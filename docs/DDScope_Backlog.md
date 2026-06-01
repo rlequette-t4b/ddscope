@@ -17,6 +17,7 @@
 | 1.6 | May 2026 | §1.1: nested transactions note added to DDS_CMD; §1.2: glossary and philosophy document ideas added |
 | 1.7 | May 2026 | §1.2: DOM structure documentation added |
 | 1.8 | May 2026 | §1.2: tag-styles on flows (undocumented gap) added; Information flows candidate updated with RFC reference |
+| 1.9 | May 2026 | §1.2: Glossary — note added distinguishing session glossary (GLOSSARY.md) from future user-facing documents |
 
 ---
 
@@ -103,6 +104,8 @@ Once `DDS_MODEL` is implemented, progressively migrate callers of `DDS_PRODUCTS`
 
 **Glossary**
 Two separate glossary documents: one functional (user-facing terminology — concepts, entities, DDMRP vocabulary as used in DDScope), one internal (architecture and implementation vocabulary — module names, layer names, key patterns). Both cross-referenced from `docs/README.md`. Scope and format to be defined before creating the files.
+
+*Note:* `GLOSSARY.md` at project root already exists — it is a session glossary for AI assistants (structured by domain, loaded selectively per session). It is distinct from the two user-facing documents described above and does not substitute for them.
 
 **Philosophy and selling points document**
 A document capturing DDScope's design philosophy (structured, simple, flexible) and its positioning relative to existing tools. Intended audience and format (internal reference vs. client-facing) to be decided. Any new feature must be validated against the philosophy before implementation — this document would make that criterion explicit and shareable.
