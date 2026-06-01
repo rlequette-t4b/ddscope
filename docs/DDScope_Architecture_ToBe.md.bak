@@ -1,0 +1,153 @@
+# DDScope — Architecture ToBe
+
+## Quick Start
+Central architecture reference for the ToBe modular design of DDScope.
+Describes the three concerns (Core, Framework, Service), the Core module inventory, and the abstract interfaces.
+Load when reasoning about module boundaries, defining a new interface, or planning the migration.
+Does not list frameworks or service implementations — see DDScope_Assemblies.md.
+Does not specify interface APIs — see the dedicated doc for each interface.
+
+## Keywords
+architecture, tobe, modular, core, framework, service, interface, dependency-injection, module-types, IFramework, IGraphRenderer, IFileStorage, IAITransport
+
+## Table of Contents
+
+1. [1 - Overview](#1---overview)
+2. [2 - Core Modules](#2---core-modules)
+3. [3 - IFramework](#3---iframework)
+4. [4 - IGraphRenderer](#4---igraphrenderer)
+5. [5 - IFileStorage](#5---ifilestorage)
+6. [6 - IAITransport](#6---iaitransport)
+7. [7 - src Layout](#7---src-layout)
+8. [Index](#index)
+
+## 1 - Overview
+[up](#table-of-contents)
+DDScope is structured around three distinct concerns.
+
+**Core** — the framework-agnostic business logic of DDScope. Core depends only on abstract interfaces — never on a concrete framework or service implementation. It is the portable, ownable heart of the application.
+
+**Framework** — the host shell that launches and wires the application. Core is assembled into a framework at build time. Example: CommWise (current). The framework implements `IFramework` — the abstract interface through which Core interacts with its host.
+
+**Service** — an external capability required by Core, abstracted behind an interface. Multiple implementations of a service can exist; one is selected per assembly. Example: Cytoscape as one implementation of `IGraphRenderer`. Core depends on the interface only — the implementation is injected at application init.
+
+This separation makes DDScope portable: the same Core can be assembled with different frameworks and service implementations without modification.
+
+In the future, an App Modular Architecture convention will be created. The present document will then describe only interfaces and modules.
+
+## 2 - Core Modules
+[up](#table-of-contents)
+Core is decomposed into modules. Each module has a type that determines how it is packaged and loaded by the host framework.
+
+### Fundamental UI Choice
+
+In all assemblies, DDScope's UI is built on native HTML/CSS/JavaScript. There is no framework-specific UI toolkit, no virtual DOM, no component framework. This is a deliberate architectural choice: it keeps Core portable and ensures that any framework capable of hosting a web page can host DDScope.
+
+### Module Types
+
+| Type | Content | Role |
+|---|---|---|
+| script | JavaScript only | Business logic, data, services — no markup |
+| style | CSS only | Visual definition — layout, colors, typography |
+| div | HTML + embedded script | UI components — structure, interaction, event wiring |
+
+Frameworks expose an `IFramework` interface that abstracts module registration and loading. Each framework maps these types to its own packaging model. For an HTML page, script maps to a `<script>` tag, style to a `<style>` or `<link>` tag, and div to an HTML fragment injected into the page body.
+
+### Module Inventory
+
+| Module | Type | Layer | Responsibility |
+|---|---|---|---|
+| DDS_TOOLS | script | Functional | Transversal utilities, levelled logger |
+| DDS_COLORS | script | Functional | Color palette constant |
+| DDS_ICONS | script | Functional | SVG icon library |
+| DDS_STORE | script | Functional | In-memory CRUD + serialization |
+| DDS_DURATION | script | Functional | Duration arithmetic and formatting |
+| DDS_MODEL | script | Functional | Cascade delete rules |
+| DDS_ACTIONS | script | Functional | Action execution engine |
+| DDS_TRANSACTIONS | script | Functional | Snapshot-based undo/redo |
+| DDS_TX | script | Functional | Transaction label catalogue |
+| DDS_TX_HELPER | script | Functional | UI transaction wrapper |
+| DDS_JSON | script | Functional | Project import with ID remapping |
+| DDS_NODES | script | Helper | Node CRUD facade |
+| DDS_PRODUCTS | script | Helper | Product CRUD facade |
+| DDS_FLOWS | script | Helper | Flow CRUD facade |
+| DDS_SKUS | script | Helper | SKU CRUD facade |
+| DDS_BOMS | script | Helper | BOM CRUD facade |
+| DDS_DEMANDS | script | Helper | Demand CRUD facade |
+| DDS_ANNOTATIONS | script | Helper | Annotation CRUD facade |
+| DDS_LANES | script | Helper | Swim-lane CRUD facade |
+| DDS_AI_CONTEXT | script | AI | Project state serialization for AI context |
+| DDS_AI | script | AI | Prompt assembly, response parsing, calls IAITransport |
+| DDS_LAYOUT | script | Presentation | BFS node placement algorithm |
+| DDS_MAP | script + div | Presentation | Map state, Cytoscape wiring, calls IGraphRenderer |
+| DDS_SWIMLANES | script + div | Presentation | Swim-lane overlay, calls IGraphRenderer |
+| DDS_AI_UI | div | AI | AI panel — plan display, confirm/cancel |
+| All *_UI modules | div | Presentation | Table views, panels, modals |
+| App styles | style | Presentation | Global CSS — layout, theming, component styles |
+
+## 3 - IFramework
+[up](#table-of-contents)
+The framework interface abstracts how Core modules are registered, loaded, and initialized by the host.
+
+Core does not call framework APIs directly. At boot, the framework wiring injects itself and all selected service implementations into Core.
+
+See `DDScope_Framework_CommWise.md` for the current implementation.
+Full interface specification: to be defined.
+
+## 4 - IGraphRenderer
+[up](#table-of-contents)
+Abstracts supply chain map rendering and user interaction on the canvas.
+
+Modules that call this interface: DDS_MAP, DDS_SWIMLANES.
+
+See `DDScope_Service_GraphRenderer.md` for implementations and API.
+Full interface specification: to be defined.
+
+## 5 - IFileStorage
+[up](#table-of-contents)
+Abstracts project file persistence — load, save, save-as, dirty state.
+
+Modules that call this interface: DDS_STORE (file operations only).
+
+See `DDScope_Service_FileStorage.md` for implementations and API.
+Full interface specification: to be defined.
+
+## 6 - IAITransport
+[up](#table-of-contents)
+Abstracts Claude API call routing — sends a prompt payload, returns a response.
+
+Modules that call this interface: DDS_AI.
+
+See `DDScope_Service_AITransport.md` for implementations and API.
+Full interface specification: to be defined.
+
+## 7 - src Layout
+[up](#table-of-contents)
+The repository source tree reflects the three-concern structure.
+
+```
+src/
+  core/                  # All Core modules
+  services/
+    IGraphRenderer/
+      interface.js         # IGraphRenderer abstract definition
+      implementation-1/    # First implementation
+      implementation-2/    # Second implementation
+    IFileStorage/
+      interface.js
+      implementation-1/
+    IAITransport/
+      interface.js
+      implementation-1/
+  frameworks/
+    IFramework/
+      interface.js         # IFramework abstract definition
+    framework-1/           # First framework wiring
+    framework-2/
+```
+
+Each assembly is a build configuration that selects one framework and one implementation per service. Assemblies are defined in DDScope_Assemblies.md.
+
+## Index
+
+## Changelog

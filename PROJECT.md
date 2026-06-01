@@ -1,25 +1,47 @@
 # DDScope — Project
 
-> Central reference for DDScope. Readable by any AI assistant, developer, or contributor.
-> For Claude Code operational setup, see `CLAUDE.md`.
+Central reference for DDScope. Readable by any AI assistant, developer, or contributor.
 
-## Role
+## Quick Start
+
+DDScope is a CommWise web application supporting DDMRP scoping workshops.
+Load at session start — provides project context, AI Agent Setup, and Idea Inboxes.
+Does not replace `docs/` for technical specifications.
+
+## Keywords
+ddscope, ddmrp, commwise, b2wise, supply-chain, scoping, workshop, ai-agent
+
+## Table of Contents
+
+1. [Purpose](#purpose)
+2. [Structure](#structure)
+3. [AI Agent Setup](#ai-agent-setup)
+4. [Idea Inboxes](#idea-inboxes)
+5. [Glossary](#glossary)
+6. [Index](#index)
+
+## Purpose
 
 DDScope is a CommWise web application built by b2wise. It supports DDMRP scoping workshops — consultants use it to build supply chain maps capturing current-state structure before buffer design begins.
 
 The AI assistant works alongside the lead developer to design, implement, and maintain the application.
 
-## Interactive Sessions
+## Structure
 
-Conversation language: French.
+```
+docs/       # All documentation — flat, no sub-folders
+src/        # Extracted functional modules (mirror of CommWise SCRIPT blocks)
+tests/      # Vitest unit tests + Playwright e2e specs
+fixtures/   # JSON project files for automated tests
+samples/    # Realistic DDScope projects for demos and manual testing
+shims/      # Minimal stubs for CommWise/browser globals (Node.js compat)
+```
 
-## Repo Autonomy Rule
+Key files at root: `README.md`, `GLOSSARY.md`, `TODO.md`, `DEVIATIONS.md`
 
-The repo must be fully usable without Claude Code — by a human developer or any other AI agent (e.g. an AI working directly via CommWise). Any knowledge needed to understand or contribute to the project belongs in `README.md` or `docs/`.
+## AI Agent Setup
 
-`CLAUDE.md` is the right place only for what is specific to Claude Code as an agent: its execution environment, its tool constraints, its operational patterns.
-
-When memorizing something, apply this test: *could another AI working via CommWise need this?* If yes → `docs/` (see placement rules in `docs/README.md`). If it is specific to how Claude Code operates as an agent → `CLAUDE.md`.
+AI Assistant: Claude
 
 ## Idea Inboxes
 
@@ -35,20 +57,29 @@ On request at the start of a session: read the channel, present unprocessed mess
 
 ### Notion (Canal DDScope)
 
-Database URL: `https://www.notion.so/8845001f0d0c83efa0098157aef9677c`  
-Columns of interest: `Details` (content), `Statut` (status).  
+Database URL: `https://www.notion.so/8845001f0d0c83efa0098157aef9677c`
+Columns of interest: `Details` (content), `Statut` (status).
 Status values: `À faire` | `En cours` | `Retour IA` | `Traité`.
 
 On request at the start of a session: read the database, present unprocessed entries (all entries where `Statut ≠ Traité`), and discuss what to do with each. Once handled, update `Statut` to `Traité`.
 
-## Audit
-
-To audit this project's conformance to Claude.ai best practices:
-
-1. Read: `C:\Users\RemiLequette\Development\projects\claude-knowledge\guides\audit-process.md` — audit methodology
-2. Verify against: `C:\Users\RemiLequette\Development\projects\claude-knowledge\guides\Claude.ai-best-practices.md` — source of truth
-3. Review documented deviations: `DEVIATIONS.md`
-
 ## Glossary
 
 See `GLOSSARY.md` at project root.
+
+## Index
+
+| Term | Occurrences |
+|------|-------------|
+
+## Changelog
+
+### Version 2.0 - Conformance rewrite
+**Date:** 2026-06-01
+**Reason:** Brought PROJECT.md into conformance with conventions/documentation.md and conventions/project-structure.md.
+
+**Changes:**
+- Added: Quick Start, Keywords, Table of Contents, Structure, AI Agent Setup, Index, Changelog
+- Renamed: ## Role → ## Purpose
+- Removed: ## Audit (KB now in project instructions), ## Interactive Sessions (chatbot setting), ## Repo Autonomy Rule
+- Preserved: ## Idea Inboxes, ## Glossary
