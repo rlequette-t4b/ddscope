@@ -6,6 +6,9 @@ coverage/
 tests/ui/auth/.auth/*.json
 samples/Test.json
 
+# Backup files
+*.bak
+
 # SQLite test tracker database (data stored locally, schema versioned in tests/schema.sql)
 tests/*.db
 tests/*.sqlite

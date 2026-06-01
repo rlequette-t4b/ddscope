@@ -3,7 +3,7 @@
 ## Quick Start
 Describes how DDScope Core is assembled into a runnable application: the framework convention, service implementations, compatibility matrix, and named assemblies.
 Load when selecting an assembly to build, adding a new framework or service implementation, or synchronising the source repo with a framework.
-Does not describe Core or IService interfaces — see DDScope_Architecture_ToBe.md.
+Does not describe Core or IService interfaces — see conventions/modular-architecture.md (KB).
 
 ## Keywords
 assemblies, framework, framework-convention, blocks, synchronisation, service-implementations, compatibility-matrix, build, commwise
@@ -43,7 +43,7 @@ Each framework document describes how to perform this synchronisation using the 
 
 | ID | Description | Doc |
 |---|---|---|
-| framework-1 | CommWise — b2wise platform | DDScope_Framework_CommWise.md |
+| framework-1 | CommWise — b2wise platform | DDScope_Framework_CommWise.md (params) — conventions/commwise-framework.md (KB) |
 
 ## 3 - Service Implementations
 [up](#table-of-contents)

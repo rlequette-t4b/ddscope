@@ -18,7 +18,6 @@ Single source of truth for all DDScope documentation. All files are flat in this
 | [DDScope_Actions.md](DDScope_Actions.md) | Active | AI action vocabulary (current — pending migration to DDS_CMD) |
 | [DDScope_AI_Assistant.md](DDScope_AI_Assistant.md) | Active | Embedded AI assistant RFC |
 | [DDScope_Backlog.md](DDScope_Backlog.md) | Active | Feature backlog — pre-backlog candidates, committed features, user manual copy |
-| [DDScope_CommWise.md](DDScope_CommWise.md) | Active | CommWise platform conventions — session lifecycle, editing, AI proxy, known traps |
 | [DDScope_InformationFlows_RFC.md](DDScope_InformationFlows_RFC.md) | Draft | Information flows feature — pre-spec design decisions and open questions |
 
 ### Implementation details
@@ -74,7 +73,7 @@ This list is open-ended — add a domain when a combination of documents recurs 
 | `DDScope_Modules.md` | Module APIs, dependencies, testability |
 | `DDScope_Actions.md` | AI action vocabulary (current) |
 | `DDScope_Commands.md` | DDS_CMD target architecture, TX catalogue, call site inventory |
-| `DDScope_CommWise.md` | If reading or writing CommWise blocks |
+| `conventions/commwise-framework.md` (KB) | If reading or writing CommWise blocks |
 
 ---
 
@@ -86,7 +85,7 @@ This list is open-ended — add a domain when a combination of documents recurs 
 | `DDScope_Rendering.md` | Rendering engine, Cytoscape traps |
 | `DDScope_Presentation.md` | map_* logic, layout algorithms |
 | `DDScope_Modules.md` | Render-dependent modules, CommWise positions |
-| `DDScope_CommWise.md` | Session lifecycle, editing, regex traps |
+| `conventions/commwise-framework.md` (KB) | Session lifecycle, editing, regex traps |
 
 ---
 
@@ -99,7 +98,7 @@ This list is open-ended — add a domain when a combination of documents recurs 
 | `DDScope_AI_UI.md` | AI assistant panel — header, replay, export/import |
 | `DDScope_ElementsLifecycle.md` | Element lifecycle on maps |
 | `DDScope_Modules.md` | UI modules, CommWise positions |
-| `DDScope_CommWise.md` | Session lifecycle, editing, regex traps |
+| `conventions/commwise-framework.md` (KB) | Session lifecycle, editing, regex traps |
 
 ---
 
@@ -114,7 +113,7 @@ This list is open-ended — add a domain when a combination of documents recurs 
 | `DDScope_AI_UI.md` | AI assistant panel spec |
 | `DDScope_ElementsLifecycle.md` | Element lifecycle on maps |
 | `DDScope_Modules.md` | UI modules, CommWise positions |
-| `DDScope_CommWise.md` | Session lifecycle, editing, regex traps |
+| `conventions/commwise-framework.md` (KB) | Session lifecycle, editing, regex traps |
 | `DDScope_TestUI.md` | Test protocol — conventions, status values, category definitions |
 | `DDScope_SQLite_Setup.md` | Schema, query patterns, backup procedure |
 
@@ -130,7 +129,7 @@ This list is open-ended — add a domain when a combination of documents recurs 
 | `DDScope_Actions.md` | Action vocabulary, plan format (current) |
 | `DDScope_Commands.md` | Future AI vocabulary contract via DDS_CMD |
 | `DDScope_Modules.md` | AI layer modules, CommWise positions |
-| `DDScope_CommWise.md` | secureRequest proxy, session lifecycle |
+| `conventions/commwise-framework.md` (KB) | secureRequest proxy, session lifecycle |
 
 ---
 
@@ -144,7 +143,7 @@ This list is open-ended — add a domain when a combination of documents recurs 
 | `DDScope_TestUI.md` | Test protocol reference |
 | `DDScope_TestUI_watcher.md` | Auto-watcher setup — VS Code task configuration |
 | `DDScope_Modules.md` | Module testability, extraction contracts |
-| `DDScope_CommWise.md` | Session lifecycle for push operations |
+| `conventions/commwise-framework.md` (KB) | Session lifecycle for push operations |
 
 ---
 
@@ -153,7 +152,8 @@ This list is open-ended — add a domain when a combination of documents recurs 
 
 | Document | Why |
 |---|---|
-| `DDScope_CommWise.md` | All platform conventions |
+| `conventions/commwise-framework.md` (KB) | All platform conventions |
+| `DDScope_Framework_CommWise.md` | DDScope app ID and correspondence file |
 | `DDScope_Modules.md` | Block positions, expected titles |
 
 ---
@@ -168,7 +168,7 @@ The domains section of this document and the table below should help you locate 
 
 | Scope | Target document |
 |---|---|
-| CommWise platform behaviour (any app) | `DDScope_CommWise.md` |
+| CommWise platform behaviour (any app) | `conventions/commwise-framework.md` (KB) |
 | Architecture or layer rule | `DDScope_Architecture.md` |
 | Module API, dependency, or testability | `DDScope_Modules.md` |
 | Data model, entity, field, cascade | `DDScope_DataModel.md` |

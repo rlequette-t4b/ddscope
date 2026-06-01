@@ -33,7 +33,7 @@
 **About DDS_TRANSACTIONS:**
 The module `DDS_TRANSACTIONS` (Functional layer) is the transaction manager for undo/redo. It is called only by UI modules to wrap user interactions that may chain multiple `DDS_ACTIONS.execute()` calls. It captures DDS_STORE state snapshots on `begin`, restores them on `rollback`/`undo`, and manages the undo/redo stacks. Helpers and AI modules do not call it directly.
 
-Both DEV and TEST contexts must keep their copy in sync (manual transfer — see `README.md`).
+Both DEV and TEST contexts must keep their copy in sync (manual transfer — see `docs/DDScope_TestEnvironment.md`).
 
 ---
 
@@ -173,6 +173,88 @@ graph TD
 
 ---
 
+## Components
+
+Five components, aligned on the architectural layers. Each module belongs to exactly one component.
+
+### core
+*Pure and functional layers — no DOM, no rendering. The portable heart of the application.*
+
+| Module | Block |
+|---|---|
+| DDS_TOOLS | SCRIPT 40 |
+| DDS_COLORS | SCRIPT 105 |
+| DDS_ICONS | SCRIPT 110 |
+| DDS_STORE | SCRIPT 150 |
+| DDS_DURATION | SCRIPT 1650 |
+| DDS_MODEL | SCRIPT 1550 |
+| DDS_ACTIONS | SCRIPT 1850 |
+| DDS_TRANSACTIONS | SCRIPT 1860 |
+| DDS_TX | SCRIPT 1865 |
+| DDS_TX_HELPER | SCRIPT 1870 |
+| DDS_JSON | SCRIPT 600 |
+
+### domain
+*Helper layer — semantic CRUD facades over core.*
+
+| Module | Block |
+|---|---|
+| DDS_NODES | SCRIPT 1560 |
+| DDS_PRODUCTS | SCRIPT 1610 |
+| DDS_FLOWS | SCRIPT 1620 |
+| DDS_SKUS | SCRIPT 1630 |
+| DDS_BOMS | SCRIPT 1800 |
+| DDS_DEMANDS | SCRIPT 1660 |
+| DDS_ANNOTATIONS | SCRIPT 1670 |
+| DDS_LANES | SCRIPT 1640 |
+
+### ai
+*AI layer — context serialisation, Claude API, assistant UI.*
+
+| Module | Block |
+|---|---|
+| DDS_AI_CONTEXT | SCRIPT 2200 |
+| DDS_AI_SERVICE | SCRIPT 2300 |
+| DDS_AI | SCRIPT 2400 |
+| DDS_AI_UI | SCRIPT 2500 |
+
+### presentation
+*Cytoscape canvas, swim-lanes, layout algorithms, element lifecycle.*
+
+| Module | Block |
+|---|---|
+| DDS_MAP (state) | SCRIPT 900 |
+| DDS_MAP (load) | SCRIPT 1000 |
+| DDS_MAP (style) | SCRIPT 1050 |
+| DDS_MAP (CTT) | SCRIPT 1055 |
+| DDS_SWIMLANES | SCRIPT 1100 |
+| DDS_SWIMLANE_GROUP | SCRIPT 1150 |
+| DDS_LAYOUT | SCRIPT 1250 |
+| DDS_ELEMENTS | SCRIPT 2000 |
+| DDS_REMOVE | SCRIPT 2050 |
+| DDS_PANEL | SCRIPT 1500 |
+| DDS_PANEL (demand) | SCRIPT 1505 |
+
+### ui
+*Panels, table views, nav bar, user interactions.*
+
+| Module | Block |
+|---|---|
+| DDS_MAP_UI | SCRIPT 1200 |
+| DDS_NODE_UI | SCRIPT 1300 |
+| DDS_FLOW_UI | SCRIPT 1400 |
+| DDS_ELEMENTS_UI | SCRIPT 2100 |
+| DDS_NODES_UI | SCRIPT 1750 |
+| DDS_FLOWS_UI | SCRIPT 1760 |
+| DDS_PRODUCTS_UI | SCRIPT 1700 |
+| DDS_BOMS_UI | SCRIPT 1900 |
+| DDS_DEMANDS_UI | SCRIPT 1770 |
+| DDS_ANNOTATIONS_UI | SCRIPT 1780 |
+| DDS_NOTES_UI | SCRIPT TBD |
+| DDS_SETTINGS_UI | SCRIPT 2600 |
+
+---
+
 ## Reference Tables
 
 ### Testability classes
@@ -219,7 +301,7 @@ graph TD
 ```
 global:         DDS_COLORS
 block:          SCRIPT 105
-file:           src/DDS_COLORS.js
+file:           src/core/DDS_COLORS.js
 testability:    pure
 contract:       met
 dom_mixed:      no
@@ -242,7 +324,7 @@ DDS_COLORS   // string[] — 8 hex color strings
 ```
 global: DDS_TOOLS
 block: SCRIPT 40
-file: src/DDS_TOOLS.js
+file: src/core/DDS_TOOLS.js
 testability: pure
 contract: met
 dom_mixed: no
@@ -272,7 +354,7 @@ DDS_TOOLS.log.error(...) // logs if level <= error
 ```
 global:         DDS_ICONS
 block:          SCRIPT 110
-file:           src/DDS_ICONS.js
+file:           src/core/DDS_ICONS.js
 testability:    pure
 contract:       not-met
 dom_mixed:      no
@@ -327,7 +409,7 @@ DDS_ICONS.toDataUrl(key, color?)     // string | null — encoded data URL; repl
 ```
 global:         DDS_STORE
 block:          SCRIPT 150
-file:           src/DDS_STORE.js
+file:           src/core/DDS_STORE.js
 testability:    pure
 contract:       met
 dom_mixed:      no
@@ -374,7 +456,7 @@ DDS_STORE.revertDelta(delta) // delta - moves form the end state to the start st
 ```
 global:         DDS_DURATION
 block:          SCRIPT 1650
-file:           src/DDS_DURATION.js
+file:           src/core/DDS_DURATION.js
 testability:    pure
 contract:       met
 dom_mixed:      no
@@ -405,7 +487,7 @@ DDS_DURATION.toDisplay(value, unit)      // string
 ```
 global:         DDS_MODEL
 block:          SCRIPT 1550
-file:           src/DDS_MODEL.js
+file:           src/core/DDS_MODEL.js
 testability:    store-dependent
 contract:       partial
 dom_mixed:      no
@@ -442,7 +524,7 @@ DDS_STORE    SCRIPT 150
 ```
 global:         DDS_ACTIONS
 block:          SCRIPT 1850
-file:           src/DDS_ACTIONS.js
+file:           src/core/DDS_ACTIONS.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -479,7 +561,7 @@ DDS_MODEL   SCRIPT 1550
 ```
 global:         DDS_TRANSACTIONS
 block:          SCRIPT 1860
-file:           src/DDS_TRANSACTIONS.js
+file:           src/core/DDS_TRANSACTIONS.js
 testability:    store-dependent
 contract:       stub
 dom_mixed:      no
@@ -587,7 +669,7 @@ TX                 SCRIPT 1865
 ```
 global:         DDS_NODES
 block:          SCRIPT 1560
-file:           src/DDS_NODES.js
+file:           src/domain/DDS_NODES.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -620,7 +702,7 @@ DDS_STORE     SCRIPT 150
 ```
 global:         DDS_PRODUCTS
 block:          SCRIPT 1610
-file:           src/DDS_PRODUCTS.js
+file:           src/domain/DDS_PRODUCTS.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -652,7 +734,7 @@ DDS_STORE     SCRIPT 150
 ```
 global:         DDS_FLOWS
 block:          SCRIPT 1620
-file:           src/DDS_FLOWS.js
+file:           src/domain/DDS_FLOWS.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -688,7 +770,7 @@ DDS_STORE     SCRIPT 150
 ```
 global:         DDS_SKUS
 block:          SCRIPT 1630
-file:           src/DDS_SKUS.js
+file:           src/domain/DDS_SKUS.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -722,7 +804,7 @@ DDS_STORE     SCRIPT 150
 ```
 global:         DDS_BOMS
 block:          SCRIPT 1800
-file:           src/DDS_BOMS.js
+file:           src/domain/DDS_BOMS.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -754,7 +836,7 @@ DDS_STORE     SCRIPT 150
 ```
 global:         DDS_DEMANDS
 block:          SCRIPT 1660
-file:           src/DDS_DEMANDS.js
+file:           src/domain/DDS_DEMANDS.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -789,7 +871,7 @@ DDS_STORE     SCRIPT 150
 ```
 global:         DDS_ANNOTATIONS
 block:          SCRIPT 1670
-file:           src/DDS_ANNOTATIONS.js
+file:           src/domain/DDS_ANNOTATIONS.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -821,7 +903,7 @@ DDS_STORE     SCRIPT 150
 ```
 global:         DDS_LANES
 block:          SCRIPT 1640
-file:           src/DDS_LANES.js
+file:           src/domain/DDS_LANES.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no
@@ -853,7 +935,7 @@ DDS_STORE     SCRIPT 150
 ```
 global:         DDS_AI_CONTEXT
 block:          SCRIPT 2200
-file:           src/DDS_AI_CONTEXT.js
+file:           src/ai/DDS_AI_CONTEXT.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no  (expected)
@@ -881,7 +963,7 @@ DDS         SCRIPT 400
 ```
 global:         DDS_AI
 block:          SCRIPT 2400
-file:           src/DDS_AI.js
+file:           src/ai/DDS_AI.js
 testability:    out-of-scope
 contract:       unverified
 dom_mixed:      no  (expected)
@@ -906,7 +988,7 @@ DDS_ACTIONS      SCRIPT 1850
 ```
 global:         DDS_AI_UI
 block:          SCRIPT 2500
-file:           src/DDS_AI_UI.js
+file:           src/ai/DDS_AI_UI.js
 testability:    render-dependent
 contract:       unverified
 dom_mixed:      yes  (expected)
@@ -931,7 +1013,7 @@ DDS_ACTIONS      SCRIPT 1850
 ```
 global:         DDS_ANNOTATIONS_UI
 block:          SCRIPT 1780
-file:           src/DDS_ANNOTATIONS_UI.js
+file:           src/ui/DDS_ANNOTATIONS_UI.js
 testability:    render-dependent
 contract:       unverified
 dom_mixed:      yes
@@ -960,7 +1042,7 @@ DDS_STORE         SCRIPT 150
 ```
 global:         DDS_JSON
 block:          SCRIPT 600
-file:           src/DDS_JSON.js
+file:           src/core/DDS_JSON.js
 testability:    store-dependent
 contract:       unverified
 dom_mixed:      no  (expected)
