@@ -9,7 +9,7 @@ See `conventions/commwise-framework.md` in the knowledge base for the full frame
 | Parameter | Value |
 |---|---|
 | CommWise app ID | `22645` |
-| Correspondence file | `src/frameworks/commwise/sync-tracker.md` |
+| Correspondence file | `frameworks/commwise/sync-tracker.md` |
 
 The correspondence file maps each `src/` module to its CommWise block address and tracks synchronisation state.
 See `src/frameworks/commwise/sync-tracker.md` for the full tracking table.

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "project": {
+    "name": "Bericap from description",
+    "description": "",
+    "created_by": "r.lequette@tech4best.com",
+    "ai_instructions": "The industry sector is plastics manufacturing / industrial packaging (bottle caps and closures).\n\nThis VSM represents the current state of Bericap France's production flow, scoped to Bâtiment D (decoupled, semi-finished goods flow). It was produced after a scoping day (cadrage J1) on 3 June 2026, as part of a DDMRP project led by b2wise. Bâtiment A (inline production, no semi-finished goods) follows a separate flow and is not modelled here.\n\nThe flow is entirely push-driven: SAP ECC + Excel macros generate work orders post by post with no reliable forecast. Five friction points were validated on the Gemba. The priority pilot is Bâtiment D: establish true decoupling points on semi-finished goods, switch to pull flow, and stabilise the MPS."
+  },
+  "swim_lanes": [
+    {
+      "name": "Information",
+      "color": null,
+      "id": 1,
+      "created_at": "2026-06-03T20:32:46.050Z",
+      "updated_at": "2026-06-03T20:32:46.050Z"
+    },
+    {
+      "name": "Flux physique",
+      "color": null,
+      "id": 2,
+      "created_at": "2026-06-03T20:32:46.050Z",
+      "updated_at": "2026-06-03T20:32:46.050Z"
+    },
+    {
+      "name": "Information",
+      "color": "#43a047",
+      "id": 3,
+      "created_at": "2026-06-03T20:33:03.481Z",
+      "updated_at": "2026-06-03T20:33:03.481Z"
+    },
+    {
+      "name": "Flux physiques",
+      "color": "#fbc02d",
+      "id": 4,
+      "created_at": "2026-06-03T20:33:36.122Z",
+      "updated_at": "2026-06-03T20:33:36.122Z"
+    }
+  ],
+  "node_types": [],
+  "product_types": [],
+  "nodes": [],
+  "products": [],
+  "flows": [],
+  "skus": [],
+  "boms": [],
+  "bom_components": [],
+  "tag_styles": [],
+  "demands": [],
+  "maps": [
+    {
+      "name": "Map 1",
+      "position": 1,
+      "legend_visible": true,
+      "id": 1,
+      "created_at": "2026-06-03T20:32:05.941Z",
+      "updated_at": "2026-06-03T20:32:05.941Z"
+    }
+  ],
+  "map_nodes": [],
+  "map_flows": [],
+  "map_swim_lanes": [
+    {
+      "map_id": 1,
+      "swim_lane_id": 3,
+      "x": -159.5,
+      "y": -161,
+      "width": 552.5,
+      "height": 125.5,
+      "id": 1,
+      "created_at": "2026-06-03T20:33:03.481Z",
+      "updated_at": "2026-06-03T20:33:41.400Z"
+    },
+    {
+      "map_id": 1,
+      "swim_lane_id": 4,
+      "x": -161,
+      "y": -25,
+      "width": 617,
+      "height": 342,
+      "id": 2,
+      "created_at": "2026-06-03T20:33:36.122Z",
+      "updated_at": "2026-06-03T20:33:46.396Z"
+    }
+  ],
+  "map_demands": [],
+  "annotations": [],
+  "map_annotations": [],
+  "note_categories": []
+}

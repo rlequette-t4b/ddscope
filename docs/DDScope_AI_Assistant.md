@@ -16,7 +16,7 @@
     - [6.4 Partial failure](#64-partial-failure)
   - [7. Open Questions](#7-open-questions)
 # DDScope — AI Assistant (Claude)
-## Request for Comments — v1.6 — Draft — May 2026
+## Request for Comments — v1.7 — Draft — Jun 2026
 
 ---
 
@@ -40,6 +40,7 @@
 | 1.4     | May 2026 | ACTION_VOCABULARY_TEXT source moved to DDS_ACTIONS.getVocabularyText(); execution and error reporting delegated to DDS_ACTIONS.execute() and DDS_AI_UI; DDS_AI_EXECUTOR removed |
 | 1.5     | May 2026 | Action vocabulary extracted to DDScope_Actions.md; §3 and §5.3 replaced by pointers |
 | 1.6     | May 2026 | Annotation actions added to §3 pointer; annotations array added to context format (§4) |
+| 1.7     | Jun 2026 | Script format documented in §4b — export structure, parsing rules, replay behaviour |
 
 ---
 
@@ -202,6 +203,59 @@ The following JSON structure is serialised from the current project state and tr
 > `product_types` transmits `is_default` so Claude can select the correct default product type when creating a product.
 
 > `annotations` lists all project annotations regardless of which maps they appear on. Canvas positions (`x`, `y`) are omitted — they are map-specific and not relevant to the action vocabulary.
+
+---
+
+## 4b. Script Format
+
+A conversation can be exported as a Markdown file and replayed by the AI assistant panel. This section documents the format produced by `DDS_AI_UI.exportConversation()` (SCRIPT 2500) and consumed by `DDS_AI_UI._replayParse` and `DDS_AI_UI._replayParseInstructions` (SCRIPT 2506).
+
+### File structure
+
+```
+# AI Assistant — <project name>
+
+**Project specific instructions:**
+```
+<project-specific instructions text>
+```
+
+**User:**
+```
+<instruction text>
+```
+
+**Assistant:** <reasoning or answer>
+
+---
+
+**User:**
+```
+<instruction text>
+```
+
+**Assistant:** <reasoning or answer>
+
+---
+```
+
+### Blocks
+
+| Block | Marker | Delimiter | Required |
+|---|---|---|---|
+| Instructions | `**Project specific instructions:**` | triple-backtick fence | No — omitted if `project.ai_instructions` is empty |
+| User message | `**User:**` | triple-backtick fence | Yes — one per turn |
+| Assistant response | `**Assistant:**` inline | none | Informational only — not parsed on replay |
+
+### Parsing rules
+
+`_replayParseInstructions` extracts the text inside the first triple-backtick fence following `**Project specific instructions:**`. Returns `null` if the marker or fence is absent. The extracted text is loaded into `DDS_AI_UI._replay.instructions` and injected as project-specific instructions for every replayed turn (see §5.3).
+
+`_replayParse` splits the file on every `**User:**` marker and extracts the text inside the triple-backtick fence that follows each one. Returns an ordered array of instruction strings. Assistant response lines are ignored.
+
+### Replay behaviour
+
+Messages are replayed in order, one per `_replayNext()` call or all at once via `_replayRunToEnd()`. Each replayed message goes through the normal `DDS_AI_UI.send()` flow — context is serialised fresh, the API is called, and the returned plan is auto-applied. If a turn fails, replay halts.
 
 ---
 
