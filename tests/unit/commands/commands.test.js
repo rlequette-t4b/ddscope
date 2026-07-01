@@ -588,3 +588,513 @@ describe('DDS_TX.SETTINGS_PRODUCT_TYPE', () => {
     expect(DDS_STORE.query('product_types').length).toBe(0);
   });
 });
+
+// ------------------------------------------------------------------ //
+// Phase 3 — Products / BOMs / Demands (tabular CRUD)
+// ------------------------------------------------------------------ //
+
+describe('DDS_TX.PRODUCT_CREATE', () => {
+  beforeEach(setup);
+
+  it('inserts a product record', () => {
+    const result = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Widget', type_code: 'FG' }, null);
+    expect(result.ok).toBe(true);
+    const products = DDS_STORE.query('products');
+    expect(products.length).toBe(1);
+    expect(products[0].name).toBe('Widget');
+    expect(products[0].type_code).toBe('FG');
+  });
+
+  it('defaults tags to an empty array and notes to an empty string', () => {
+    DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Widget' }, null);
+    const product = DDS_STORE.query('products')[0];
+    expect(product.tags).toEqual([]);
+    expect(product.notes).toBe('');
+  });
+
+  it('is undoable', () => {
+    DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Undo me' }, null);
+    expect(DDS_STORE.query('products').length).toBe(1);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('products').length).toBe(0);
+  });
+});
+
+describe('DDS_TX.PRODUCT_UPDATE', () => {
+  beforeEach(setup);
+
+  it('updates the given fields only', () => {
+    const { id } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Old', type_code: 'FG' }, null);
+    DDS_CMD.execute(DDS_TX.PRODUCT_UPDATE, { id, name: 'New' }, null);
+    const product = DDS_STORE.query('products', { id })[0];
+    expect(product.name).toBe('New');
+    expect(product.type_code).toBe('FG');
+  });
+
+  it('is undoable', () => {
+    const { id } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Original' }, null);
+    DDS_CMD.execute(DDS_TX.PRODUCT_UPDATE, { id, name: 'Changed' }, null);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('products', { id })[0].name).toBe('Original');
+  });
+});
+
+describe('DDS_TX.PRODUCT_DELETE — cascade via DDS_MODEL.deleteProduct', () => {
+  beforeEach(setup);
+
+  it('removes the product record', () => {
+    const { id } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'ToDelete' }, null);
+    DDS_CMD.execute(DDS_TX.PRODUCT_DELETE, { id }, null);
+    expect(DDS_STORE.query('products', { id }).length).toBe(0);
+  });
+
+  it('removes skus referencing the product', () => {
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'P1' }, null);
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    DDS_STORE.insert('skus', { node_id: node.id, product_id: productId });
+    DDS_CMD.execute(DDS_TX.PRODUCT_DELETE, { id: productId }, null);
+    expect(DDS_STORE.query('skus', { product_id: productId }).length).toBe(0);
+  });
+
+  it('removes demands associated with the product', () => {
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'P1' }, null);
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    DDS_STORE.insert('demands', { node_id: node.id, product_id: productId });
+    DDS_CMD.execute(DDS_TX.PRODUCT_DELETE, { id: productId }, null);
+    expect(DDS_STORE.query('demands', { product_id: productId }).length).toBe(0);
+  });
+
+  it('removes boms whose output_product_id matches, with their bom_components', () => {
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Output' }, null);
+    const { id: compId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Component' }, null);
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const bom = DDS_STORE.insert('boms', { node_id: node.id, output_product_id: productId })[0];
+    DDS_STORE.insert('bom_components', { bom_id: bom.id, product_id: compId, quantity: 1 });
+    DDS_CMD.execute(DDS_TX.PRODUCT_DELETE, { id: productId }, null);
+    expect(DDS_STORE.query('boms', { id: bom.id }).length).toBe(0);
+    expect(DDS_STORE.query('bom_components', { bom_id: bom.id }).length).toBe(0);
+  });
+
+  it('is undoable — restores the product and its cascade', () => {
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'P1' }, null);
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    DDS_STORE.insert('skus', { node_id: node.id, product_id: productId });
+    DDS_CMD.execute(DDS_TX.PRODUCT_DELETE, { id: productId }, null);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('products', { id: productId }).length).toBe(1);
+    expect(DDS_STORE.query('skus', { product_id: productId }).length).toBe(1);
+  });
+});
+
+describe('DDS_TX.BOM_CREATE', () => {
+  beforeEach(setup);
+
+  it('inserts a bom record with no components', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Output' }, null);
+    const result = DDS_CMD.execute(DDS_TX.BOM_CREATE, { node_id: node.id, output_product_id: productId }, null);
+    expect(result.ok).toBe(true);
+    expect(DDS_STORE.query('boms', { id: result.id }).length).toBe(1);
+  });
+
+  it('inserts components alongside the bom, ignoring entries without product_id', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: outputId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Output' }, null);
+    const { id: compId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Component' }, null);
+    const result = DDS_CMD.execute(DDS_TX.BOM_CREATE, {
+      node_id: node.id,
+      output_product_id: outputId,
+      components: [{ product_id: compId, quantity: 3, notes: 'steel' }, { product_id: null, quantity: 1 }]
+    }, null);
+    const components = DDS_STORE.query('bom_components', { bom_id: result.id });
+    expect(components.length).toBe(1);
+    expect(components[0].product_id).toBe(compId);
+    expect(components[0].quantity).toBe(3);
+    expect(components[0].notes).toBe('steel');
+  });
+
+  it('fails when a bom for the same node/output product already exists', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Output' }, null);
+    DDS_CMD.execute(DDS_TX.BOM_CREATE, { node_id: node.id, output_product_id: productId }, null);
+    const result = DDS_CMD.execute(DDS_TX.BOM_CREATE, { node_id: node.id, output_product_id: productId }, null);
+    expect(result.ok).toBe(false);
+    expect(DDS_STORE.query('boms', { node_id: node.id, output_product_id: productId }).length).toBe(1);
+  });
+
+  it('is undoable — removes bom and its components', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: outputId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Output' }, null);
+    const { id: compId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Component' }, null);
+    const { id: bomId } = DDS_CMD.execute(DDS_TX.BOM_CREATE, {
+      node_id: node.id, output_product_id: outputId, components: [{ product_id: compId, quantity: 1 }]
+    }, null);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('boms', { id: bomId }).length).toBe(0);
+    expect(DDS_STORE.query('bom_components', { bom_id: bomId }).length).toBe(0);
+  });
+});
+
+describe('DDS_TX.BOM_UPDATE_COMPONENTS', () => {
+  beforeEach(setup);
+
+  function makeBom() {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: outputId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Output' }, null);
+    const { id: p1 } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'C1' }, null);
+    const { id: p2 } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'C2' }, null);
+    const { id: bomId } = DDS_CMD.execute(DDS_TX.BOM_CREATE, {
+      node_id: node.id,
+      output_product_id: outputId,
+      components: [{ product_id: p1, quantity: 2, notes: '' }, { product_id: p2, quantity: 1, notes: 'old' }]
+    }, null);
+    return { bomId, p1, p2 };
+  }
+
+  it('removes components no longer present', () => {
+    const { bomId, p2 } = makeBom();
+    DDS_CMD.execute(DDS_TX.BOM_UPDATE_COMPONENTS, { bom_id: bomId, components: [{ product_id: p2, quantity: 1, notes: 'old' }] }, null);
+    expect(DDS_STORE.query('bom_components', { bom_id: bomId }).length).toBe(1);
+  });
+
+  it('adds new components and updates changed ones', () => {
+    const { bomId, p1, p2 } = makeBom();
+    const { id: p3 } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'C3' }, null);
+    DDS_CMD.execute(DDS_TX.BOM_UPDATE_COMPONENTS, {
+      bom_id: bomId,
+      components: [{ product_id: p2, quantity: 3, notes: 'new' }, { product_id: p3, quantity: 5, notes: '' }]
+    }, null);
+    const components = DDS_STORE.query('bom_components', { bom_id: bomId });
+    expect(components.length).toBe(2);
+    expect(components.find(c => c.product_id === p1)).toBeUndefined();
+    const c2 = components.find(c => c.product_id === p2);
+    expect(c2.quantity).toBe(3);
+    expect(c2.notes).toBe('new');
+    const c3 = components.find(c => c.product_id === p3);
+    expect(c3.quantity).toBe(5);
+  });
+
+  it('is undoable', () => {
+    const { bomId, p1, p2 } = makeBom();
+    DDS_CMD.execute(DDS_TX.BOM_UPDATE_COMPONENTS, { bom_id: bomId, components: [{ product_id: p2, quantity: 9, notes: '' }] }, null);
+    DDS_TRANSACTIONS.undo();
+    const components = DDS_STORE.query('bom_components', { bom_id: bomId });
+    expect(components.length).toBe(2);
+    expect(components.find(c => c.product_id === p1)).toBeDefined();
+    expect(components.find(c => c.product_id === p2).quantity).toBe(1);
+  });
+});
+
+describe('DDS_TX.BOM_DELETE — cascade via DDS_MODEL.deleteBom', () => {
+  beforeEach(setup);
+
+  it('removes the bom and its components', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: outputId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Output' }, null);
+    const { id: compId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Component' }, null);
+    const { id: bomId } = DDS_CMD.execute(DDS_TX.BOM_CREATE, {
+      node_id: node.id, output_product_id: outputId, components: [{ product_id: compId, quantity: 1 }]
+    }, null);
+    DDS_CMD.execute(DDS_TX.BOM_DELETE, { id: bomId }, null);
+    expect(DDS_STORE.query('boms', { id: bomId }).length).toBe(0);
+    expect(DDS_STORE.query('bom_components', { bom_id: bomId }).length).toBe(0);
+  });
+
+  it('is undoable', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: outputId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'Output' }, null);
+    const { id: bomId } = DDS_CMD.execute(DDS_TX.BOM_CREATE, { node_id: node.id, output_product_id: outputId }, null);
+    DDS_CMD.execute(DDS_TX.BOM_DELETE, { id: bomId }, null);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('boms', { id: bomId }).length).toBe(1);
+  });
+});
+
+describe('DDS_TX.DEMAND_UPDATE', () => {
+  beforeEach(setup);
+
+  function makeDemand() {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'P1' }, null);
+    DDS_STORE.insert('demands', { node_id: node.id, product_id: productId, demand_value: 10, demand_period: 'weeks' });
+    return { nodeId: node.id, productId };
+  }
+
+  it('updates only the given fields', () => {
+    const { nodeId, productId } = makeDemand();
+    DDS_CMD.execute(DDS_TX.DEMAND_UPDATE, { node_id: nodeId, product_id: productId, demand_value: 25 }, null);
+    const demand = DDS_STORE.query('demands', { node_id: nodeId, product_id: productId })[0];
+    expect(demand.demand_value).toBe(25);
+    expect(demand.demand_period).toBe('weeks');
+  });
+
+  it('is undoable', () => {
+    const { nodeId, productId } = makeDemand();
+    DDS_CMD.execute(DDS_TX.DEMAND_UPDATE, { node_id: nodeId, product_id: productId, demand_value: 99 }, null);
+    DDS_TRANSACTIONS.undo();
+    const demand = DDS_STORE.query('demands', { node_id: nodeId, product_id: productId })[0];
+    expect(demand.demand_value).toBe(10);
+  });
+});
+
+describe('DDS_TX.NODE_CREATE', () => {
+  beforeEach(setup);
+
+  it('inserts a node record with given fields', () => {
+    const { id, ok } = DDS_CMD.execute(DDS_TX.NODE_CREATE, {
+      name: 'Supplier A', type_code: 'supplier', swim_lane_id: null
+    }, null);
+    expect(ok).toBe(true);
+    const node = DDS_STORE.query('nodes', { id })[0];
+    expect(node.name).toBe('Supplier A');
+    expect(node.type_code).toBe('supplier');
+  });
+
+  it('defaults tags/notes when not provided (table-driven create, no mapId)', () => {
+    const { id } = DDS_CMD.execute(DDS_TX.NODE_CREATE, { name: 'N1' }, null);
+    const node = DDS_STORE.query('nodes', { id })[0];
+    expect(node.tags).toEqual([]);
+    expect(node.notes).toBe('');
+  });
+
+  it('does not create a map_nodes row when mapId is absent (table call site)', () => {
+    const { id } = DDS_CMD.execute(DDS_TX.NODE_CREATE, { name: 'N1' }, null);
+    expect(DDS_STORE.query('map_nodes', { node_id: id }).length).toBe(0);
+  });
+
+  it('is undoable', () => {
+    const { id } = DDS_CMD.execute(DDS_TX.NODE_CREATE, { name: 'Undo me' }, null);
+    expect(DDS_STORE.query('nodes', { id }).length).toBe(1);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('nodes', { id }).length).toBe(0);
+  });
+
+  // NOTE: the mapId-present branch (modal call site, DDS_NODE_UI) calls
+  // DDS_LAYOUT.placeNode() to compute canvas position. DDS_LAYOUT is not
+  // part of the vitest shims (shims/modules.js) — same pre-existing gap as
+  // TX.MAP_ADD_PRODUCT_NODE (Phase 4), which has no unit coverage for the
+  // same reason. That branch is covered by manual verification only.
+});
+
+describe('DDS_TX.FLOW_CREATE', () => {
+  beforeEach(setup);
+
+  it('inserts a flow record and a map_flows row', () => {
+    const mapId = getMapId();
+    const n1 = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const n2 = DDS_STORE.insert('nodes', { name: 'N2' })[0];
+    const { ok, id, flowId, mapFlowId } = DDS_CMD.execute(DDS_TX.FLOW_CREATE, {
+      source_id: n1.id, target_id: n2.id
+    }, mapId);
+    expect(ok).toBe(true);
+    expect(flowId).toBe(id);
+    const flow = DDS_STORE.query('flows', { id })[0];
+    expect(flow.source_node_id).toBe(n1.id);
+    expect(flow.target_node_id).toBe(n2.id);
+    const mapFlows = DDS_STORE.query('map_flows', { id: mapFlowId });
+    expect(mapFlows.length).toBe(1);
+    expect(mapFlows[0].flow_id).toBe(id);
+  });
+
+  it('throws when mapId is missing', () => {
+    const n1 = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const n2 = DDS_STORE.insert('nodes', { name: 'N2' })[0];
+    const result = DDS_CMD.execute(DDS_TX.FLOW_CREATE, { source_id: n1.id, target_id: n2.id }, null);
+    expect(result.ok).toBe(false);
+  });
+
+  it('is undoable — removes both flow and map_flows', () => {
+    const mapId = getMapId();
+    const n1 = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const n2 = DDS_STORE.insert('nodes', { name: 'N2' })[0];
+    const { id } = DDS_CMD.execute(DDS_TX.FLOW_CREATE, { source_id: n1.id, target_id: n2.id }, mapId);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('flows', { id }).length).toBe(0);
+    expect(DDS_STORE.query('map_flows', { flow_id: id }).length).toBe(0);
+  });
+});
+
+describe('DDS_TX.FLOW_REROUTE', () => {
+  beforeEach(setup);
+
+  function makeFlow() {
+    const mapId = getMapId();
+    const n1 = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const n2 = DDS_STORE.insert('nodes', { name: 'N2' })[0];
+    const n3 = DDS_STORE.insert('nodes', { name: 'N3' })[0];
+    const { id: flowId } = DDS_CMD.execute(DDS_TX.FLOW_CREATE, { source_id: n1.id, target_id: n2.id }, mapId);
+    return { flowId, n1, n2, n3 };
+  }
+
+  it('reroutes the source endpoint', () => {
+    const { flowId, n2, n3 } = makeFlow();
+    DDS_CMD.execute(DDS_TX.FLOW_REROUTE, { flow_id: flowId, new_source_id: n3.id }, null);
+    const flow = DDS_STORE.query('flows', { id: flowId })[0];
+    expect(flow.source_node_id).toBe(n3.id);
+    expect(flow.target_node_id).toBe(n2.id);
+  });
+
+  it('reroutes the target endpoint', () => {
+    const { flowId, n1, n3 } = makeFlow();
+    DDS_CMD.execute(DDS_TX.FLOW_REROUTE, { flow_id: flowId, new_target_id: n3.id }, null);
+    const flow = DDS_STORE.query('flows', { id: flowId })[0];
+    expect(flow.source_node_id).toBe(n1.id);
+    expect(flow.target_node_id).toBe(n3.id);
+  });
+
+  it('is undoable', () => {
+    const { flowId, n1, n3 } = makeFlow();
+    DDS_CMD.execute(DDS_TX.FLOW_REROUTE, { flow_id: flowId, new_source_id: n3.id }, null);
+    DDS_TRANSACTIONS.undo();
+    const flow = DDS_STORE.query('flows', { id: flowId })[0];
+    expect(flow.source_node_id).toBe(n1.id);
+  });
+});
+
+describe('DDS_TX.MAP_MOVE_WAYPOINT', () => {
+  beforeEach(setup);
+
+  function makeMapFlow() {
+    const mapId = getMapId();
+    const n1 = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const n2 = DDS_STORE.insert('nodes', { name: 'N2' })[0];
+    const { mapFlowId } = DDS_CMD.execute(DDS_TX.FLOW_CREATE, { source_id: n1.id, target_id: n2.id }, mapId);
+    return { mapFlowId };
+  }
+
+  it('persists waypoint_pct on the map_flows row', () => {
+    const { mapFlowId } = makeMapFlow();
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_WAYPOINT, { map_flow_id: mapFlowId, waypoint_pct: 0.3 }, null);
+    expect(DDS_STORE.query('map_flows', { id: mapFlowId })[0].waypoint_pct).toBe(0.3);
+  });
+
+  it('resets to 0.5', () => {
+    const { mapFlowId } = makeMapFlow();
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_WAYPOINT, { map_flow_id: mapFlowId, waypoint_pct: 0.2 }, null);
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_WAYPOINT, { map_flow_id: mapFlowId, waypoint_pct: 0.5 }, null);
+    expect(DDS_STORE.query('map_flows', { id: mapFlowId })[0].waypoint_pct).toBe(0.5);
+  });
+
+  it('is undoable', () => {
+    const { mapFlowId } = makeMapFlow();
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_WAYPOINT, { map_flow_id: mapFlowId, waypoint_pct: 0.8 }, null);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('map_flows', { id: mapFlowId })[0].waypoint_pct).not.toBe(0.8);
+  });
+});
+
+describe('DDS_TX.MAP_MOVE_NODE', () => {
+  beforeEach(setup);
+
+  it('persists x/y on the map_nodes row', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const mn = DDS_STORE.insert('map_nodes', { map_id: mapId, node_id: node.id, x: 10, y: 10 })[0];
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_NODE, { map_node_id: mn.id, x: 150, y: 220 }, null);
+    const updated = DDS_STORE.query('map_nodes', { id: mn.id })[0];
+    expect(updated.x).toBe(150);
+    expect(updated.y).toBe(220);
+  });
+
+  it('is undoable', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const mn = DDS_STORE.insert('map_nodes', { map_id: mapId, node_id: node.id, x: 10, y: 10 })[0];
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_NODE, { map_node_id: mn.id, x: 150, y: 220 }, null);
+    DDS_TRANSACTIONS.undo();
+    const reverted = DDS_STORE.query('map_nodes', { id: mn.id })[0];
+    expect(reverted.x).toBe(10);
+    expect(reverted.y).toBe(10);
+  });
+});
+
+describe('DDS_TX.MAP_MOVE_NOTE_GHOST', () => {
+  beforeEach(setup);
+
+  it('persists note_dx/note_dy on the map_nodes row', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const mn = DDS_STORE.insert('map_nodes', { map_id: mapId, node_id: node.id, x: 0, y: 0 })[0];
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_NOTE_GHOST, { map_node_id: mn.id, note_dx: 12, note_dy: -8 }, null);
+    const updated = DDS_STORE.query('map_nodes', { id: mn.id })[0];
+    expect(updated.note_dx).toBe(12);
+    expect(updated.note_dy).toBe(-8);
+  });
+
+  it('is undoable', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const mn = DDS_STORE.insert('map_nodes', { map_id: mapId, node_id: node.id, x: 0, y: 0, note_dx: 0, note_dy: 30 })[0];
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_NOTE_GHOST, { map_node_id: mn.id, note_dx: 12, note_dy: -8 }, null);
+    DDS_TRANSACTIONS.undo();
+    const reverted = DDS_STORE.query('map_nodes', { id: mn.id })[0];
+    expect(reverted.note_dx).toBe(0);
+    expect(reverted.note_dy).toBe(30);
+  });
+});
+
+describe('DDS_TX.MAP_MOVE_ANNOTATION', () => {
+  beforeEach(setup);
+
+  function makeMapAnnotation() {
+    const mapId = getMapId();
+    const ann = DDS_STORE.insert('annotations', { notes: 'A1' })[0];
+    const ma = DDS_STORE.insert('map_annotations', { map_id: mapId, annotation_id: ann.id, x: 0, y: 0 })[0];
+    return { ma };
+  }
+
+  it('persists x/y on the map_annotations row', () => {
+    const { ma } = makeMapAnnotation();
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_ANNOTATION, { map_annotation_id: ma.id, x: 77, y: 88 }, null);
+    const updated = DDS_STORE.query('map_annotations', { id: ma.id })[0];
+    expect(updated.x).toBe(77);
+    expect(updated.y).toBe(88);
+  });
+
+  it('is undoable', () => {
+    const { ma } = makeMapAnnotation();
+    DDS_CMD.execute(DDS_TX.MAP_MOVE_ANNOTATION, { map_annotation_id: ma.id, x: 77, y: 88 }, null);
+    DDS_TRANSACTIONS.undo();
+    const reverted = DDS_STORE.query('map_annotations', { id: ma.id })[0];
+    expect(reverted.x).toBe(0);
+    expect(reverted.y).toBe(0);
+  });
+});
+
+// NOTE: TX.MAP_RESIZE_LANE (DDS_SWIMLANES, SCRIPT 1100) was found during
+// Phase 5 to already implement the §1.5 begin-at-mousedown pattern correctly
+// with direct DDS_TRANSACTIONS.begin/commit/rollback calls (no DDS_CMD.execute
+// involved by design — execute() is single-shot and cannot support the
+// split-phase mousedown/onMove/mouseup lifecycle). No command was added and no
+// code changed; see DDScope_Commands.md v1.9 for the docs-only correction.
+
+describe('DDS_TX.DEMAND_DELETE — cascade via DDS_MODEL.deleteDemand', () => {
+  beforeEach(setup);
+
+  it('removes the demand record', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'P1' }, null);
+    DDS_STORE.insert('demands', { node_id: node.id, product_id: productId });
+    DDS_CMD.execute(DDS_TX.DEMAND_DELETE, { node_id: node.id, product_id: productId }, null);
+    expect(DDS_STORE.query('demands', { node_id: node.id, product_id: productId }).length).toBe(0);
+  });
+
+  it('removes map_demands for the deleted demand', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'P1' }, null);
+    const demand = DDS_STORE.insert('demands', { node_id: node.id, product_id: productId })[0];
+    DDS_STORE.insert('map_demands', { demand_id: demand.id, map_id: mapId });
+    DDS_CMD.execute(DDS_TX.DEMAND_DELETE, { node_id: node.id, product_id: productId }, null);
+    expect(DDS_STORE.query('map_demands', { demand_id: demand.id }).length).toBe(0);
+  });
+
+  it('is undoable', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const { id: productId } = DDS_CMD.execute(DDS_TX.PRODUCT_CREATE, { name: 'P1' }, null);
+    DDS_STORE.insert('demands', { node_id: node.id, product_id: productId });
+    DDS_CMD.execute(DDS_TX.DEMAND_DELETE, { node_id: node.id, product_id: productId }, null);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('demands', { node_id: node.id, product_id: productId }).length).toBe(1);
+  });
+});

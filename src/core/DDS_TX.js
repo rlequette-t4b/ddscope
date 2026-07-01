@@ -9,7 +9,7 @@ var TX = {
   NODE_CREATE:              'node.create',
   NODE_UPDATE:              'node.update',
   NODE_DELETE:              'node.delete',
-  NODE_ASSIGN_LANE:         'node.assign_lane',
+  NODE_ASSIGN_LANE:         'node.assign_lane', // unused — legacy side-panel call site uses NODE_UPDATE (see DDScope_Commands.md §3.3)
 
   // Flows
   FLOW_CREATE:              'flow.create',
@@ -25,9 +25,9 @@ var TX = {
   PRODUCT_DELETE:           'product.delete',
 
   // SKUs
-  SKU_ADD:                  'sku.add',
+  SKU_ADD:                  'sku.add', // unused — cascade folded into FLOW_ADD_PRODUCT (see DDScope_Commands.md §3.3)
   SKU_UPDATE:               'sku.update',
-  SKU_REMOVE:               'sku.remove',
+  SKU_REMOVE:               'sku.remove', // unused — cascade folded into FLOW_REMOVE_PRODUCT (see DDScope_Commands.md §3.3)
 
   // BOMs
   BOM_CREATE:               'bom.create',
@@ -80,6 +80,10 @@ var TX = {
   MAP_MOVE_ANNOTATION:      'map.move_annotation',
   MAP_RESIZE_LANE:          'map.resize_lane',
 
+  // Map presentation — demand visibility
+  MAP_SHOW_DEMAND:          'map.show_demand',
+  MAP_HIDE_DEMAND:          'map.hide_demand',
+
   // Notes (DDS_CMD — FEAT-002)
   NOTE_CATEGORY_CREATE:     'note_category.create',
   NOTE_CATEGORY_UPDATE:     'note_category.update',
@@ -102,3 +106,6 @@ var TX = {
 };
 
 window.TX = TX;
+
+// ESM export for Vitest compatibility
+export default TX;

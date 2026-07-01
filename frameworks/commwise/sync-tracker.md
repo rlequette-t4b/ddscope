@@ -31,8 +31,8 @@ After every PULL or PUSH, update the relevant row immediately.
 | `core/DDS_MODEL.js` | SCRIPT 1550 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
 | `core/DDS_ACTIONS.js` | SCRIPT 1850 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
 | `core/DDS_TRANSACTIONS.js` | SCRIPT 1860 | store-dependent | NO | PUSH | 2026-05-24 | v100 | #23913 |
-| `core/DDS_TX.js` | SCRIPT 1865 | pure | NO | PUSH | 2026-06-01 | — | #24834 |
-| `core/DDS_CMD.js` | SCRIPT 1875 | store-dependent | NO | PUSH | 2026-06-01 | — | #24834 |
+| `core/DDS_TX.js` | SCRIPT 1865 | pure | NO | PUSH | 2026-07-01 | — | #28133 | (Phase 5 §3.3: added MAP_SHOW_DEMAND / MAP_HIDE_DEMAND keys, annotated NODE_ASSIGN_LANE / SKU_ADD / SKU_REMOVE as unused) |
+| `core/DDS_CMD.js` | SCRIPT 1875 | store-dependent | NO | PUSH | 2026-07-01 | — | #28133 | (Phase 5 §3.3: added NODE_UPDATE, FLOW_UPDATE, FLOW_ADD_PRODUCT, FLOW_REMOVE_PRODUCT, SKU_UPDATE, DEMAND_CREATE, MAP_SHOW_DEMAND, MAP_HIDE_DEMAND commands) |
 | `domain/DDS_NODES.js` | SCRIPT 1560 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
 | `domain/DDS_PRODUCTS.js` | SCRIPT 1610 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
 | `domain/DDS_FLOWS.js` | SCRIPT 1620 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
