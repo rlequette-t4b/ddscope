@@ -212,6 +212,15 @@ var DDS_MODEL = (function () {
   };
 
   // ------------------------------------------------------------------
+  // deleteAnnotation
+  // Deletes all map_annotations for this annotation, then the record.
+  // ------------------------------------------------------------------
+  api.deleteAnnotation = function (annotationId) {
+    DDS_STORE.remove('map_annotations', { annotation_id: annotationId });
+    DDS_STORE.remove('annotations',     { id: annotationId });
+  };
+
+  // ------------------------------------------------------------------
   // rerouteFlow
   // Updates source_node_id and/or target_node_id on the flows record.
   // No SKU modification.

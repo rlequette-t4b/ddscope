@@ -1,15 +1,18 @@
-// JS: DDS_CMD — unified command layer (notes domain bootstrap)
+// JS: DDS_CMD — unified command layer (notes domain + Phase 2: lanes, annotations, settings)
 // CommWise block: SCRIPT 1875
 // Testability: store-dependent
-// Depends on: DDS_STORE (SCRIPT 150), DDS_TRANSACTIONS (SCRIPT 1860), TX (SCRIPT 1865)
+// Depends on: DDS_STORE (SCRIPT 150), DDS_TRANSACTIONS (SCRIPT 1860), TX (SCRIPT 1865), DDS_MODEL (SCRIPT 1550)
 // API documented: yes
 //
-// Bootstrap of the future unified command layer — notes domain only (FEAT-002).
-// Legacy helpers (DDS_NODES, DDS_ACTIONS, etc.) are untouched.
+// Bootstrap of the future unified command layer.
+// Domains covered: notes (FEAT-002), swim lanes, annotations (delete),
+// settings node/product types. Legacy helpers (DDS_NODES, DDS_ACTIONS, etc.)
+// remain in place for domains not yet migrated.
 //
 // Signature:
 //   DDS_CMD.execute(txKey, params, mapId, onSuccess?)
 //   Returns: { ok: boolean, id?: integer }
+// AUDITOR:LARGE_BLOCK_JUSTIFIED - unified command registry serving multiple domains atomically; splitting would break single-point command registration
 
 var DDS_CMD = (function () {
 
@@ -157,6 +160,112 @@ var DDS_CMD = (function () {
     DDS_STORE.remove('maps',            { id: params.id });
     DDS_STORE.markDirty();
     return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------------
+  // Swim lanes domain (Phase 2)
+  // ---------------------------------------------------------------------------
+
+  // TX.LANE_CREATE
+  // params: { name: string, color?: string }
+  _register(TX.LANE_CREATE, function (params) {
+    var inserted = DDS_STORE.insert('swim_lanes', [{
+      name:  params.name || '',
+      color: params.color || '#6b7280'
+    }]);
+    DDS_STORE.markDirty();
+    return { ok: true, id: inserted[0].id };
+  });
+
+  // TX.LANE_UPDATE
+  // params: { id: integer, name?: string, color?: string }
+  _register(TX.LANE_UPDATE, function (params) {
+    var updates = {};
+    if (params.name  !== undefined) { updates.name  = params.name; }
+    if (params.color !== undefined) { updates.color = params.color; }
+    DDS_STORE.update('swim_lanes', { id: params.id }, updates);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.LANE_DELETE
+  // params: { id: integer }
+  // Cascade: delegates to DDS_MODEL.deleteSwimLane (deletes all assigned
+  // nodes with their full cascade, all map_swim_lanes references, clears
+  // default_swim_lane_id on affected node_types).
+  _register(TX.LANE_DELETE, function (params) {
+    DDS_MODEL.deleteSwimLane(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------------
+  // Annotations domain (Phase 2)
+  // ---------------------------------------------------------------------------
+
+  // TX.ANNOTATION_DELETE
+  // params: { id: integer }
+  // Cascade: delegates to DDS_MODEL.deleteAnnotation (removes map_annotations
+  // across all maps, then the annotations record).
+  _register(TX.ANNOTATION_DELETE, function (params) {
+    DDS_MODEL.deleteAnnotation(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------------
+  // Settings domain (Phase 2) — node types / product types
+  // Single TX key covers both create (no id) and update (id present).
+  // forceInsert: true forces an insert even when id is present — mirrors
+  // the "Save as New" button in the Settings modal (edit mode, insert a
+  // new record instead of updating the one being edited).
+  // Single-default and single-product-node-default rules are enforced
+  // here, inside the same transaction, so undo restores the previous
+  // default flags atomically together with the saved record.
+  // ---------------------------------------------------------------------------
+
+  // TX.SETTINGS_NODE_TYPE
+  // params: { id?: integer, forceInsert?: boolean, fields: {
+  //   code, label, shape, is_default, color, default_swim_lane_id,
+  //   is_product_node_default, icon_key, label_position, transparent_bg
+  // } }
+  _register(TX.SETTINGS_NODE_TYPE, function (params) {
+    var fields = params.fields || {};
+    if (fields.is_default) {
+      DDS_STORE.update('node_types', {}, { is_default: false });
+    }
+    if (fields.is_product_node_default) {
+      DDS_STORE.update('node_types', {}, { is_product_node_default: false });
+    }
+    var doInsert = !params.id || params.forceInsert;
+    if (doInsert) {
+      var inserted = DDS_STORE.insert('node_types', [fields]);
+      DDS_STORE.markDirty();
+      return { ok: true, id: inserted[0].id };
+    }
+    DDS_STORE.update('node_types', { id: params.id }, fields);
+    DDS_STORE.markDirty();
+    return { ok: true, id: params.id };
+  });
+
+  // TX.SETTINGS_PRODUCT_TYPE
+  // params: { id?: integer, forceInsert?: boolean, fields: {
+  //   code, label, shape, is_default, color
+  // } }
+  _register(TX.SETTINGS_PRODUCT_TYPE, function (params) {
+    var fields = params.fields || {};
+    if (fields.is_default) {
+      DDS_STORE.update('product_types', {}, { is_default: false });
+    }
+    var doInsert = !params.id || params.forceInsert;
+    if (doInsert) {
+      var inserted = DDS_STORE.insert('product_types', [fields]);
+      DDS_STORE.markDirty();
+      return { ok: true, id: inserted[0].id };
+    }
+    DDS_STORE.update('product_types', { id: params.id }, fields);
+    DDS_STORE.markDirty();
+    return { ok: true, id: params.id };
   });
 
   // ---------------------------------------------------------------------------
