@@ -1,4 +1,4 @@
-// JS: DDS_CMD — unified command layer (notes domain + Phase 2: lanes, annotations, settings + Phase 3: products, BOMs, demands + Phase 4: maps, project, add-product-on-map + Phase 5: nodes, flows, waypoint/drag persists, DDS_PANEL)
+// JS: DDS_CMD — unified command layer (notes domain + Phase 2: lanes, annotations, settings + Phase 3: products, BOMs, demands + Phase 4: maps, project, add-product-on-map)
 // CommWise block: SCRIPT 1875
 // Testability: store-dependent
 // Depends on: DDS_STORE (SCRIPT 150), DDS_TRANSACTIONS (SCRIPT 1860), TX (SCRIPT 1865), DDS_MODEL (SCRIPT 1550), DDS_LAYOUT (map placement, Phase 4 only)
@@ -7,10 +7,7 @@
 // Bootstrap of the future unified command layer.
 // Domains covered: notes (FEAT-002), swim lanes, annotations (delete),
 // settings node/product types, products / BOMs / demands (Phase 3 tabular CRUD),
-// maps create/rename/duplicate/delete, project rename, add-product-on-map (Phase 4),
-// node/flow creation, flow reroute, waypoint/drag terminal persists, DDS_PANEL
-// side panel (node/flow/lane fields, flow products, SKU tags, demand CRUD,
-// demand map visibility) (Phase 5).
+// maps create/rename/duplicate/delete, project rename, add-product-on-map (Phase 4).
 // Legacy helpers (DDS_NODES, DDS_ACTIONS, etc.) remain in place for domains
 // not yet migrated.
 //
@@ -27,6 +24,16 @@
 //   be deleted. Notification payload: [{ type: txKey, params }] — a single-
 //   element array, matching the shape DDS_ACTIONS_LOG already consumes.
 // AUDITOR:LARGE_BLOCK_JUSTIFIED - unified command registry serving multiple domains atomically; splitting would break single-point command registration
+//
+// SRC MIRROR NOTE (2026-07-02): resynced against the live CommWise app
+// (SCRIPT 1875, revision #28180) — this mirror had drifted significantly
+// behind live: missing executeList()/getVocabularyText()/_VOCAB (Phase 6
+// Steps 1-3), TX.ANNOTATION_CREATE/UPDATE, standalone TX.SKU_ADD/REMOVE,
+// TX.BOM_COMPONENT_ADD/UPDATE/REMOVE (Phase 6 Step 2), the full-delete
+// domain (TX.NODE_DELETE/FLOW_DELETE/MAP_REMOVE_*/MULTI_DELETE, Phase 5
+// §3.4), and describe()'s gap-closing cases. Also carries the fix for the
+// AI-string-id bug (parseInt on source_id/target_id/new_source_id/
+// new_target_id/product_id/swim_lane_id) — see DDScope_Commands.md v1.13.
 
 var DDS_CMD = (function () {
 
@@ -46,6 +53,37 @@ var DDS_CMD = (function () {
   function _truncate(str, n) {
     str = (str || '').trim();
     return str.length > n ? str.substring(0, n) + '…' : str;
+  }
+
+  // _entityLabel / _flowEndpointNames / _bomNodeName — shared by describe()
+  // for both real records and 'new_*' temporary ids referenced by an
+  // in-progress AI plan (Phase 6 — DDS_CMD_Migration.md). Mirrors the
+  // newLabelMap pattern from the legacy DDS_ACTIONS.describe().
+  function _entityLabel(table, id, newLabelMap) {
+    if (typeof id === 'string' && id.indexOf('new_') === 0) {
+      return (newLabelMap && newLabelMap[id]) || id;
+    }
+    var rec = _rec(table, id);
+    if (!rec) return table + '#' + id;
+    if (rec.name) return rec.name;
+    if (rec.label) return rec.label;
+    if (rec.notes) return _truncate(rec.notes, 30);
+    return table + '#' + id;
+  }
+
+  function _flowEndpointNames(flowId, newLabelMap) {
+    var flow = _rec('flows', flowId);
+    if (!flow) return { src: 'flow#' + flowId, tgt: '?' };
+    return {
+      src: _entityLabel('nodes', flow.source_node_id, newLabelMap),
+      tgt: _entityLabel('nodes', flow.target_node_id, newLabelMap)
+    };
+  }
+
+  function _bomNodeName(bomId) {
+    var bom = _rec('boms', bomId);
+    if (!bom) return 'bom#' + bomId;
+    return _entityLabel('nodes', bom.node_id, {});
   }
 
   // ---------------------------------------------------------------------------
@@ -319,6 +357,35 @@ var DDS_CMD = (function () {
     return { ok: true };
   });
 
+  // TX.ANNOTATION_CREATE (Phase 6 Step 2 gap-closing — DDS_CMD_Migration.md)
+  // params: { notes?: string, swim_lane_id?: integer|null, tags?: array }
+  // Mirrors the legacy 'add_annotation' DDS_ACTIONS case: creates the
+  // annotations record only. Map placement is intentionally NOT done here —
+  // an annotation is never automatically placed on any map; that is a
+  // presentation-layer operation performed by the UI (DDS_ELEMENTS.addAnnotation),
+  // same as the AI flow's onSuccess handling (see DDScope_AI_Assistant.md §4).
+  _register(TX.ANNOTATION_CREATE, function (params) {
+    var inserted = DDS_STORE.insert('annotations', [{
+      notes:        params.notes || '',
+      swim_lane_id: params.swim_lane_id ? parseInt(params.swim_lane_id, 10) : null,
+      tags:         params.tags || []
+    }]);
+    DDS_STORE.markDirty();
+    return { ok: true, id: inserted[0].id };
+  });
+
+  // TX.ANNOTATION_UPDATE (Phase 6 Step 2 gap-closing — DDS_CMD_Migration.md)
+  // params: { id: integer, notes?: string, swim_lane_id?: integer|null, tags?: array }
+  _register(TX.ANNOTATION_UPDATE, function (params) {
+    var updates = {};
+    if (params.notes        !== undefined) { updates.notes        = params.notes; }
+    if (params.swim_lane_id !== undefined) { updates.swim_lane_id = params.swim_lane_id ? parseInt(params.swim_lane_id, 10) : null; }
+    if (params.tags         !== undefined) { updates.tags         = params.tags; }
+    DDS_STORE.update('annotations', { id: params.id }, updates);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
   // ---------------------------------------------------------------------------
   // Settings domain (Phase 2) — node types / product types
   // Single TX key covers both create (no id) and update (id present).
@@ -490,6 +557,47 @@ var DDS_CMD = (function () {
   // then the bom record).
   _register(TX.BOM_DELETE, function (params) {
     DDS_MODEL.deleteBom(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------------
+  // BOM components — unitary commands (Phase 6 Step 2 gap-closing —
+  // DDS_CMD_Migration.md). New TX keys alongside the existing
+  // BOM_UPDATE_COMPONENTS (full-list diff, still used by the table UI modal).
+  // These exist for the AI vocabulary, which reasons in single-component
+  // steps rather than re-emitting a full component list per edit — decision
+  // made in favour of unitary keys, per the docs' own leaning.
+  // ---------------------------------------------------------------------------
+
+  // TX.BOM_COMPONENT_ADD
+  // params: { bom_id: integer, product_id: integer, quantity?: number, notes?: string }
+  _register(TX.BOM_COMPONENT_ADD, function (params) {
+    DDS_STORE.insert('bom_components', [{
+      bom_id:     params.bom_id,
+      product_id: params.product_id,
+      quantity:   params.quantity !== undefined ? params.quantity : 1,
+      notes:      params.notes || ''
+    }]);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.BOM_COMPONENT_UPDATE
+  // params: { bom_id: integer, product_id: integer, quantity?: number, notes?: string }
+  _register(TX.BOM_COMPONENT_UPDATE, function (params) {
+    var updates = {};
+    if (params.quantity !== undefined) { updates.quantity = params.quantity; }
+    if (params.notes    !== undefined) { updates.notes    = params.notes; }
+    DDS_STORE.update('bom_components', { bom_id: params.bom_id, product_id: params.product_id }, updates);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.BOM_COMPONENT_REMOVE
+  // params: { bom_id: integer, product_id: integer }
+  _register(TX.BOM_COMPONENT_REMOVE, function (params) {
+    DDS_STORE.remove('bom_components', { bom_id: params.bom_id, product_id: params.product_id });
     DDS_STORE.markDirty();
     return { ok: true };
   });
@@ -712,11 +820,16 @@ var DDS_CMD = (function () {
   //           bidirectional?: boolean, notes?: string }
   // mapId: required — map-scoped creation (inserts a map_flows row), mirrors
   // the legacy DDS_FLOW_UI.createFlow drag-to-create flow.
+  // FIX (2026-07-02, DDScope_Commands.md v1.13): source_id/target_id are
+  // coerced via parseInt — AI-supplied ids arrive as strings
+  // (DDScope_AI_Assistant.md §4) and, left uncoerced, broke the strict ===
+  // node-lookup in DDS_MAP.loadMap (SCRIPT 1000), silently excluding the
+  // flow from the map even though it was correctly created and logged.
   _register(TX.FLOW_CREATE, function (params, mapId) {
     if (!mapId) throw new Error('[DDS_CMD] FLOW_CREATE requires a mapId');
     var inserted = DDS_STORE.insert('flows', [{
-      source_node_id:  params.source_id,
-      target_node_id:  params.target_id,
+      source_node_id:  parseInt(params.source_id, 10),
+      target_node_id:  parseInt(params.target_id, 10),
       product_ids:     params.product_ids || [],
       tags:            params.tags || [],
       lead_time_value: params.lead_time_value !== undefined ? params.lead_time_value : null,
@@ -734,10 +847,12 @@ var DDS_CMD = (function () {
   // params: { flow_id: integer, new_source_id?: integer, new_target_id?: integer }
   // At least one of new_source_id / new_target_id is expected — mirrors the
   // legacy DDS_FLOWS.reroute(flowId, newSourceId, newTargetId) signature.
+  // FIX (2026-07-02, DDScope_Commands.md v1.13): same parseInt coercion as
+  // TX.FLOW_CREATE — see comment there.
   _register(TX.FLOW_REROUTE, function (params) {
     var updates = {};
-    if (params.new_source_id) { updates.source_node_id = params.new_source_id; }
-    if (params.new_target_id) { updates.target_node_id = params.new_target_id; }
+    if (params.new_source_id) { updates.source_node_id = parseInt(params.new_source_id, 10); }
+    if (params.new_target_id) { updates.target_node_id = parseInt(params.new_target_id, 10); }
     DDS_STORE.update('flows', { id: params.flow_id }, updates);
     DDS_STORE.markDirty();
     return { ok: true };
@@ -807,11 +922,17 @@ var DDS_CMD = (function () {
   // throughout. NOTE: TX.NODE_ASSIGN_LANE exists in the catalogue but is
   // unused — the legacy swim-lane <select> has always gone through
   // TX.NODE_UPDATE, not a dedicated assign-to-lane action.
+  // FIX (2026-07-02, DDScope_Commands.md v1.13): swim_lane_id coerced via
+  // parseInt — same class of bug as TX.FLOW_CREATE, aligned with the pattern
+  // already used by TX.ANNOTATION_CREATE/UPDATE.
   _register(TX.NODE_UPDATE, function (params, mapId) {
     var nodeUpdates = {};
     ['name', 'type_code', 'swim_lane_id', 'notes', 'tags'].forEach(function (f) {
       if (params[f] !== undefined) { nodeUpdates[f] = params[f]; }
     });
+    if (nodeUpdates.swim_lane_id !== undefined) {
+      nodeUpdates.swim_lane_id = nodeUpdates.swim_lane_id === null ? null : parseInt(nodeUpdates.swim_lane_id, 10);
+    }
     if (Object.keys(nodeUpdates).length > 0) {
       DDS_STORE.update('nodes', { id: params.id }, nodeUpdates);
     }
@@ -872,20 +993,26 @@ var DDS_CMD = (function () {
   // flow endpoints (source and target node) — mirrors the legacy
   // DDS_PRODUCTS.syncFlowSkus() / ensureSku() cascade, ported inline since no
   // standalone SKU_ADD call site exists (see DDScope_Commands.md §3.3 gap
-  // note — TX.SKU_ADD is unused). Never removes an existing SKU.
+  // note — TX.SKU_ADD is unused at the legacy UI level). Never removes an
+  // existing SKU.
+  // FIX (2026-07-02, DDScope_Commands.md v1.13): product_id coerced via
+  // parseInt — an uncoerced string failed the indexOf() lookup against
+  // flow.product_ids.map(Number), silently duplicating the id on repeated
+  // AI-driven calls instead of being recognised as already present.
   _register(TX.FLOW_ADD_PRODUCT, function (params) {
     var flow = _rec('flows', params.flow_id);
     if (!flow) throw new Error('[DDS_CMD] Flow not found');
+    var productId  = parseInt(params.product_id, 10);
     var productIds = Array.isArray(flow.product_ids) ? flow.product_ids.map(Number) : [];
-    if (productIds.indexOf(params.product_id) === -1) {
-      productIds.push(params.product_id);
+    if (productIds.indexOf(productId) === -1) {
+      productIds.push(productId);
       DDS_STORE.update('flows', { id: params.flow_id }, { product_ids: productIds });
     }
 
     [flow.source_node_id, flow.target_node_id].forEach(function (nodeId) {
-      var existing = DDS_STORE.query('skus', { node_id: nodeId, product_id: params.product_id });
+      var existing = DDS_STORE.query('skus', { node_id: nodeId, product_id: productId });
       if (existing.length === 0) {
-        DDS_STORE.insert('skus', [{ node_id: nodeId, product_id: params.product_id, tags: [], notes: '' }]);
+        DDS_STORE.insert('skus', [{ node_id: nodeId, product_id: productId, tags: [], notes: '' }]);
       }
     });
 
@@ -899,12 +1026,16 @@ var DDS_CMD = (function () {
   // flow endpoints that are no longer needed — mirrors DDS_PRODUCTS.cleanSku():
   // a SKU is kept if its node is the product-node-default type (owns its SKU
   // independently of flows), or if any other flow touching that node still
-  // references the product. See §3.3 gap note — TX.SKU_REMOVE is unused.
+  // references the product. See §3.3 gap note — TX.SKU_REMOVE is unused at
+  // the legacy UI level.
+  // FIX (2026-07-02, DDScope_Commands.md v1.13): same parseInt coercion as
+  // TX.FLOW_ADD_PRODUCT — see comment there.
   _register(TX.FLOW_REMOVE_PRODUCT, function (params) {
     var flow = _rec('flows', params.flow_id);
     if (!flow) throw new Error('[DDS_CMD] Flow not found');
+    var productId  = parseInt(params.product_id, 10);
     var productIds = Array.isArray(flow.product_ids) ? flow.product_ids.map(Number) : [];
-    var idx = productIds.indexOf(params.product_id);
+    var idx = productIds.indexOf(productId);
     if (idx !== -1) {
       productIds.splice(idx, 1);
       DDS_STORE.update('flows', { id: params.flow_id }, { product_ids: productIds });
@@ -918,25 +1049,173 @@ var DDS_CMD = (function () {
 
       var stillNeeded = DDS_STORE.query('flows').some(function (f) {
         return (f.source_node_id === nodeId || f.target_node_id === nodeId) &&
-          Array.isArray(f.product_ids) && f.product_ids.map(Number).indexOf(params.product_id) !== -1;
+          Array.isArray(f.product_ids) && f.product_ids.map(Number).indexOf(productId) !== -1;
       });
       if (stillNeeded) return;
 
-      DDS_STORE.remove('skus', { node_id: nodeId, product_id: params.product_id });
+      DDS_STORE.remove('skus', { node_id: nodeId, product_id: productId });
     });
 
     DDS_STORE.markDirty();
     return { ok: true };
   });
 
+  // TX.SKU_ADD (Phase 6 Step 2 gap-closing — DDS_CMD_Migration.md)
+  // params: { node_id: integer, product_id: integer, tags?: array, notes?: string }
+  // Standalone SKU creation for the AI vocabulary — the legacy UI call sites
+  // only ever create a SKU as a side effect of FLOW_ADD_PRODUCT, but the AI
+  // needs to create a bare SKU (e.g. product stored at a node with no flow
+  // yet). Guards against a duplicate (same node_id + product_id) by no-oping
+  // rather than throwing, since a retried AI plan should not fail.
+  _register(TX.SKU_ADD, function (params) {
+    var existing = DDS_STORE.query('skus', { node_id: params.node_id, product_id: params.product_id });
+    if (existing.length > 0) { return { ok: true }; }
+    DDS_STORE.insert('skus', [{
+      node_id:    params.node_id,
+      product_id: params.product_id,
+      tags:       params.tags || [],
+      notes:      params.notes || ''
+    }]);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
   // TX.SKU_UPDATE
-  // params: { node_id: integer, product_id: integer, tags? }
-  // Only tags are edited from the SKU row in the node panel (legacy call
-  // site scope) — notes are not exposed there.
+  // params: { node_id: integer, product_id: integer, tags?: array, notes?: string }
+  // The legacy side-panel SKU row only edits tags; notes is exposed here for
+  // the AI vocabulary (Phase 6 Step 2 gap-closing — DDS_CMD_Migration.md).
   _register(TX.SKU_UPDATE, function (params) {
     var updates = {};
-    if (params.tags !== undefined) { updates.tags = params.tags; }
+    if (params.tags  !== undefined) { updates.tags  = params.tags; }
+    if (params.notes !== undefined) { updates.notes = params.notes; }
     DDS_STORE.update('skus', { node_id: params.node_id, product_id: params.product_id }, updates);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.SKU_REMOVE (Phase 6 Step 2 gap-closing — DDS_CMD_Migration.md)
+  // params: { node_id: integer, product_id: integer }
+  // Delegates to DDS_MODEL.removeSku — same cascade as the legacy
+  // 'remove_sku' DDS_ACTIONS case (removes dependent demands/map_demands).
+  _register(TX.SKU_REMOVE, function (params) {
+    DDS_MODEL.removeSku(params.node_id, params.product_id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------------
+  // Nodes / Flows domain — full delete (Phase 5, DDS_CMD_Migration.md §3.4)
+  // ---------------------------------------------------------------------------
+
+  // TX.NODE_DELETE
+  // params: { id: integer }
+  // Cascade: delegates to DDS_MODEL.deleteNode (flows, skus, boms, demands,
+  // map_nodes across all maps, orphan product cleanup, Cytoscape removal —
+  // same cascade already used by the legacy 'delete_node' DDS_ACTIONS case).
+  _register(TX.NODE_DELETE, function (params) {
+    DDS_MODEL.deleteNode(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.FLOW_DELETE
+  // params: { id: integer }
+  // Cascade: delegates to DDS_MODEL.deleteFlow (map_flows across all maps).
+  // NOTE: no SKU cleanup — matches existing behaviour of the legacy
+  // 'delete_flow' DDS_ACTIONS case. The DDS_REMOVE confirmation modal's
+  // "orphan SKU(s) will be deleted" text is display-only and does not
+  // reflect an actual cleanup step; pre-existing gap, out of scope here.
+  _register(TX.FLOW_DELETE, function (params) {
+    DDS_MODEL.deleteFlow(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------------
+  // Map presentation — remove from map only (Phase 5, DDS_CMD_Migration.md §3.4)
+  // TX.MAP_REMOVE_NODE covers both the single-element and the multi-selection
+  // map-only removal rows in the inventory — same TX key, unified params
+  // shape: always an items array (one entry for the single-element case).
+  // ---------------------------------------------------------------------------
+
+  // TX.MAP_REMOVE_NODE
+  // params: { items: [{ type: 'node'|'edge', id: integer }] }
+  // mapId: required — the active map to remove from.
+  // Delegates to DDS_ELEMENTS.removeNode/removeFlow, which already cascade
+  // map-scoped flows and handle their own Cytoscape cleanup.
+  _register(TX.MAP_REMOVE_NODE, function (params, mapId) {
+    if (!mapId) throw new Error('[DDS_CMD] MAP_REMOVE_NODE requires a mapId');
+    (params.items || []).forEach(function (item) {
+      if (item.type === 'node') DDS_ELEMENTS.removeNode(item.id);
+      else if (item.type === 'edge') DDS_ELEMENTS.removeFlow(item.id);
+    });
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.MAP_REMOVE_FLOW
+  // params: { id: integer } — mapId required.
+  _register(TX.MAP_REMOVE_FLOW, function (params, mapId) {
+    if (!mapId) throw new Error('[DDS_CMD] MAP_REMOVE_FLOW requires a mapId');
+    DDS_ELEMENTS.removeFlow(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.MAP_REMOVE_ANNOTATION
+  // params: { id: integer } — mapId required.
+  _register(TX.MAP_REMOVE_ANNOTATION, function (params, mapId) {
+    if (!mapId) throw new Error('[DDS_CMD] MAP_REMOVE_ANNOTATION requires a mapId');
+    DDS_ELEMENTS.removeAnnotation(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.MAP_REMOVE_LANE
+  // params: { id: integer } — mapId required.
+  // Gap found during Phase 5 §3.4 migration (see DDScope_Commands.md §3.4):
+  // the DDS_REMOVE lane modal has always supported "map only" removal
+  // (DDS_ELEMENTS.removeLane), but this row was never in the TX catalogue
+  // or the DDS_CMD_Migration.md §3.4 inventory. Added here rather than left
+  // silently unreachable now that dispatch is keyed on txKey.
+  _register(TX.MAP_REMOVE_LANE, function (params, mapId) {
+    if (!mapId) throw new Error('[DDS_CMD] MAP_REMOVE_LANE requires a mapId');
+    DDS_ELEMENTS.removeLane(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------------
+  // Multi-selection — full delete (Phase 5, DDS_CMD_Migration.md §3.4)
+  // ---------------------------------------------------------------------------
+
+  // TX.MULTI_DELETE
+  // params: { items: [{ type: 'node'|'edge'|'annotation', id: integer }] }
+  // Ports the legacy DDS_REMOVE.execute() multi-selection branch verbatim:
+  // annotations first (no cascade), then nodes (cascade handles connected
+  // flows via DDS_MODEL.deleteNode), then standalone flows not already
+  // removed by a node cascade.
+  _register(TX.MULTI_DELETE, function (params) {
+    var items = params.items || [];
+    items.forEach(function (item) {
+      if (item.type === 'annotation') DDS_MODEL.deleteAnnotation(item.id);
+    });
+    var deletedNodeIds = {};
+    items.forEach(function (item) {
+      if (item.type === 'node') {
+        DDS_MODEL.deleteNode(item.id);
+        deletedNodeIds[item.id] = true;
+      }
+    });
+    items.forEach(function (item) {
+      if (item.type === 'edge') {
+        var flow = DDS_STORE.query('flows', { id: item.id })[0];
+        if (!flow) return; // already removed via node cascade
+        if (!deletedNodeIds[flow.source_node_id] && !deletedNodeIds[flow.target_node_id]) {
+          DDS_MODEL.deleteFlow(item.id);
+        }
+      }
+    });
     DDS_STORE.markDirty();
     return { ok: true };
   });
@@ -947,6 +1226,22 @@ var DDS_CMD = (function () {
   // ---------------------------------------------------------------------------
 
   function describe(commands) {
+    // Pass 1 — collect 'new_*' labels so an in-progress AI plan can describe
+    // commands that reference entities created earlier in the same plan
+    // (mirrors the legacy DDS_ACTIONS.describe() newLabelMap pattern).
+    var newLabelMap = {};
+    commands.forEach(function (entry) {
+      if (!entry.id || String(entry.id).indexOf('new_') !== 0) return;
+      var p = entry.params || {};
+      var lbl = p.name;
+      if (!lbl) {
+        if (entry.type === TX.FLOW_CREATE) { lbl = 'new flow'; }
+        else if (entry.type === TX.BOM_CREATE) { lbl = 'new BOM'; }
+        else { lbl = entry.id; }
+      }
+      newLabelMap[entry.id] = lbl;
+    });
+
     return commands.map(function (entry, index) {
       var type   = entry.type;
       var params = entry.params || {};
@@ -1008,6 +1303,120 @@ var DDS_CMD = (function () {
             var ptFields = params.fields || {};
             label = 'Save product type "' + (ptFields.label || ptFields.code || '?') + '"';
             break;
+
+          // --- Gap-closing additions (Phase 6 — DDS_CMD_Migration.md): full
+          // registry coverage so both the AI plan panel and the Actions Log
+          // panel can describe every command, not just the Phase 1-2 subset. ---
+
+          case TX.NODE_CREATE:
+            label = 'Add node "' + (params.name || '?') + '"';
+            break;
+          case TX.NODE_UPDATE:
+            label = 'Update node "' + _entityLabel('nodes', params.id, newLabelMap) + '"';
+            break;
+          case TX.NODE_DELETE:
+            label = 'Delete node "' + _entityLabel('nodes', params.id, newLabelMap) + '"';
+            break;
+
+          case TX.FLOW_CREATE:
+            var _fcArrow = params.bidirectional ? ' ↔ ' : ' → ';
+            label = 'Add flow ' + _entityLabel('nodes', params.source_id, newLabelMap) + _fcArrow + _entityLabel('nodes', params.target_id, newLabelMap);
+            break;
+          case TX.FLOW_UPDATE:
+            var _fuEp = _flowEndpointNames(params.id, newLabelMap);
+            label = 'Update flow ' + _fuEp.src + ' → ' + _fuEp.tgt;
+            break;
+          case TX.FLOW_DELETE:
+            var _fdEp = _flowEndpointNames(params.id, newLabelMap);
+            label = 'Delete flow ' + _fdEp.src + ' → ' + _fdEp.tgt;
+            break;
+          case TX.FLOW_REROUTE:
+            var _frEp  = _flowEndpointNames(params.flow_id, newLabelMap);
+            var _frSrc = params.new_source_id ? _entityLabel('nodes', params.new_source_id, newLabelMap) : _frEp.src;
+            var _frTgt = params.new_target_id ? _entityLabel('nodes', params.new_target_id, newLabelMap) : _frEp.tgt;
+            label = 'Reroute flow: ' + _frSrc + ' → ' + _frTgt;
+            break;
+          case TX.FLOW_ADD_PRODUCT:
+            var _fapEp = _flowEndpointNames(params.flow_id, newLabelMap);
+            label = 'Add product "' + _entityLabel('products', params.product_id, newLabelMap) + '" to flow ' + _fapEp.src + ' → ' + _fapEp.tgt;
+            break;
+          case TX.FLOW_REMOVE_PRODUCT:
+            var _frpEp = _flowEndpointNames(params.flow_id, newLabelMap);
+            label = 'Remove product "' + _entityLabel('products', params.product_id, newLabelMap) + '" from flow ' + _frpEp.src + ' → ' + _frpEp.tgt;
+            break;
+
+          case TX.PRODUCT_CREATE:
+            label = 'Add product "' + (params.name || '?') + '"';
+            break;
+          case TX.PRODUCT_UPDATE:
+            label = 'Update product "' + _entityLabel('products', params.id, newLabelMap) + '"';
+            break;
+          case TX.PRODUCT_DELETE:
+            label = 'Delete product "' + _entityLabel('products', params.id, newLabelMap) + '"';
+            break;
+
+          case TX.SKU_ADD:
+            label = 'Add SKU: node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" × product "' + _entityLabel('products', params.product_id, newLabelMap) + '"';
+            break;
+          case TX.SKU_UPDATE:
+            label = 'Update SKU: node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" × product "' + _entityLabel('products', params.product_id, newLabelMap) + '"';
+            break;
+          case TX.SKU_REMOVE:
+            label = 'Remove SKU: node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" × product "' + _entityLabel('products', params.product_id, newLabelMap) + '"';
+            break;
+
+          case TX.BOM_CREATE:
+            label = 'Add BOM: node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" → output "' + _entityLabel('products', params.output_product_id, newLabelMap) + '"';
+            break;
+          case TX.BOM_UPDATE_COMPONENTS:
+            label = 'Update BOM components on node "' + _bomNodeName(params.bom_id) + '"';
+            break;
+          case TX.BOM_DELETE:
+            label = 'Delete BOM on node "' + _bomNodeName(params.id) + '"';
+            break;
+          case TX.BOM_COMPONENT_ADD:
+            label = 'Add BOM component: "' + _entityLabel('products', params.product_id, newLabelMap) + '" × ' + (params.quantity || 1) + ' to BOM on "' + _bomNodeName(params.bom_id) + '"';
+            break;
+          case TX.BOM_COMPONENT_UPDATE:
+            label = 'Update BOM component "' + _entityLabel('products', params.product_id, newLabelMap) + '" on "' + _bomNodeName(params.bom_id) + '"';
+            break;
+          case TX.BOM_COMPONENT_REMOVE:
+            label = 'Remove BOM component "' + _entityLabel('products', params.product_id, newLabelMap) + '" from "' + _bomNodeName(params.bom_id) + '"';
+            break;
+
+          case TX.DEMAND_CREATE:
+            label = 'Add demand: node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" × product "' + _entityLabel('products', params.product_id, newLabelMap) + '"';
+            break;
+          case TX.DEMAND_UPDATE:
+            label = 'Update demand: node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" × product "' + _entityLabel('products', params.product_id, newLabelMap) + '"';
+            break;
+          case TX.DEMAND_DELETE:
+            label = 'Delete demand: node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" × product "' + _entityLabel('products', params.product_id, newLabelMap) + '"';
+            break;
+
+          case TX.ANNOTATION_CREATE:
+            var _annNotes = (params.notes || '').trim();
+            label = _annNotes.length > 0 ? 'Add annotation "' + _truncate(_annNotes, 30) + '"' : 'Add annotation';
+            break;
+          case TX.ANNOTATION_UPDATE:
+            label = 'Update annotation "' + _entityLabel('annotations', params.id, newLabelMap) + '"';
+            break;
+
+          case TX.MAP_CREATE:
+            label = 'Add map "' + (params.name || '?') + '"';
+            break;
+          case TX.MAP_RENAME:
+            label = 'Rename map to "' + (params.name || '?') + '"';
+            break;
+          case TX.MAP_DUPLICATE:
+            var _srcMap = _rec('maps', params.source_id);
+            label = 'Duplicate map "' + (_srcMap ? _srcMap.name : '?') + '"';
+            break;
+
+          case TX.PROJECT_RENAME:
+            label = 'Rename project to "' + (params.name || '?') + '"';
+            break;
+
           default:
             label = 'Unknown command: ' + type;
         }
@@ -1016,6 +1425,156 @@ var DDS_CMD = (function () {
       }
       return { index: index, label: label };
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // AI vocabulary — _VOCAB + getVocabularyText() (Phase 6 Step 3 —
+  // DDS_CMD_Migration.md). Replaces DDS_ACTIONS.ACTIONS / getVocabularyText()
+  // as the source of truth for the AI system prompt.
+  //
+  // Design note: the aspirational design in DDScope_Commands.md §0.4 calls
+  // for attaching required/optional/notes directly next to each
+  // _register(...) call. In practice that would mean touching every one of
+  // the ~35 existing _register calls in this file — high mechanical risk for
+  // a single-block live edit with no behavioural gain over a single
+  // co-located schema table. _VOCAB below stays in this same module (still
+  // the single source of truth getVocabularyText() reads from) but as one
+  // object rather than N inline attachments — documented deviation.
+  //
+  // Scope: only commands the AI is allowed to emit (DDScope_AI_Assistant.md
+  // §2/§3 — v1 exclusions: map-scoped, type management, lane deletion,
+  // notes). Map/project/settings/note commands are UI-only, absent here.
+  // ---------------------------------------------------------------------------
+
+  var _VOCAB = {};
+
+  _VOCAB[TX.NODE_CREATE] = {
+    required: ['name'],
+    optional: ['type_code', 'swim_lane_id', 'tags', 'notes'],
+    notes: [
+      'x, y are NOT accepted — canvas position is map-specific and set manually.',
+      'include "id": "new_node_N" in this command when referenced by params in later commands in the same plan.',
+      'PRODUCT-NODE PATTERN (default behaviour): whenever a new product is mentioned, apply the product-node pattern — create a node (name = product name, type = is_product_node_default, swim_lane_id = default_swim_lane_id unless specified by the user) and emit sku.add for the node × product pair. Also emit flow.create if the product is described as a source or destination.',
+      'EXCEPTION — flow.add_product only: when the user explicitly asks to add a product to an existing flow between two existing non-product nodes (both endpoints already exist and neither represents a product), use flow.add_product instead. Do NOT create a node for the product in this case.',
+      'In all other cases — new product, product as a flow endpoint, product placed in a lane — apply the product-node pattern.'
+    ]
+  };
+  _VOCAB[TX.NODE_UPDATE] = { required: ['id'], optional: ['name', 'type_code', 'swim_lane_id', 'tags', 'notes'], notes: [] };
+  _VOCAB[TX.NODE_DELETE] = {
+    required: ['id'], optional: [],
+    notes: [
+      'implicitly removes all flows where this node is source or target, all SKUs for this node, and all demands for this node.',
+      'List all implied cascade commands explicitly in the commands array.'
+    ]
+  };
+
+  _VOCAB[TX.FLOW_CREATE] = {
+    required: ['source_id', 'target_id'],
+    optional: ['lead_time_value', 'lead_time_unit', 'bidirectional', 'tags', 'notes'],
+    notes: [
+      'a flow with no products is valid.',
+      'bidirectional (boolean, default false) — when true, the flow is rendered with arrowheads at both ends. Use for symmetric exchanges. Same products and lead time apply in both directions. Do not create two flows for a bidirectional exchange.',
+      'include "id": "new_flow_N" in this command when referenced by later commands in the same plan.'
+    ]
+  };
+  _VOCAB[TX.FLOW_UPDATE] = { required: ['id'], optional: ['lead_time_value', 'lead_time_unit', 'bidirectional', 'tags', 'notes'], notes: [] };
+  _VOCAB[TX.FLOW_DELETE] = { required: ['id'], optional: [], notes: [] };
+  _VOCAB[TX.FLOW_REROUTE] = { required: ['flow_id'], optional: ['new_source_id', 'new_target_id'], notes: ['at least one of new_source_id or new_target_id is required.'] };
+  _VOCAB[TX.FLOW_ADD_PRODUCT] = { required: ['flow_id', 'product_id'], optional: [], notes: [] };
+  _VOCAB[TX.FLOW_REMOVE_PRODUCT] = { required: ['flow_id', 'product_id'], optional: [], notes: [] };
+
+  _VOCAB[TX.PRODUCT_CREATE] = { required: ['name'], optional: ['type_code', 'tags', 'notes'], notes: ['include "id": "new_product_N" in this command when referenced by later commands in the same plan.'] };
+  _VOCAB[TX.PRODUCT_UPDATE] = { required: ['id'], optional: ['name', 'type_code', 'tags', 'notes'], notes: [] };
+  _VOCAB[TX.PRODUCT_DELETE] = {
+    required: ['id'], optional: [],
+    notes: [
+      'implicitly removes the product from all flows, all SKUs, and all demands associated with those SKUs.',
+      'List all implied cascade commands explicitly in the commands array.'
+    ]
+  };
+
+  _VOCAB[TX.SKU_ADD] = { required: ['node_id', 'product_id'], optional: ['tags', 'notes'], notes: ['tags express the nature of the association (e.g. "buffer", "stock", "transit").'] };
+  _VOCAB[TX.SKU_UPDATE] = { required: ['node_id', 'product_id'], optional: ['tags', 'notes'], notes: [] };
+  _VOCAB[TX.SKU_REMOVE] = { required: ['node_id', 'product_id'], optional: [], notes: [] };
+
+  _VOCAB[TX.LANE_CREATE] = { required: ['name'], optional: ['color'], notes: ['include "id": "new_lane_N" in this command when referenced by later commands in the same plan.'] };
+  _VOCAB[TX.LANE_UPDATE] = { required: ['id'], optional: ['name', 'color'], notes: [] };
+
+  _VOCAB[TX.BOM_CREATE] = {
+    required: ['node_id', 'output_product_id'], optional: ['notes', 'components'],
+    notes: [
+      'include "id": "new_bom_N" when referenced by subsequent bom_component.add commands.',
+      'verify that output_product_id exists as a SKU on the node. If not, propose sku.add first.',
+      'components (optional array of { product_id, quantity, notes }) may be supplied inline at creation instead of separate bom_component.add commands.'
+    ]
+  };
+  _VOCAB[TX.BOM_DELETE] = { required: ['id'], optional: [], notes: ['implicitly removes all bom_components for this BOM. State the cascade explicitly in reasoning.'] };
+  _VOCAB[TX.BOM_COMPONENT_ADD] = { required: ['bom_id', 'product_id', 'quantity'], optional: ['notes'], notes: ['verify that product_id exists as a SKU on the node owning the BOM. If not, propose sku.add first.'] };
+  _VOCAB[TX.BOM_COMPONENT_UPDATE] = { required: ['bom_id', 'product_id'], optional: ['quantity', 'notes'], notes: [] };
+  _VOCAB[TX.BOM_COMPONENT_REMOVE] = { required: ['bom_id', 'product_id'], optional: [], notes: [] };
+
+  _VOCAB[TX.DEMAND_CREATE] = {
+    required: ['node_id', 'product_id'], optional: ['ctt_value', 'ctt_unit', 'demand_value', 'demand_period', 'notes'],
+    notes: [
+      'verify that the SKU (node_id × product_id) exists before emitting. If absent, propose sku.add first.',
+      'ctt_unit and demand_period accept: hours, days, weeks, months, years.'
+    ]
+  };
+  _VOCAB[TX.DEMAND_UPDATE] = { required: ['node_id', 'product_id'], optional: ['ctt_value', 'ctt_unit', 'demand_value', 'demand_period', 'notes'], notes: [] };
+  _VOCAB[TX.DEMAND_DELETE] = { required: ['node_id', 'product_id'], optional: [], notes: ['cascades to map_demands. State explicitly in reasoning.'] };
+
+  _VOCAB[TX.ANNOTATION_CREATE] = {
+    required: [], optional: ['notes', 'swim_lane_id', 'tags'],
+    notes: [
+      'x, y are NOT accepted — canvas position is map-specific and set by the UI after creation.',
+      'The annotation is NOT automatically placed on any map — map placement is a presentation-layer operation performed by the UI.',
+      'include "id": "new_annotation_N" when referenced by subsequent commands in the same plan.'
+    ]
+  };
+  _VOCAB[TX.ANNOTATION_UPDATE] = { required: ['id'], optional: ['notes', 'swim_lane_id', 'tags'], notes: [] };
+  _VOCAB[TX.ANNOTATION_DELETE] = { required: ['id'], optional: [], notes: ['cascades to all map_annotations records for this annotation. State the cascade explicitly in reasoning.'] };
+
+  function getVocabularyText() {
+    var lines = [];
+
+    var sections = [
+      { title: 'NODES',      keys: [TX.NODE_CREATE, TX.NODE_UPDATE, TX.NODE_DELETE] },
+      { title: 'FLOWS',      keys: [TX.FLOW_CREATE, TX.FLOW_UPDATE, TX.FLOW_DELETE, TX.FLOW_REROUTE, TX.FLOW_ADD_PRODUCT, TX.FLOW_REMOVE_PRODUCT] },
+      { title: 'PRODUCTS',   keys: [TX.PRODUCT_CREATE, TX.PRODUCT_UPDATE, TX.PRODUCT_DELETE] },
+      { title: 'SKUs',       keys: [TX.SKU_ADD, TX.SKU_UPDATE, TX.SKU_REMOVE] },
+      { title: 'SWIM-LANES', keys: [TX.LANE_CREATE, TX.LANE_UPDATE] },
+      { title: 'BOMs',       keys: [TX.BOM_CREATE, TX.BOM_DELETE, TX.BOM_COMPONENT_ADD, TX.BOM_COMPONENT_UPDATE, TX.BOM_COMPONENT_REMOVE] },
+      { title: 'DEMANDS',      keys: [TX.DEMAND_CREATE, TX.DEMAND_UPDATE, TX.DEMAND_DELETE] },
+      { title: 'ANNOTATIONS',  keys: [TX.ANNOTATION_CREATE, TX.ANNOTATION_UPDATE, TX.ANNOTATION_DELETE] }
+    ];
+
+    lines.push('COMMAND FORMAT: each command is a JSON object with a "type" field (required — the exact key shown below, e.g. "node.create") plus a "params" object holding the domain fields, and an optional "id" field for temporary reference.');
+    lines.push('Example: {"type": "node.create", "params": {"name": "Supplier A"}}');
+    lines.push('NEVER use "action" or any other key for the discriminant — only "type" is accepted, and domain fields belong inside "params", never at the top level.');
+    lines.push('');
+
+    sections.forEach(function (section) {
+      lines.push('--- ' + section.title + ' ---');
+      lines.push('');
+      section.keys.forEach(function (key) {
+        var def = _VOCAB[key];
+        if (!def) return;
+        lines.push(key);
+        if (def.required.length) lines.push('  Required : ' + def.required.join(', '));
+        if (def.optional.length) lines.push('  Optional : ' + def.optional.join(', '));
+        def.notes.forEach(function (note) {
+          lines.push('  Note     : ' + note);
+        });
+        lines.push('');
+      });
+    });
+
+    lines.push('Note: swim_lane deletion is excluded from v1 of the AI assistant.');
+    lines.push('Note: node_type and product_type creation are excluded from v1.');
+    lines.push('Note: map management and map visibility (maps, map_nodes, map_flows, map_swim_lanes, map_demands) are excluded from v1. Do not emit commands on these entities.');
+    lines.push('Note: project-specific instructions and notes/note_categories are managed separately and are not part of this command vocabulary.');
+
+    return lines.join(String.fromCharCode(10));
   }
 
   // ---------------------------------------------------------------------------
@@ -1047,9 +1606,97 @@ var DDS_CMD = (function () {
     return result || { ok: true };
   }
 
+  // ---------------------------------------------------------------------------
+  // executeList(commands, mapId, onSuccess?) — AI batch entry point
+  // (DDS_CMD_Migration.md Phase 6, Step 1)
+  //
+  // commands: [{ type: TX.KEY, params: {}, id?: 'new_X' }]
+  // Runs the whole list inside ONE transaction (TX.AI_APPLY_ACTIONS) — not one
+  // transaction per command, so the batch is a single undo/redo entry, same
+  // guarantee as any other single user interaction (§1.1 rule: "a single
+  // run() per user interaction, even when multiple helpers are chained").
+  // Stops at the first failure and rolls back everything applied so far in
+  // the batch. Cross-command temporary-id resolution mirrors
+  // DDS_ACTIONS._resolveAction/_resolveId (SCRIPT 1850), generalised: instead
+  // of each action case manually doing `newIdMap[raw.id] = inserted[0].id`,
+  // every DDS_CMD command already returns { id } on insert, so the mapping
+  // is done once here from entry.id -> result.id after each command runs.
+  // ---------------------------------------------------------------------------
+
+  function _resolveId(value, newIdMap) {
+    if (typeof value === 'string' && value.indexOf('new_') === 0) {
+      return newIdMap[value] !== undefined ? newIdMap[value] : value;
+    }
+    return value;
+  }
+
+  function _resolveParams(params, newIdMap) {
+    var resolved = {};
+    for (var key in params) {
+      if (!params.hasOwnProperty(key)) continue;
+      var val = params[key];
+      if (typeof val === 'string') {
+        resolved[key] = _resolveId(val, newIdMap);
+      } else if (Array.isArray(val)) {
+        resolved[key] = val.map(function (v) {
+          return typeof v === 'string' ? _resolveId(v, newIdMap) : v;
+        });
+      } else if (val && typeof val === 'object') {
+        resolved[key] = _resolveParams(val, newIdMap); // nested objects (e.g. SETTINGS_* "fields")
+      } else {
+        resolved[key] = val;
+      }
+    }
+    return resolved;
+  }
+
+  function executeList(commands, mapId, onSuccess) {
+    commands = commands || [];
+    _notifyExecuteListeners(commands);
+
+    var txId    = DDS_TRANSACTIONS.begin(TX.AI_APPLY_ACTIONS);
+    var applied = [];
+    var newIdMap = {};
+
+    for (var i = 0; i < commands.length; i++) {
+      var entry = commands[i];
+      var cmd   = _commands[entry.type];
+      if (!cmd) {
+        DDS_TOOLS.log.error('DDS_CMD.executeList: unknown command', entry.type);
+        DDS_TRANSACTIONS.rollback(txId);
+        return { ok: false, applied: applied, failed: { type: entry.type, params: entry.params, _error: 'Unknown command: ' + entry.type } };
+      }
+      var resolvedParams = _resolveParams(entry.params || {}, newIdMap);
+      var result;
+      try {
+        result = cmd(resolvedParams, mapId || null);
+      } catch (e) {
+        DDS_TOOLS.log.error('DDS_CMD.executeList: error in command', entry.type, e);
+        DDS_TRANSACTIONS.rollback(txId);
+        return { ok: false, applied: applied, failed: { type: entry.type, params: resolvedParams, _error: e.message || String(e) } };
+      }
+      if (entry.id && result && result.id !== undefined) {
+        newIdMap[entry.id] = result.id;
+      }
+      applied.push({ type: entry.type, params: resolvedParams, result: result });
+    }
+
+    DDS_TRANSACTIONS.commit(txId);
+
+    if (typeof onSuccess === 'function') {
+      try { onSuccess(applied); } catch (e) {
+        DDS_TOOLS.log.warn('DDS_CMD.executeList: onSuccess threw', e);
+      }
+    }
+
+    return { ok: true, applied: applied };
+  }
+
   return {
     execute: execute,
+    executeList: executeList,
     describe: describe,
+    getVocabularyText: getVocabularyText,
     addExecuteListener: addExecuteListener,
     removeExecuteListener: removeExecuteListener
   };

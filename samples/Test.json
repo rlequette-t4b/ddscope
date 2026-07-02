@@ -4,7 +4,7 @@
     "name": "Test",
     "description": "Template",
     "created_by": "r.lequette@tech4best.com",
-    "auto_layout": false
+    "auto_layout": true
   },
   "swim_lanes": [
     {
@@ -174,16 +174,6 @@
       "updated_at": "2026-05-24T08:33:36.157Z"
     },
     {
-      "name": "WH1",
-      "type_code": "WH",
-      "swim_lane_id": 3,
-      "tags": [],
-      "notes": "Very busy place",
-      "id": 4,
-      "created_at": "2026-05-22T18:15:48.566Z",
-      "updated_at": "2026-05-22T18:16:53.571Z"
-    },
-    {
       "name": "s1",
       "type_code": "SUPPLIER",
       "swim_lane_id": 2,
@@ -246,25 +236,20 @@
       "id": 10,
       "created_at": "2026-05-22T19:40:50.597Z",
       "updated_at": "2026-05-22T19:40:50.597Z"
+    },
+    {
+      "name": "WH1",
+      "type_code": "WH",
+      "swim_lane_id": 3,
+      "tags": [],
+      "notes": "",
+      "id": 11,
+      "created_at": "2026-07-02T04:20:31.880Z",
+      "updated_at": "2026-07-02T04:20:31.880Z"
     }
   ],
   "products": [],
   "flows": [
-    {
-      "source_node_id": 4,
-      "target_node_id": 7,
-      "product_ids": [],
-      "tags": [
-        "overflow"
-      ],
-      "lead_time_value": null,
-      "lead_time_unit": null,
-      "bidirectional": true,
-      "notes": "",
-      "id": 5,
-      "created_at": "2026-05-22T18:44:54.150Z",
-      "updated_at": "2026-05-22T19:43:04.190Z"
-    },
     {
       "source_node_id": 8,
       "target_node_id": 9,
@@ -282,19 +267,6 @@
     },
     {
       "source_node_id": 5,
-      "target_node_id": 4,
-      "product_ids": [],
-      "tags": [],
-      "lead_time_value": null,
-      "lead_time_unit": null,
-      "bidirectional": false,
-      "notes": "",
-      "id": 7,
-      "created_at": "2026-05-22T18:48:48.603Z",
-      "updated_at": "2026-05-22T19:45:36.021Z"
-    },
-    {
-      "source_node_id": 5,
       "target_node_id": 8,
       "product_ids": [],
       "tags": [],
@@ -303,19 +275,6 @@
       "bidirectional": false,
       "notes": "",
       "id": 8,
-      "created_at": "2026-05-22T18:48:48.603Z",
-      "updated_at": "2026-05-22T18:48:48.603Z"
-    },
-    {
-      "source_node_id": 6,
-      "target_node_id": 4,
-      "product_ids": [],
-      "tags": [],
-      "lead_time_value": null,
-      "lead_time_unit": null,
-      "bidirectional": false,
-      "notes": "",
-      "id": 9,
       "created_at": "2026-05-22T18:48:48.603Z",
       "updated_at": "2026-05-22T18:48:48.603Z"
     },
@@ -359,7 +318,33 @@
       "updated_at": "2026-05-22T19:52:10.310Z"
     },
     {
-      "source_node_id": 4,
+      "source_node_id": "4",
+      "target_node_id": "8",
+      "product_ids": [],
+      "tags": [],
+      "lead_time_value": null,
+      "lead_time_unit": null,
+      "bidirectional": false,
+      "notes": "",
+      "id": 14,
+      "created_at": "2026-07-02T04:12:20.185Z",
+      "updated_at": "2026-07-02T04:12:20.185Z"
+    },
+    {
+      "source_node_id": 11,
+      "target_node_id": 7,
+      "product_ids": [],
+      "tags": [],
+      "lead_time_value": null,
+      "lead_time_unit": null,
+      "bidirectional": true,
+      "notes": "",
+      "id": 16,
+      "created_at": "2026-07-02T04:20:45.685Z",
+      "updated_at": "2026-07-02T04:20:55.352Z"
+    },
+    {
+      "source_node_id": 11,
       "target_node_id": 3,
       "product_ids": [],
       "tags": [],
@@ -367,9 +352,35 @@
       "lead_time_unit": null,
       "bidirectional": false,
       "notes": "",
-      "id": 13,
-      "created_at": "2026-05-22T19:52:13.855Z",
-      "updated_at": "2026-05-22T19:52:13.855Z"
+      "id": 17,
+      "created_at": "2026-07-02T04:21:51.815Z",
+      "updated_at": "2026-07-02T04:21:51.815Z"
+    },
+    {
+      "source_node_id": 5,
+      "target_node_id": 11,
+      "product_ids": [],
+      "tags": [],
+      "lead_time_value": null,
+      "lead_time_unit": null,
+      "bidirectional": false,
+      "notes": "",
+      "id": 18,
+      "created_at": "2026-07-02T04:22:02.768Z",
+      "updated_at": "2026-07-02T04:22:02.768Z"
+    },
+    {
+      "source_node_id": 6,
+      "target_node_id": 11,
+      "product_ids": [],
+      "tags": [],
+      "lead_time_value": null,
+      "lead_time_unit": null,
+      "bidirectional": false,
+      "notes": "",
+      "id": 19,
+      "created_at": "2026-07-02T04:22:09.957Z",
+      "updated_at": "2026-07-02T04:22:09.957Z"
     }
   ],
   "skus": [],
@@ -419,105 +430,90 @@
     {
       "map_id": 2,
       "node_id": 3,
-      "x": -469.6231652268566,
-      "y": 182.5548397796488,
+      "x": -470,
+      "y": 183,
       "id": 3,
       "created_at": "2026-05-22T18:08:04.398Z",
-      "updated_at": "2026-05-28T19:11:24.681Z",
+      "updated_at": "2026-07-02T04:22:09.987Z",
       "bfs_rank_min": 0,
       "bfs_rank_max": 0
     },
     {
       "map_id": 2,
-      "node_id": 4,
-      "x": -124.6231652268566,
-      "y": 17.554839779648802,
-      "id": 4,
-      "created_at": "2026-05-22T18:15:48.566Z",
-      "updated_at": "2026-05-28T19:11:24.681Z",
-      "note_visible": true,
-      "note_dx": 57,
-      "note_dy": -19,
-      "bfs_rank_min": 1,
-      "bfs_rank_max": 1
-    },
-    {
-      "map_id": 2,
       "node_id": 5,
-      "x": 386.3768347731434,
-      "y": -36.4451602203512,
+      "x": 386,
+      "y": -36,
       "id": 5,
       "created_at": "2026-05-22T18:43:55.036Z",
-      "updated_at": "2026-05-28T19:11:24.681Z",
+      "updated_at": "2026-07-02T04:22:09.987Z",
       "bfs_rank_min": 0,
       "bfs_rank_max": 0
     },
     {
       "map_id": 2,
       "node_id": 6,
-      "x": 386.3768347731434,
-      "y": 298.5548397796488,
+      "x": 386,
+      "y": 299,
       "id": 6,
       "created_at": "2026-05-22T18:43:55.036Z",
-      "updated_at": "2026-05-28T19:11:24.681Z",
+      "updated_at": "2026-07-02T04:22:09.987Z",
       "bfs_rank_min": 0,
       "bfs_rank_max": 0
     },
     {
       "map_id": 2,
       "node_id": 7,
-      "x": 25.3768347731434,
-      "y": -36.4451602203512,
+      "x": 26,
+      "y": -28,
       "id": 7,
       "created_at": "2026-05-22T18:44:54.150Z",
-      "updated_at": "2026-05-28T19:11:24.681Z",
+      "updated_at": "2026-07-02T04:22:09.987Z",
       "bfs_rank_min": 0,
       "bfs_rank_max": 0
     },
     {
       "map_id": 2,
       "node_id": 8,
-      "x": -124.6231652268566,
-      "y": 237.5548397796488,
+      "x": -124,
+      "y": 238,
       "id": 8,
       "created_at": "2026-05-22T18:47:31.738Z",
-      "updated_at": "2026-05-28T19:11:24.681Z",
+      "updated_at": "2026-07-02T04:22:09.987Z",
       "bfs_rank_min": 1,
       "bfs_rank_max": 1
     },
     {
       "map_id": 2,
       "node_id": 9,
-      "x": 25.3768347731434,
-      "y": 314.5548397796488,
+      "x": 26,
+      "y": 315,
       "id": 9,
       "created_at": "2026-05-22T18:48:12.754Z",
-      "updated_at": "2026-05-28T19:11:24.681Z",
+      "updated_at": "2026-07-02T04:22:09.987Z",
       "bfs_rank_min": 0,
       "bfs_rank_max": 0
     },
     {
       "map_id": 2,
       "node_id": 10,
-      "x": 686.091261992893,
-      "y": 511.77754555218445,
+      "x": -87.33041035182737,
+      "y": 546.8705217884662,
       "id": 10,
       "created_at": "2026-05-22T19:40:50.598Z",
-      "updated_at": "2026-05-28T19:15:04.947Z",
+      "updated_at": "2026-07-02T04:15:30.675Z",
       "label_position": "below"
+    },
+    {
+      "map_id": 2,
+      "node_id": 11,
+      "x": -124,
+      "y": 106,
+      "id": 11,
+      "created_at": "2026-07-02T04:20:31.880Z",
+      "updated_at": "2026-07-02T04:22:09.987Z"
     }
   ],
   "map_flows": [
-    {
-      "map_id": 2,
-      "flow_id": 5,
-      "id": 5,
-      "created_at": "2026-05-22T18:44:54.151Z",
-      "updated_at": "2026-05-24T08:33:02.770Z",
-      "layout_offset": 1,
-      "layout_direction_inverted": true,
-      "curve_style": "straight"
-    },
     {
       "map_id": 2,
       "flow_id": 6,
@@ -530,28 +526,11 @@
     },
     {
       "map_id": 2,
-      "flow_id": 7,
-      "id": 7,
-      "created_at": "2026-05-22T18:48:48.604Z",
-      "updated_at": "2026-05-22T19:48:23.149Z",
-      "waypoint_pct": 0.27
-    },
-    {
-      "map_id": 2,
       "flow_id": 8,
       "id": 8,
       "created_at": "2026-05-22T18:48:48.604Z",
-      "updated_at": "2026-05-22T19:48:32.701Z",
-      "waypoint_pct": 0.27
-    },
-    {
-      "map_id": 2,
-      "flow_id": 9,
-      "id": 9,
-      "created_at": "2026-05-22T18:48:48.604Z",
-      "updated_at": "2026-05-22T19:48:17.828Z",
-      "layout_offset": 2,
-      "waypoint_pct": 0.27
+      "updated_at": "2026-07-02T04:22:32.554Z",
+      "waypoint_pct": 0.4977976402799535
     },
     {
       "map_id": 2,
@@ -578,10 +557,40 @@
     },
     {
       "map_id": 2,
-      "flow_id": 13,
-      "id": 13,
-      "created_at": "2026-05-22T19:52:13.856Z",
-      "updated_at": "2026-05-22T19:52:13.856Z"
+      "flow_id": 14,
+      "id": 14,
+      "created_at": "2026-07-02T04:12:20.185Z",
+      "updated_at": "2026-07-02T04:12:20.185Z"
+    },
+    {
+      "map_id": 2,
+      "flow_id": 16,
+      "id": 16,
+      "created_at": "2026-07-02T04:20:45.686Z",
+      "updated_at": "2026-07-02T04:21:38.238Z",
+      "curve_style": "straight",
+      "layout_direction_inverted": true
+    },
+    {
+      "map_id": 2,
+      "flow_id": 17,
+      "id": 17,
+      "created_at": "2026-07-02T04:21:51.816Z",
+      "updated_at": "2026-07-02T04:21:51.816Z"
+    },
+    {
+      "map_id": 2,
+      "flow_id": 18,
+      "id": 18,
+      "created_at": "2026-07-02T04:22:02.768Z",
+      "updated_at": "2026-07-02T04:22:02.768Z"
+    },
+    {
+      "map_id": 2,
+      "flow_id": 19,
+      "id": 19,
+      "created_at": "2026-07-02T04:22:09.957Z",
+      "updated_at": "2026-07-02T04:22:09.957Z"
     }
   ],
   "map_swim_lanes": [

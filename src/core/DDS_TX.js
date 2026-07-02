@@ -3,6 +3,9 @@
 // Testability: pure
 // Depends on: none
 // API documented: yes
+// SRC MIRROR NOTE (2026-07-02): synced against live SCRIPT 1865 (BOM_COMPONENT_*
+// and MAP_REMOVE_LANE keys were missing) alongside the DDS_CMD.js resync —
+// see DDScope_Commands.md v1.13.
 
 var TX = {
   // Nodes
@@ -25,14 +28,17 @@ var TX = {
   PRODUCT_DELETE:           'product.delete',
 
   // SKUs
-  SKU_ADD:                  'sku.add', // unused — cascade folded into FLOW_ADD_PRODUCT (see DDScope_Commands.md §3.3)
+  SKU_ADD:                  'sku.add', // standalone AI-vocabulary command (Phase 6 Step 2) — legacy UI call sites still fold this into FLOW_ADD_PRODUCT
   SKU_UPDATE:               'sku.update',
-  SKU_REMOVE:               'sku.remove', // unused — cascade folded into FLOW_REMOVE_PRODUCT (see DDScope_Commands.md §3.3)
+  SKU_REMOVE:               'sku.remove', // standalone AI-vocabulary command (Phase 6 Step 2) — legacy UI call sites still fold this into FLOW_REMOVE_PRODUCT
 
   // BOMs
   BOM_CREATE:               'bom.create',
   BOM_UPDATE_COMPONENTS:    'bom.update_components',
   BOM_DELETE:               'bom.delete',
+  BOM_COMPONENT_ADD:        'bom_component.add', // Phase 6 Step 2 — unitary BOM component commands for the AI vocabulary
+  BOM_COMPONENT_UPDATE:     'bom_component.update',
+  BOM_COMPONENT_REMOVE:     'bom_component.remove',
 
   // Demands
   DEMAND_CREATE:            'demand.create',
@@ -69,6 +75,7 @@ var TX = {
   MAP_REMOVE_NODE:          'map.remove_node',
   MAP_REMOVE_FLOW:          'map.remove_flow',
   MAP_REMOVE_ANNOTATION:    'map.remove_annotation',
+  MAP_REMOVE_LANE:          'map.remove_lane', // gap found during Phase 5 §3.4 migration — DDS_REMOVE lane modal supports "map only" removal, was never in the TX catalogue before
 
   // Map presentation — canvas geometry
   MAP_MOVE_NODE:            'map.move_node',
