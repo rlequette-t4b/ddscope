@@ -1,0 +1,253 @@
+/* STYLE 1020 — Notes panel below the map canvas. Show/hide via Notes toolbar
+   button. Vertically resizable. Part of FEAT-002. */
+
+.dds-notes-panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 220px;
+  background: var(--dds-surface);
+  border-top: 1px solid var(--dds-border);
+  overflow: hidden;
+  position: relative;
+}
+.dds-notes-panel.dds-hidden {
+  display: none !important;
+}
+
+/* Header */
+.dds-notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--dds-border);
+  background: var(--dds-surface);
+  height: 37px;
+  box-sizing: border-box;
+  cursor: ns-resize;
+}
+.dds-notes-header button {
+  cursor: pointer;
+}
+/* CommWise visibility override — prevent global disabled rule from hiding header buttons */
+#dds-notes-show-all {
+  visibility: visible !important;
+  display: inline-flex !important;
+}
+.dds-notes-header-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dds-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Body */
+.dds-notes-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Category section */
+.dds-notes-category {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dds-notes-category-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  border-bottom: 2px solid var(--dds-border);
+}
+.dds-notes-category-header:hover {
+  background: var(--dds-bg);
+}
+.dds-notes-category-toggle {
+  font-size: 10px;
+  color: var(--dds-text-muted);
+  width: 12px;
+  flex-shrink: 0;
+}
+.dds-notes-category-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dds-text);
+  letter-spacing: 0.01em;
+  flex: 1;
+}
+.dds-notes-category-count {
+  font-size: 11px;
+  color: var(--dds-text-muted);
+  background: var(--dds-bg);
+  border: 1px solid var(--dds-border);
+  border-radius: 8px;
+  padding: 0 6px;
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Notes list */
+.dds-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 4px 0;
+}
+.dds-notes-list.collapsed {
+  display: none;
+}
+
+/* Note card */
+.dds-note-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: var(--dds-surface);
+  border: 1px solid var(--dds-border);
+  border-left-width: 4px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-height: 56px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  position: relative;
+  cursor: default;
+}
+.dds-note-row.sortable-ghost {
+  opacity: 0.4;
+}
+.dds-note-row.sortable-drag {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Drag handle */
+.dds-note-drag-handle {
+  flex-shrink: 0;
+  color: var(--dds-text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: grab;
+  padding-top: 2px;
+  opacity: 0.4;
+  user-select: none;
+}
+.dds-note-row:hover .dds-note-drag-handle {
+  opacity: 1;
+}
+.dds-note-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Note content area */
+.dds-note-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Display mode — static text */
+.dds-note-display {
+  font-size: 16px !important;
+  color: var(--dds-text);
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+  cursor: text;
+  min-height: 22px;
+}
+.dds-note-display:empty::before {
+  content: 'Click to edit\2026';
+  color: var(--dds-text-muted);
+  font-style: italic;
+}
+
+/* Edit mode — textarea */
+/* specificity bump to beat .dds-app textarea !important */
+.dds-app textarea.dds-note-text {
+  font-size: 16px !important;
+}
+.dds-note-text {
+  display: none;
+  width: 100%;
+  font-size: 16px !important;
+  color: var(--dds-text);
+  line-height: 1.5;
+  border: 1px solid var(--dds-accent);
+  border-radius: 3px;
+  padding: 2px 4px;
+  background: var(--dds-bg);
+  resize: none;
+  font-family: inherit;
+  min-height: 26px;
+  overflow: hidden;
+  word-break: break-word;
+  outline: none;
+  box-sizing: border-box;
+}
+.dds-note-row.editing .dds-note-display {
+  display: none;
+}
+.dds-note-row.editing .dds-note-text {
+  display: block;
+}
+
+/* Delete button — top right of card */
+.dds-note-delete-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dds-danger, #dc2626);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.5;
+}
+.dds-note-delete-btn:hover {
+  opacity: 1;
+  background: var(--dds-danger-light, #fef2f2);
+}
+
+/* Add note button — I3: distinct from bullet notes */
+.dds-notes-add-btn {
+  font-size: 13px;
+  color: var(--dds-accent);
+  padding: 4px 10px;
+  margin-top: 4px;
+  margin-left: 18px;
+  cursor: pointer;
+  background: var(--dds-accent-light, #e8f5e9);
+  border: 1px dashed var(--dds-accent);
+  border-radius: var(--dds-radius);
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+.dds-notes-add-btn svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+.dds-notes-add-btn:hover {
+  background: var(--dds-accent);
+  color: #fff;
+  border-style: solid;
+}

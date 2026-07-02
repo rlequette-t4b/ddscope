@@ -1,0 +1,139 @@
+/* STYLE 650 — Demand sub-section (node side panel) + Demand table view */
+
+/* SKU row demand badge */
+.dds-demand-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  vertical-align: middle;
+  cursor: default;
+}
+.dds-demand-badge.has-demand { color: var(--dds-color-primary, #3b82f6); }
+.dds-demand-badge.no-demand  { color: var(--dds-text-muted, #94a3b8); }
+
+/* + Demand button inside SKU row */
+.dds-demand-add-btn {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--dds-text-xs, 12px);
+}
+
+/* Expand toggle */
+.dds-demand-toggle {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--dds-text-xs, 12px);
+  color: var(--dds-text-muted, #64748b);
+}
+
+/* Demand sub-section container */
+.dds-demand-sub {
+  margin-top: 6px;
+  padding: 8px;
+  background: var(--dds-bg-subtle, #f8fafc);
+  border-radius: 6px;
+  border: 1px solid var(--dds-border, #e2e8f0);
+}
+
+/* Row inside demand sub-section */
+.dds-demand-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.dds-demand-row label {
+  width: 60px;
+  font-size: var(--dds-text-xs, 12px);
+  color: var(--dds-text-muted, #64748b);
+  flex-shrink: 0;
+}
+
+/* Numeric input */
+.dds-demand-val {
+  width: 72px;
+  padding: 3px 6px;
+  border: 1px solid var(--dds-border, #e2e8f0);
+  border-radius: 4px;
+  font-size: var(--dds-text-xs, 12px);
+}
+
+/* Unit selector */
+.dds-demand-unit {
+  flex: 1;
+  padding: 3px 4px;
+  border: 1px solid var(--dds-border, #e2e8f0);
+  border-radius: 4px;
+  font-size: var(--dds-text-xs, 12px);
+}
+
+/* Period label ("/ ") */
+.dds-demand-period-label {
+  font-size: var(--dds-text-xs, 12px);
+  color: var(--dds-text-muted, #64748b);
+}
+
+/* Notes textarea */
+.dds-demand-notes {
+  flex: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--dds-border, #e2e8f0);
+  border-radius: 4px;
+  font-size: var(--dds-text-xs, 12px);
+  resize: vertical;
+}
+
+/* Actions row (Show on map + Delete) */
+.dds-demand-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+/* Demand table view */
+.dds-demand-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--dds-text-sm, 13px);
+}
+.dds-demand-table th {
+  text-align: left;
+  padding: 8px 10px;
+  background: var(--dds-bg-subtle, #f8fafc);
+  border-bottom: 2px solid var(--dds-border, #e2e8f0);
+  font-weight: 600;
+  color: var(--dds-text-muted, #64748b);
+  font-size: var(--dds-text-xs, 12px);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dds-demand-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--dds-border, #e2e8f0);
+  vertical-align: top;
+}
+.dds-demand-table tr:hover td { background: var(--dds-bg-hover, #f1f5f9); }
+.dds-demand-table input,
+.dds-demand-table select,
+.dds-demand-table textarea {
+  width: 100%;
+  padding: 3px 6px;
+  border: 1px solid var(--dds-border, #e2e8f0);
+  border-radius: 4px;
+  font-size: var(--dds-text-xs, 12px);
+  box-sizing: border-box;
+}
+.dds-demand-table .dds-demand-pair {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.dds-demand-table .dds-demand-pair input  { flex: 0 0 72px; }
+.dds-demand-table .dds-demand-pair select { flex: 1; }
+.dds-demand-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--dds-text-muted, #64748b);
+  font-size: var(--dds-text-sm, 13px);
+}

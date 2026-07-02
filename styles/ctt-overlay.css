@@ -1,0 +1,65 @@
+/* STYLE 660 — CTT line overlay
+   positioned inside .dds-canvas-wrap, synchronised with Cytoscape pan/zoom via JS transform. */
+
+.dds-ctt-line-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 500;
+  transform-origin: 0 0;
+}
+
+/* Container for a single node's CTT line — centred on demand_x/demand_y */
+.dds-ctt-node-wrap {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+}
+
+.dds-ctt-node-wrap:active {
+  cursor: grabbing;
+}
+
+/* Label above the line */
+.dds-ctt-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #dc2626;
+  white-space: nowrap;
+  margin-bottom: 2px;
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* Red horizontal bar */
+.dds-ctt-bar-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dds-ctt-line {
+  height: 3px;
+  background: #dc2626;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Resize handles — left and right circles */
+.dds-ctt-handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #dc2626;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #dc2626;
+  cursor: ew-resize;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}

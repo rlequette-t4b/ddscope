@@ -1,0 +1,73 @@
+/* STYLE 200 — DDScope Design Tokens + base resets */
+:root {
+  --dds-bg:           #f4f5f7;
+  --dds-surface:      #ffffff;
+  --dds-border:       #e2e5ea;
+  --dds-border-hover: #c5cad4;
+  --dds-text:         #1a2130;
+  --dds-text-muted:   #6b7280;
+  --dds-accent:       #2e7d32;
+  --dds-accent-hover: #1b5e20;
+  --dds-accent-light: #e8f5e9;
+  --dds-danger:       #c62828;
+  --dds-danger-light: #ffebee;
+  --dds-warning:      #f57c00;
+  --dds-radius:       8px;
+  --dds-radius-lg:    12px;
+  --dds-shadow:       0 1px 4px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+  --dds-shadow-hover: 0 4px 16px rgba(0,0,0,0.12);
+  --dds-transition:   0.18s ease;
+
+  /* ===== Typography scale ===== */
+  --dds-text-xs:   12px;  /* labels, meta info */
+  --dds-text-sm:   13px;  /* secondary text, badges */
+  --dds-text-base: 16px;  /* body default */
+  --dds-text-md:   15px;  /* buttons, form fields */
+  --dds-text-lg:   18px;  /* card titles, section headings */
+  --dds-text-xl:   21px;  /* page titles */
+  --dds-text-modal-title: 17px;
+}
+
+/* ===== Base resets ===== */
+*, *::before, *::after { box-sizing: border-box; }
+
+.dds-app {
+  font-family: 'Figtree', 'Inter', sans-serif;
+  font-size: var(--dds-text-base);
+  color: var(--dds-text);
+  background: var(--dds-bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dds-app button:not(.dds-btn):not(.dds-nav-tab) {
+  font-family: inherit !important;
+  cursor: pointer !important;
+  border: none !important;
+  background: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.dds-app button.dds-btn,
+.dds-app button.dds-nav-tab {
+  font-family: inherit !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.dds-app input,
+.dds-app textarea,
+.dds-app select {
+  font-family: inherit !important;
+  font-size: var(--dds-text-md) !important;
+}
+
+/* ===== Utility ===== */
+.dds-hidden  { display: none !important; }
+.dds-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,0 +1,86 @@
+/* STYLE 700 — Products table view + generic data table component */
+
+.dds-table-view {
+  padding: 24px 32px 80px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  height: 100% !important;
+  overflow: auto !important;
+}
+
+.dds-table-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-shrink: 0 !important;
+}
+
+.dds-table-title {
+  font-size: var(--dds-text-xl) !important;
+  font-weight: 700 !important;
+  color: var(--dds-text) !important;
+}
+
+/* ===== Simple data table ===== */
+.dds-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: var(--dds-text-base) !important;
+  background: var(--dds-surface) !important;
+  border-radius: var(--dds-radius-lg) !important;
+  overflow: hidden !important;
+  box-shadow: var(--dds-shadow) !important;
+}
+
+.dds-table th {
+  background: var(--dds-bg) !important;
+  color: var(--dds-text-muted) !important;
+  font-size: var(--dds-text-xs) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  padding: 10px 16px !important;
+  text-align: left !important;
+  border-bottom: 1px solid var(--dds-border) !important;
+}
+
+.dds-table td {
+  padding: 10px 16px !important;
+  border-bottom: 1px solid var(--dds-border) !important;
+  color: var(--dds-text) !important;
+  vertical-align: middle !important;
+}
+
+.dds-table tr:last-child td {
+  border-bottom: none !important;
+}
+
+.dds-table tr:hover td {
+  background: var(--dds-bg) !important;
+}
+
+.dds-table-actions {
+  display: flex !important;
+  gap: 6px !important;
+  justify-content: flex-end !important;
+}
+
+.dds-table-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 8px !important;
+  border-radius: 20px !important;
+  background: var(--dds-accent-light) !important;
+  color: var(--dds-accent) !important;
+  font-size: var(--dds-text-xs) !important;
+  font-weight: 500 !important;
+  margin: 2px !important;
+}
+
+.dds-table-empty {
+  text-align: center !important;
+  padding: 40px !important;
+  color: var(--dds-text-muted) !important;
+  font-size: var(--dds-text-base) !important;
+}

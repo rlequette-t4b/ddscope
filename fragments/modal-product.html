@@ -1,0 +1,37 @@
+<!-- DIV 400 — Product modal (add/edit) -->
+<div class="dds-overlay dds-hidden" id="dds-modal-product-overlay">
+  <div class="dds-modal" style="max-width:440px">
+    <div class="dds-modal-header">
+      <span class="dds-modal-title" id="dds-modal-product-title">Add product</span>
+      <button class="dds-btn dds-modal-close" id="dds-modal-product-close">&times;</button>
+    </div>
+    <div class="dds-modal-body">
+      <div class="dds-field">
+        <label class="dds-label" for="dds-prod-name">Name *</label>
+        <input class="dds-input" id="dds-prod-name" type="text" placeholder="Product name" autocomplete="off" />
+        <span class="dds-field-error dds-hidden" id="dds-prod-name-error"></span>
+      </div>
+      <div class="dds-field">
+        <label class="dds-label" for="dds-prod-type">Type</label>
+        <select class="dds-select" id="dds-prod-type">
+          <option value="">&mdash; no type &mdash;</option>
+        </select>
+      </div>
+      <div class="dds-field">
+        <label class="dds-label">Tags</label>
+        <div class="dds-tags-wrap" id="dds-prod-tags-wrap">
+          <input class="dds-tag-input" id="dds-prod-tag-input" placeholder="Add tag&hellip;" />
+        </div>
+      </div>
+      <div class="dds-field">
+        <label class="dds-label" for="dds-prod-notes">Notes</label>
+        <textarea class="dds-textarea" id="dds-prod-notes" style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div class="dds-modal-footer">
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-product-cancel">Cancel</button>
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-product-save" disabled>Save</button>
+      <button class="dds-btn dds-btn-primary" id="dds-modal-product-save-close" disabled>Save &amp; Close</button>
+    </div>
+  </div>
+</div>

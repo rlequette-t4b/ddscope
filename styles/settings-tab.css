@@ -1,0 +1,68 @@
+/* STYLE 1000 — Settings tab: section layout, color dot, shape badge, default badge. */
+
+.dds-settings-view {
+  padding: 24px 32px 80px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 32px !important;
+  overflow-y: auto !important;
+  height: 100% !important;
+}
+
+.dds-settings-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.dds-settings-section-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 8px !important;
+  border-bottom: 2px solid var(--dds-border) !important;
+}
+
+.dds-settings-section-title {
+  font-size: var(--dds-text-lg) !important;
+  font-weight: 700 !important;
+  color: var(--dds-text) !important;
+}
+
+/* ===== Inline color dot in table ===== */
+.dds-color-dot {
+  display: inline-block !important;
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  vertical-align: middle !important;
+  margin-right: 6px !important;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+  flex-shrink: 0 !important;
+}
+
+/* ===== Shape badge ===== */
+.dds-shape-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  background: var(--dds-bg) !important;
+  border: 1px solid var(--dds-border) !important;
+  font-size: var(--dds-text-xs) !important;
+  font-weight: 500 !important;
+  color: var(--dds-text-muted) !important;
+  text-transform: lowercase !important;
+}
+
+/* ===== Default badge ===== */
+.dds-default-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 8px !important;
+  border-radius: 20px !important;
+  background: var(--dds-accent-light) !important;
+  color: var(--dds-accent) !important;
+  font-size: var(--dds-text-xs) !important;
+  font-weight: 600 !important;
+}

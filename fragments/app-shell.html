@@ -1,0 +1,663 @@
+<div class="dds-app" id="dds-app">
+
+  <!-- Nav bar -->
+  <nav class="dds-nav">
+    <span class="dds-nav-logo"><span>DD</span>Scope</span>
+
+    <!-- Project tabs (hidden until project open) -->
+    <div class="dds-nav-tabs">
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-map"      data-view="map">Map</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-nodes"    data-view="nodes">Nodes</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-flows"    data-view="flows">Flows</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-products" data-view="products">Products</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-boms"     data-view="boms">BOMs</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-demand"      data-view="demand">Demand</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-annotations" data-view="annotations">Annotations</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-settings"    data-view="settings">Settings</button>
+    </div>
+
+    <!-- Project name (centered) -->
+    <div class="dds-nav-project-center dds-hidden" id="dds-nav-project-center">
+      <span id="dds-nav-project-label" class="dds-nav-project-label"></span>
+      <button class="dds-nav-project-edit-btn" id="dds-btn-edit-project" title="Edit project name &amp; description">&#9998;</button>
+      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-save" disabled>Save</button>
+      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-undo" disabled title="Undo">↩</button>
+      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-redo" disabled title="Redo">↪</button>
+    </div>
+
+    <!-- Nav actions -->
+    <div class="dds-nav-actions">
+      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-new">New</button>
+      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-load">Open</button>
+      <button class="dds-btn dds-btn-ghost dds-btn-sm dds-hidden" id="dds-btn-save-as">Save As</button>
+    </div>
+  </nav>
+
+  <!-- Main workspace: AI panel (push) + content -->
+  <div class="dds-workspace" id="dds-workspace">
+
+    <!-- AI Assistant panel (in-flow, pushes canvas) -->
+    <div class="dds-ai-panel" id="dds-ai-panel">
+      <!-- Drag-resize handle -->
+      <div class="dds-ai-resize-handle" id="dds-ai-resize-handle"></div>
+
+      <div class="dds-ai-header">
+        <div class="dds-ai-header-row">
+          <button class="dds-map-ai-btn" id="dds-ai-header-toggle" title="Close AI Assistant">&#129302; AI</button>
+          <select class="dds-ai-font-select" id="dds-ai-font-select" title="Text size">
+            <option value="15px">A</option>
+            <option value="19px">A+</option>
+            <option value="23px">A++</option>
+          </select>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-instructions" title="Project-specific instructions">&#9881;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-export" title="Save conversation to file">&#8595;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-replay" title="Replay from file">&#9654;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-close" style="margin-left:auto">&times;</button>
+        </div>
+        <div class="dds-ai-player-bar dds-hidden" id="dds-ai-player-bar">
+          <span class="dds-ai-player-file" id="dds-ai-player-file"></span>
+          <span class="dds-ai-player-pos" id="dds-ai-player-pos"></span>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-player-next" title="Next message">&#9654;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-player-run" title="Run to end">&#9197;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-player-instr" title="View / edit replay instructions">&#9432;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-player-close" title="Close player">&#10005;</button>
+        </div>
+
+      </div>
+      <input type="file" id="dds-ai-replay-input" accept=".md" style="display:none">
+
+      <!-- Replay instructions modal -->
+      <div class="dds-overlay dds-hidden" id="dds-ai-replay-instr-overlay">
+        <div class="dds-modal" style="max-width:480px">
+          <div class="dds-modal-header">
+            <span class="dds-modal-title">Replay instructions</span>
+            <button class="dds-btn dds-modal-close" id="dds-ai-replay-instr-close">&times;</button>
+          </div>
+          <div class="dds-modal-body">
+            <p style="font-size:var(--dds-text-sm);color:var(--dds-text-muted);margin:0 0 12px">
+              Instructions read from the replay file. Edit freely — use <strong>Copy to project</strong> to replace the current project instructions.
+            </p>
+            <textarea class="dds-input" id="dds-ai-replay-instr-text"
+              rows="10" style="width:100%;resize:vertical;font-size:var(--dds-text-sm)"></textarea>
+          </div>
+          <div class="dds-modal-footer">
+            <button class="dds-btn dds-btn-secondary" id="dds-ai-replay-instr-cancel">Close</button>
+            <button class="dds-btn dds-btn-primary" id="dds-ai-replay-instr-copy">Copy to project</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Replay instructions prompt (shown after load if instructions found) -->
+      <div class="dds-overlay dds-hidden" id="dds-ai-replay-instr-prompt">
+        <div class="dds-modal" style="max-width:360px">
+          <div class="dds-modal-header">
+            <span class="dds-modal-title">Replay file</span>
+          </div>
+          <div class="dds-modal-body">
+            <p style="font-size:var(--dds-text-sm);margin:0">
+              This file contains project-specific instructions. View them?
+            </p>
+          </div>
+          <div class="dds-modal-footer">
+            <button class="dds-btn dds-btn-secondary" id="dds-ai-replay-prompt-no">No</button>
+            <button class="dds-btn dds-btn-primary" id="dds-ai-replay-prompt-yes">View</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instructions modal -->
+      <div class="dds-overlay dds-hidden" id="dds-ai-instructions-overlay">
+        <div class="dds-modal" style="max-width:480px">
+          <div class="dds-modal-header">
+            <span class="dds-modal-title">Project-specific instructions</span>
+            <button class="dds-btn dds-modal-close" id="dds-ai-instructions-close">&times;</button>
+          </div>
+          <div class="dds-modal-body">
+            <p style="font-size:var(--dds-text-sm);color:var(--dds-text-muted);margin:0 0 12px">
+              These instructions are injected into every AI request for this project.<br/>
+              Typical content: naming conventions, geographic scope, preferred node types, client terminology, known constraints.
+            </p>
+            <textarea class="dds-input" id="dds-ai-instructions-text"
+              placeholder="e.g. Node names use UPPER_CASE. All lead times in days. Supplier nodes are always in the Sourcing swim-lane."
+              rows="8" style="width:100%;resize:vertical;font-size:var(--dds-text-sm)"></textarea>
+          </div>
+          <div class="dds-modal-footer">
+            <button class="dds-btn dds-btn-secondary" id="dds-ai-instructions-cancel">Cancel</button>
+            <button class="dds-btn dds-btn-primary" id="dds-ai-instructions-save">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="dds-ai-history" id="dds-ai-history">
+        <div style="text-align:center;color:var(--dds-text-muted);font-size:var(--dds-text-sm);padding:24px 0">
+          Describe a change to the project in natural language.<br/>
+          Claude will propose a plan for your review.
+        </div>
+      </div>
+
+      <div class="dds-ai-input-wrap">
+        <div class="dds-ai-input-inner">
+          <textarea class="dds-ai-input" id="dds-ai-input"
+            placeholder="e.g. Add a supplier node in the Sourcing lane&hellip;"
+            rows="3"></textarea>
+          <button class="dds-ai-clear-btn" id="dds-ai-clear" title="Clear input">&#10005;</button>
+        </div>
+        <button class="dds-btn dds-btn-primary" id="dds-ai-send">Send</button>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <main class="dds-main">
+
+      <!-- View: Map -->
+      <div class="dds-view active" id="dds-view-map">
+
+        <!-- Map toolbar -->
+        <div class="dds-map-toolbar" id="dds-map-toolbar">
+          <button class="dds-map-ai-btn dds-hidden" id="dds-btn-ai">&#129302; AI</button>
+          <select class="dds-map-selector" id="dds-map-selector" title="Active map"></select>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-rename" title="Rename map">&#9998;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-new" title="New map">+ Map</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-duplicate" title="Duplicate map">&#11001;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-delete" title="Delete map" disabled>&#10005;</button>
+          <div class="dds-map-toolbar-sep"></div>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-elements">&#9776; Elements</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-direction" title="Flow direction">&#8594; &#8594;</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-swimlane">+ Swim-lane</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-annotation">+ Annotation</button>
+          <button class="dds-btn dds-btn-primary dds-btn-sm" id="dds-btn-add-node">+ Node</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-product-on-map">+ Product</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-remove-from-map" disabled title="Remove selected element">&#10005; Remove</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-fit" style="margin-left:auto">&#9635; Fit</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-layout">&#9638; Layout</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-auto-layout" title="Auto-layout after each edit">&#8635; Auto-Layout</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-legend" title="Toggle legend">&#128065; Legend</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-notes" title="Toggle notes panel">&#128203; Notes</button>
+        </div>
+
+        <!-- Canvas -->
+        <div class="dds-canvas-wrap" id="dds-canvas-wrap">
+          <div id="dds-cy"></div>
+          <div class="dds-swimlane-overlay" id="dds-swimlane-overlay"></div>
+          <!-- Legend overlay -->
+          <div id="dds-legend" class="dds-legend"></div>
+        </div>
+
+        <!-- Notes panel -->
+        <div class="dds-notes-panel" id="dds-notes-panel">
+          <div class="dds-notes-header">
+            <span class="dds-notes-header-title">Notes</span>
+            <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-notes-show-all" title="Show all categories (including empty ones)">Show all</button>
+          </div>
+          <div class="dds-notes-body" id="dds-notes-body">
+            <!-- Rendered by DDS_NOTES_UI -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- View: Nodes -->
+      <div class="dds-view" id="dds-view-nodes">
+        <div class="dds-table-view">
+          <div class="dds-table-toolbar">
+            <span class="dds-table-title">Nodes</span>
+            <button class="dds-btn dds-btn-primary dds-btn-sm" id="dds-btn-add-node-table">+ Node</button>
+          </div>
+          <div id="dds-nodes-table-wrap"></div>
+        </div>
+      </div>
+
+      <!-- Modal: Node (add / edit) -->
+      <div class="dds-overlay dds-hidden" id="dds-modal-node-overlay">
+        <div class="dds-modal" style="max-width:480px">
+          <div class="dds-modal-header">
+            <span class="dds-modal-title" id="dds-modal-node-title">Add node</span>
+            <button class="dds-btn dds-modal-close" id="dds-modal-node-close">&times;</button>
+          </div>
+          <div class="dds-modal-body">
+            <div class="dds-field">
+              <label class="dds-label" for="dds-node-name">Name *</label>
+              <input class="dds-input" id="dds-node-name" type="text" autocomplete="off" />
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-node-type">Type</label>
+              <select class="dds-select" id="dds-node-type"></select>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-node-lane">Swim-lane</label>
+              <select class="dds-select" id="dds-node-lane"></select>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label">Tags</label>
+              <div id="dds-node-tags-wrap" class="dds-tags-wrap"></div>
+              <input class="dds-input" id="dds-node-tag-input" type="text" placeholder="Add tag and press Enter" autocomplete="off" />
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-node-notes">Notes</label>
+              <textarea class="dds-textarea" id="dds-node-notes" placeholder="Optional observations"></textarea>
+            </div>
+          </div>
+          <div class="dds-modal-footer">
+            <button class="dds-btn dds-btn-secondary" id="dds-modal-node-cancel">Cancel</button>
+            <button class="dds-btn dds-btn-secondary" id="dds-modal-node-save" disabled>Save</button>
+            <button class="dds-btn dds-btn-primary" id="dds-modal-node-save-close" disabled>Save &amp; Close</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- View: Flows -->
+      <div class="dds-view" id="dds-view-flows">
+        <div class="dds-table-view">
+          <div class="dds-table-toolbar">
+            <span class="dds-table-title">Flows</span>
+          </div>
+          <div id="dds-flows-table-wrap"></div>
+        </div>
+      </div>
+
+      <!-- View: Products -->
+      <div class="dds-view" id="dds-view-products">
+        <div class="dds-table-view">
+          <div class="dds-table-toolbar">
+            <span class="dds-table-title">Products</span>
+            <button class="dds-btn dds-btn-primary dds-btn-sm" id="dds-btn-add-product">+ Product</button>
+          </div>
+          <div id="dds-products-table-wrap"></div>
+        </div>
+      </div>
+
+      <!-- View: BOMs -->
+      <div class="dds-view" id="dds-view-boms">
+        <div class="dds-table-view">
+          <div class="dds-table-toolbar">
+            <span class="dds-table-title">BOMs</span>
+            <button class="dds-btn dds-btn-primary dds-btn-sm" id="dds-btn-add-bom">+ BOM</button>
+          </div>
+          <div id="dds-boms-table-wrap"></div>
+        </div>
+      </div>
+
+      <!-- View: Demand -->
+      <div class="dds-view" id="dds-view-demand">
+        <div class="dds-table-view">
+          <div class="dds-table-toolbar">
+            <span class="dds-table-title">Demand</span>
+          </div>
+          <div id="dds-demand-table-wrap"></div>
+        </div>
+      </div>
+
+      <!-- View: Annotations -->
+      <div class="dds-view" id="dds-view-annotations">
+        <div class="dds-table-view">
+          <div class="dds-table-toolbar">
+            <span class="dds-table-title">Annotations</span>
+          </div>
+          <div id="dds-annotations-view"></div>
+        </div>
+      </div>
+
+      <!-- View: Settings -->
+      <div class="dds-view" id="dds-view-settings">
+        <div class="dds-settings-view" id="dds-settings-content"></div>
+      </div>
+
+    </main>
+
+    <!-- Side panel (in-flow, pushes canvas+notes) -->
+    <div class="dds-panel" id="dds-panel">
+
+      <div class="dds-panel-header">
+        <span class="dds-panel-title" id="dds-panel-title">Node</span>
+        <button class="dds-btn dds-panel-close" id="dds-panel-close">&times;</button>
+      </div>
+
+      <div class="dds-panel-body" id="dds-panel-body">
+
+        <!-- ===== NODE SECTION ===== -->
+        <div id="dds-panel-node" class="dds-hidden">
+
+          <div class="dds-panel-section">
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pn-name">Name</label>
+              <input class="dds-input" id="dds-pn-name" type="text" />
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pn-type">Type</label>
+              <select class="dds-select" id="dds-pn-type"></select>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pn-lane">Swim-lane</label>
+              <select class="dds-select" id="dds-pn-lane"></select>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label">Tags</label>
+              <div class="dds-tags-wrap" id="dds-pn-tags-wrap">
+                <input class="dds-tag-input" id="dds-pn-tag-input" placeholder="Add tag…" />
+              </div>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pn-notes">Notes</label>
+              <textarea class="dds-textarea" id="dds-pn-notes"></textarea>
+            </div>
+            <div class="dds-field dds-field-inline">
+              <input type="checkbox" id="dds-pn-show-note-on-map" />
+              <label class="dds-label" for="dds-pn-show-note-on-map">Show note on map</label>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pn-label-pos">Label position</label>
+              <select id="dds-pn-label-pos" class="dds-input dds-input-sm">
+                <option value="">As in type</option>
+                <option value="center">Center</option>
+                <option value="above">Above</option>
+                <option value="below">Below</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- SKUs section -->
+          <div class="dds-panel-section" id="dds-pn-skus-section">
+            <div class="dds-panel-section-title">SKUs</div>
+            <div id="dds-pn-skus-list"></div>
+            <div class="dds-empty" id="dds-pn-skus-empty" style="padding:16px 0">
+              <div class="dds-empty-desc">No SKUs — add products to connected flows.</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ===== FLOW SECTION ===== -->
+        <div id="dds-panel-flow" class="dds-hidden">
+
+          <!-- Endpoint nodes summary -->
+          <div id="dds-pf-endpoints" class="dds-flow-endpoints"></div>
+
+          <div class="dds-panel-section">
+            <div class="dds-lead-time-row">
+              <div class="dds-field">
+                <label class="dds-label" for="dds-pf-lt-value">Lead time</label>
+                <input class="dds-input" id="dds-pf-lt-value" type="number" min="0" step="0.5" placeholder="0" />
+              </div>
+              <div class="dds-field">
+                <label class="dds-label" for="dds-pf-lt-unit">Unit</label>
+                <select class="dds-select" id="dds-pf-lt-unit">
+                  <option value="days">days</option>
+                  <option value="weeks">weeks</option>
+                  <option value="hours">hours</option>
+                  <option value="months">months</option>
+                </select>
+              </div>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label">Tags</label>
+              <div class="dds-tags-wrap" id="dds-pf-tags-wrap">
+                <input class="dds-tag-input" id="dds-pf-tag-input" placeholder="Add tag…" />
+              </div>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pf-notes">Notes</label>
+              <textarea class="dds-textarea" id="dds-pf-notes"></textarea>
+            </div>
+            <div class="dds-field dds-field-inline">
+              <input type="checkbox" id="dds-pf-show-notes-label" />
+              <label class="dds-label" for="dds-pf-show-notes-label">Show notes on map</label>
+            </div>
+            <div class="dds-field" id="dds-pf-notes-mode-row" style="display:none;">
+              <label class="dds-label" for="dds-pf-notes-mode">Display mode</label>
+              <select class="dds-select" id="dds-pf-notes-mode">
+                <option value="label">Label (on edge)</option>
+                <option value="annotation">Annotation (draggable)</option>
+              </select>
+            </div>
+            <div class="dds-field dds-field-inline">
+              <input type="checkbox" id="dds-pf-bidirectional" />
+              <label class="dds-label" for="dds-pf-bidirectional">Bidirectionnel</label>
+            </div>
+            <div class="dds-field dds-field-inline" id="dds-pf-layout-offset-row">
+              <label class="dds-label" for="dds-pf-layout-offset">Layout offset</label>
+              <input type="number" id="dds-pf-layout-offset" class="dds-input" min="0" step="1" style="width:5rem;" />
+            </div>
+            <div class="dds-field dds-field-inline" id="dds-pf-layout-dir-inverted-row" style="display:none;">
+              <label class="dds-label" for="dds-pf-layout-dir-inverted">Inverser sens layout</label>
+              <input type="checkbox" id="dds-pf-layout-dir-inverted" class="dds-checkbox" />
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pf-curve-style">Edge style</label>
+              <select class="dds-select" id="dds-pf-curve-style">
+                <option value="taxi">Taxi</option>
+                <option value="straight">Straight</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Products section -->
+          <div class="dds-panel-section">
+            <div class="dds-panel-section-title">Products</div>
+            <div id="dds-pf-products-list"></div>
+            <div class="dds-field">
+              <select class="dds-select" id="dds-pf-product-add">
+                <option value="">Add product…</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ===== SWIM-LANE SECTION ===== -->
+        <div id="dds-panel-lane" class="dds-hidden">
+
+          <div class="dds-panel-section">
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pl-name">Name</label>
+              <input class="dds-input" id="dds-pl-name" type="text" />
+            </div>
+            <div class="dds-field">
+              <label class="dds-label">Color</label>
+              <div class="dds-swatches" id="dds-pl-swatches"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ===== ANNOTATION SECTION ===== -->
+        <div id="dds-panel-annotation" class="dds-hidden">
+
+          <div class="dds-panel-section">
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pa-notes">Notes</label>
+              <textarea class="dds-textarea" id="dds-pa-notes" rows="5"></textarea>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label" for="dds-pa-lane">Swim-lane</label>
+              <select class="dds-select" id="dds-pa-lane"></select>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label">Tags</label>
+              <div class="dds-tags-wrap" id="dds-pa-tags-wrap">
+                <input class="dds-tag-input" id="dds-pa-tag-input" placeholder="Add tag…" />
+              </div>
+            </div>
+            <div class="dds-field">
+              <label class="dds-label">Font size</label>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-pa-font-dec">A&minus;</button>
+                <span id="dds-pa-font-display" style="font-size:var(--dds-text-sm);color:var(--dds-text-muted);min-width:32px;text-align:center;">11px</span>
+                <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-pa-font-inc">A+</button>
+              </div>
+            </div>
+            <div class="dds-field" style="margin-top:16px">
+              <button class="dds-btn dds-btn-danger dds-btn-sm" id="dds-pa-delete">Delete annotation</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div><!-- /.dds-workspace -->
+
+  <!-- Modal: Add product on map -->
+  <div class="dds-overlay dds-hidden" id="dds-modal-add-product-overlay">
+    <div class="dds-modal" style="max-width:400px">
+      <div class="dds-modal-header">
+        <span class="dds-modal-title">Add product on map</span>
+        <button class="dds-btn dds-modal-close" id="dds-modal-add-product-close">&times;</button>
+      </div>
+      <div class="dds-modal-body">
+        <div class="dds-field">
+          <label class="dds-label" for="dds-apm-product-input">Product *</label>
+          <input class="dds-input" id="dds-apm-product-input" type="text" placeholder="Search or create a product…" autocomplete="off" />
+          <div id="dds-apm-product-dropdown" style="display:none;position:absolute;z-index:9999;background:#fff;border:1px solid var(--dds-border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:200px;overflow-y:auto;width:100%"></div>
+        </div>
+        <div class="dds-field dds-hidden" id="dds-apm-product-type-field">
+          <label class="dds-label" for="dds-apm-product-type">Product type</label>
+          <select class="dds-select" id="dds-apm-product-type"></select>
+        </div>
+        <div class="dds-field">
+          <label class="dds-label" for="dds-apm-lane">Swim-lane</label>
+          <select class="dds-select" id="dds-apm-lane"></select>
+        </div>
+      </div>
+      <div class="dds-modal-footer">
+        <button class="dds-btn dds-btn-secondary" id="dds-modal-add-product-cancel">Cancel</button>
+        <button class="dds-btn dds-btn-primary" id="dds-modal-add-product-save" disabled>Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit project name/description -->
+  <div class="dds-overlay dds-hidden" id="dds-modal-edit-project-overlay">
+    <div class="dds-modal" style="max-width:400px">
+      <div class="dds-modal-header">
+        <span class="dds-modal-title">Edit project</span>
+        <button class="dds-btn dds-modal-close" id="dds-modal-edit-project-close">&times;</button>
+      </div>
+      <div class="dds-modal-body">
+        <div class="dds-field">
+          <label class="dds-label" for="dds-edit-proj-name">Name *</label>
+          <input class="dds-input" id="dds-edit-proj-name" type="text" autocomplete="off" />
+          <span class="dds-field-error dds-hidden" id="dds-edit-proj-name-error"></span>
+        </div>
+        <div class="dds-field">
+          <label class="dds-label" for="dds-edit-proj-desc">Description</label>
+          <textarea class="dds-textarea" id="dds-edit-proj-desc" placeholder="Optional context"></textarea>
+        </div>
+      </div>
+      <div class="dds-modal-footer">
+        <button class="dds-btn dds-btn-secondary" id="dds-modal-edit-project-cancel">Cancel</button>
+        <button class="dds-btn dds-btn-primary" id="dds-modal-edit-project-save" disabled>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Remove element (map only or full delete) -->
+  <div class="dds-overlay dds-hidden" id="dds-remove-modal-overlay">
+    <div class="dds-modal" style="max-width:440px">
+      <div class="dds-modal-header">
+        <span class="dds-modal-title" id="dds-remove-modal-title">Remove</span>
+      </div>
+      <div class="dds-modal-body" id="dds-remove-modal-body">
+        <!-- Filled by JS -->
+      </div>
+      <div class="dds-modal-footer">
+        <button class="dds-btn dds-btn-secondary" id="dds-remove-modal-cancel">Cancel</button>
+        <button class="dds-btn dds-btn-danger" id="dds-remove-modal-confirm">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Rename map -->
+  <div class="dds-overlay dds-hidden" id="dds-modal-rename-map-overlay">
+    <div class="dds-modal" style="max-width:360px">
+      <div class="dds-modal-header">
+        <span class="dds-modal-title">Rename map</span>
+        <button class="dds-btn dds-modal-close" id="dds-modal-rename-map-close">&times;</button>
+      </div>
+      <div class="dds-modal-body">
+        <div class="dds-field">
+          <label class="dds-label" for="dds-rename-map-input">Name *</label>
+          <input class="dds-input" id="dds-rename-map-input" type="text" autocomplete="off" />
+        </div>
+      </div>
+      <div class="dds-modal-footer">
+        <button class="dds-btn dds-btn-secondary" id="dds-modal-rename-map-cancel">Cancel</button>
+        <button class="dds-btn dds-btn-primary" id="dds-modal-rename-map-save" disabled>Rename</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: New project -->
+  <div class="dds-overlay dds-hidden" id="dds-modal-project-overlay">
+    <div class="dds-modal" id="dds-modal-project" role="dialog" aria-modal="true">
+      <div class="dds-modal-header">
+        <span class="dds-modal-title" id="dds-modal-project-title">New project</span>
+        <button class="dds-btn dds-modal-close" id="dds-modal-project-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="dds-modal-body">
+
+        <div class="dds-field">
+          <label class="dds-label" for="dds-proj-name">Name *</label>
+          <input class="dds-input" id="dds-proj-name" type="text" placeholder="Project name" autocomplete="off" />
+          <span class="dds-field-error dds-hidden" id="dds-proj-name-error"></span>
+        </div>
+
+        <div class="dds-field">
+          <label class="dds-label" for="dds-proj-desc">Description</label>
+          <textarea class="dds-textarea" id="dds-proj-desc" placeholder="Optional context"></textarea>
+        </div>
+
+        <div class="dds-field" id="dds-proj-from-field">
+          <label class="dds-label">From</label>
+          <select class="dds-select" id="dds-proj-from">
+            <option value="empty">Empty</option>
+            <option value="json">JSON file</option>
+          </select>
+        </div>
+
+        <div class="dds-field dds-hidden" id="dds-proj-source-existing-field">
+          <select class="dds-select" id="dds-proj-source-existing"></select>
+        </div>
+
+        <div class="dds-field dds-hidden" id="dds-proj-source-json-field">
+          <label class="dds-label">JSON file</label>
+          <input class="dds-input" id="dds-proj-source-json" type="file" accept=".json" />
+        </div>
+
+        <div class="dds-field dds-hidden" id="dds-proj-copy-field">
+          <label class="dds-label">Copy</label>
+          <div class="dds-radio-group" id="dds-proj-copy-group">
+            <label class="dds-radio-option selected" data-value="full">
+              <input type="radio" name="dds-copy-mode" value="full" checked />
+              <div>
+                <div class="dds-radio-label">Full project</div>
+                <div class="dds-radio-desc">All nodes, flows, products, SKUs, maps and geometry</div>
+              </div>
+            </label>
+            <label class="dds-radio-option" data-value="lanes">
+              <input type="radio" name="dds-copy-mode" value="lanes" />
+              <div>
+                <div class="dds-radio-label">Swim-lanes &amp; types</div>
+                <div class="dds-radio-desc">Swim-lane definitions + node &amp; product types only</div>
+              </div>
+            </label>
+            <label class="dds-radio-option" data-value="types">
+              <input type="radio" name="dds-copy-mode" value="types" />
+              <div>
+                <div class="dds-radio-label">Types only</div>
+                <div class="dds-radio-desc">Node &amp; product type definitions only</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <div class="dds-modal-footer">
+        <button class="dds-btn dds-btn-secondary" id="dds-modal-project-cancel">Cancel</button>
+        <button class="dds-btn dds-btn-primary" id="dds-modal-project-save" disabled>Create</button>
+      </div>
+    </div>
+  </div>
+
+</div>

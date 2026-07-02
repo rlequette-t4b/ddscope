@@ -1,0 +1,245 @@
+/* STYLE 600 — Side panel drawer: slide-in panel, header, body, footer, sections,
+   tag pills input, color swatches, SKU list, flow product list, lead time row. */
+
+/* ===== Side panel drawer — in-flow push layout ===== */
+/* Mirrors .dds-ai-panel pattern: in-flow inside .dds-workspace (flex row),
+   width controlled by JS (open → 360px, closed → 0). No position:fixed.
+   ID selector (#dds-panel) used to maximise specificity over platform overrides. */
+#dds-panel,
+.dds-panel {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  width: 0;
+  height: auto !important;
+  min-width: 0 !important;
+  max-width: 600px !important;
+  background: var(--dds-surface) !important;
+  border-left: 1px solid var(--dds-border) !important;
+  box-shadow: -2px 0 12px rgba(0,0,0,0.07) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  transform: none !important;
+  transition: width 0.22s ease !important;
+  z-index: auto !important;
+}
+#dds-panel.open,
+.dds-panel.open {
+  width: 360px;
+}
+
+.dds-panel-header {
+  padding: 16px 20px !important;
+  border-bottom: 1px solid var(--dds-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-shrink: 0 !important;
+  background: var(--dds-surface) !important;
+}
+.dds-panel-title {
+  font-size: var(--dds-text-lg) !important;
+  font-weight: 700 !important;
+  color: var(--dds-text) !important;
+}
+.dds-panel-close {
+  color: var(--dds-text-muted) !important;
+  font-size: 20px !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.dds-panel-close:hover { background: var(--dds-bg) !important; color: var(--dds-text) !important; }
+
+.dds-panel-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.dds-panel-footer {
+  padding: 14px 20px !important;
+  border-top: 1px solid var(--dds-border) !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+  background: var(--dds-surface) !important;
+}
+
+/* ===== Panel sections ===== */
+.dds-panel-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+/* ===== Flow endpoints summary (top of flow panel) ===== */
+.dds-flow-endpoints {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 10px 16px 8px !important;
+  border-bottom: 1px solid var(--dds-border) !important;
+  font-size: var(--dds-text-sm) !important;
+  flex-wrap: wrap !important;
+}
+.dds-flow-endpoint-node {
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 3px !important;
+  font-weight: 600 !important;
+  color: var(--dds-text) !important;
+}
+.dds-flow-endpoint-tags {
+  font-weight: 400 !important;
+  color: var(--dds-text-muted) !important;
+  font-size: var(--dds-text-xs) !important;
+}
+.dds-flow-endpoint-arrow {
+  color: var(--dds-text-muted) !important;
+  font-size: 11px !important;
+  flex-shrink: 0 !important;
+}
+
+.dds-panel-section-title {
+  font-size: var(--dds-text-xs) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--dds-text-muted) !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid var(--dds-border) !important;
+}
+
+/* ===== Tags input ===== */
+.dds-tags-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  padding: 8px !important;
+  border: 1px solid var(--dds-border) !important;
+  border-radius: var(--dds-radius) !important;
+  min-height: 40px !important;
+  cursor: text !important;
+  background: var(--dds-surface) !important;
+}
+.dds-tags-wrap:focus-within { border-color: var(--dds-accent) !important; }
+
+.dds-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 8px !important;
+  border-radius: 20px !important;
+  background: var(--dds-accent-light) !important;
+  color: var(--dds-accent) !important;
+  font-size: var(--dds-text-sm) !important;
+  font-weight: 500 !important;
+}
+.dds-tag-remove {
+  cursor: pointer !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  opacity: 0.7 !important;
+  visibility: visible !important;
+}
+.dds-tag-remove:hover { opacity: 1 !important; }
+
+.dds-tag-input {
+  border: none !important;
+  outline: none !important;
+  font-size: var(--dds-text-sm) !important;
+  background: transparent !important;
+  flex: 1 !important;
+  min-width: 80px !important;
+  color: var(--dds-text) !important;
+  padding: 2px 4px !important;
+}
+
+/* ===== Color swatches (swim-lane) ===== */
+.dds-swatches {
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+.dds-swatch {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  border: 3px solid transparent !important;
+  transition: border-color 0.15s !important;
+  flex-shrink: 0 !important;
+}
+.dds-swatch.selected { border-color: var(--dds-text) !important; }
+.dds-swatch:hover { opacity: 0.85 !important; }
+
+/* ===== SKU list ===== */
+.dds-sku-row {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  padding: 10px !important;
+  border: 1px solid var(--dds-border) !important;
+  border-radius: var(--dds-radius) !important;
+  background: var(--dds-bg) !important;
+}
+.dds-sku-name {
+  font-size: var(--dds-text-base) !important;
+  font-weight: 600 !important;
+  color: var(--dds-text) !important;
+}
+
+/* ===== Flow product list ===== */
+.dds-product-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 6px 10px !important;
+  border: 1px solid var(--dds-border) !important;
+  border-radius: var(--dds-radius) !important;
+  font-size: var(--dds-text-base) !important;
+}
+.dds-product-row-name { flex: 1 !important; }
+
+/* ===== Lead time row ===== */
+.dds-lead-time-row {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: flex-end !important;
+}
+.dds-lead-time-row .dds-field { flex: 1 !important; }
+.dds-field-inline { flex-direction: row; align-items: center; gap: 8px; }
+.dds-field-inline input[type="checkbox"] { margin: 0; width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+.dds-field-inline .dds-label { margin: 0; cursor: pointer; }
+
+/* ===== Tag suggestions dropdown ===== */
+.dds-tag-suggestions {
+  position: absolute !important;
+  z-index: 9999 !important;
+  background: var(--dds-surface) !important;
+  border: 1px solid var(--dds-border) !important;
+  border-radius: var(--dds-radius) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+  max-height: 180px !important;
+  overflow-y: auto !important;
+  min-width: 160px !important;
+}
+.dds-tag-suggestion-item {
+  padding: 7px 12px !important;
+  font-size: var(--dds-text-sm) !important;
+  color: var(--dds-text) !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+.dds-tag-suggestion-item:hover,
+.dds-tag-suggestion-item.active {
+  background: var(--dds-accent-light) !important;
+  color: var(--dds-accent) !important;
+}

@@ -1,0 +1,156 @@
+/* STYLE 905 — AI debug panel: collapsible block, summary chips, code sections,
+   editable actions textarea, Re-run row. */
+
+.dds-ai-msg-debug {
+    margin: 4px 0 8px 0;
+}
+
+.dds-dbg-block {
+    border: 1px solid #f59e0b44;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 11px;
+    background: #fffbeb;
+}
+
+.dds-dbg-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #fef3c7;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: #92400e;
+    flex-wrap: wrap;
+}
+
+.dds-dbg-toggle:hover {
+    background: #fde68a;
+}
+
+.dds-dbg-arrow {
+    font-size: 9px;
+    color: #b45309;
+    flex-shrink: 0;
+}
+
+.dds-dbg-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.dds-dbg-chip {
+    background: #fde68a;
+    border: 1px solid #f59e0b66;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 500;
+    color: #78350f;
+    white-space: nowrap;
+}
+
+.dds-dbg-badge {
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.dds-dbg-badge-err {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.dds-dbg-body {
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dds-dbg-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #92400e;
+    margin-bottom: 4px;
+}
+
+.dds-dbg-pre {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 10px;
+    line-height: 1.5;
+    color: #374151;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 0;
+}
+
+.dds-dbg-pre-err {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+/* Actions textarea + Re-run */
+.dds-dbg-textarea {
+    width: 100%;
+    min-height: 120px;
+    max-height: 400px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 10px;
+    line-height: 1.5;
+    color: #1e293b;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 6px 8px;
+    resize: vertical;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.dds-dbg-textarea:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px #fef3c766;
+}
+
+.dds-dbg-rerun-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.dds-dbg-rerun-hint {
+    font-size: 10px;
+    color: #92400e;
+    opacity: 0.7;
+}
+
+.dds-dbg-rerun-err {
+    font-size: 10px;
+    color: #991b1b;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-top: 4px;
+}

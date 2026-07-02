@@ -1,0 +1,36 @@
+<!-- DIV 500 — BOM modal (add/edit, node + output product + component lines) -->
+<div class="dds-overlay dds-hidden" id="dds-modal-bom-overlay">
+  <div class="dds-modal" style="max-width:500px">
+    <div class="dds-modal-header">
+      <span class="dds-modal-title" id="dds-modal-bom-title">Add BOM</span>
+      <button class="dds-btn dds-modal-close" id="dds-modal-bom-close">&times;</button>
+    </div>
+    <div class="dds-modal-body">
+
+      <div class="dds-field">
+        <label class="dds-label" for="dds-bom-node">Node *</label>
+        <select class="dds-select" id="dds-bom-node">
+          <option value="">Select a node&hellip;</option>
+        </select>
+      </div>
+
+      <div class="dds-field">
+        <label class="dds-label" for="dds-bom-output">Output product *</label>
+        <select class="dds-select" id="dds-bom-output">
+          <option value="">Select a product&hellip;</option>
+        </select>
+      </div>
+
+      <div class="dds-field">
+        <label class="dds-label">Components</label>
+        <div id="dds-bom-components-list"></div>
+        <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-bom-add-component" style="margin-top:8px">+ Component</button>
+      </div>
+
+    </div>
+    <div class="dds-modal-footer">
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-bom-cancel">Cancel</button>
+      <button class="dds-btn dds-btn-primary" id="dds-modal-bom-save" disabled>Save</button>
+    </div>
+  </div>
+</div>

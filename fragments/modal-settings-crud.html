@@ -1,0 +1,126 @@
+<!-- DIV 800 — Shared settings CRUD modal (swim-lane / node type / product type /
+     tag style / note category). Fields shown or hidden by DDS_SETTINGS_UI.openModal(). -->
+<div class="dds-overlay dds-hidden" id="dds-modal-settings-overlay">
+  <div class="dds-modal" style="max-width:420px">
+    <div class="dds-modal-header">
+      <span class="dds-modal-title" id="dds-modal-settings-title">Edit</span>
+      <button class="dds-btn dds-modal-close" id="dds-modal-settings-close">&times;</button>
+    </div>
+    <div class="dds-modal-body">
+
+      <!-- Name (all types) -->
+      <div class="dds-field">
+        <label class="dds-label" for="dds-set-name">Name *</label>
+        <input class="dds-input" id="dds-set-name" type="text" autocomplete="off" />
+      </div>
+
+      <!-- Code (node/product types) -->
+      <div class="dds-field dds-hidden" id="dds-set-code-field">
+        <label class="dds-label" for="dds-set-code">Code *</label>
+        <input class="dds-input" id="dds-set-code" type="text"
+          placeholder="e.g. SUPPLIER" style="text-transform:uppercase" autocomplete="off" />
+      </div>
+
+      <!-- Shape (node/product types) -->
+      <div class="dds-field dds-hidden" id="dds-set-shape-field">
+        <label class="dds-label" for="dds-set-shape">Shape</label>
+        <select class="dds-select" id="dds-set-shape">
+          <option value="rectangle">Rectangle</option>
+          <option value="diamond">Diamond</option>
+          <option value="ellipse">Ellipse</option>
+          <option value="hexagon">Hexagon</option>
+          <option value="triangle">Triangle</option>
+          <option value="star">Star</option>
+          <option value="barrel">Barrel</option>
+          <option value="rhomboid">Rhomboid</option>
+        </select>
+      </div>
+
+      <!-- Color (swim-lanes + product types) -->
+      <div class="dds-field dds-hidden" id="dds-set-color-field">
+        <label class="dds-label">Color</label>
+        <div class="dds-swatches" id="dds-set-swatches"></div>
+      </div>
+
+      <!-- Flow style fields (tag styles only) -->
+      <div id="dds-set-flow-fields" class="dds-hidden">
+        <div class="dds-field">
+          <label class="dds-label">Line color</label>
+          <div class="dds-swatches" id="dds-set-line-swatches"></div>
+        </div>
+        <div class="dds-field">
+          <label class="dds-label" for="dds-set-line-style">Line style</label>
+          <select class="dds-select" id="dds-set-line-style">
+            <option value="">— none —</option>
+            <option value="solid">Solid</option>
+            <option value="dashed">Dashed</option>
+            <option value="dotted">Dotted</option>
+          </select>
+        </div>
+        <div class="dds-field">
+          <label class="dds-label" for="dds-set-line-width">Width</label>
+          <select class="dds-select" id="dds-set-line-width">
+            <option value="">— none —</option>
+            <option value="thin">Thin (1px)</option>
+            <option value="normal">Normal (2px)</option>
+            <option value="thick">Thick (4px)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Default swim-lane (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-default-lane-field">
+        <label class="dds-label" for="dds-set-default-lane">Default swim-lane</label>
+        <select class="dds-select" id="dds-set-default-lane"></select>
+      </div>
+
+      <!-- Default checkbox (node/product types) -->
+      <div class="dds-field dds-hidden" id="dds-set-default-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--dds-text-base)">
+          <input type="checkbox" id="dds-set-default" style="width:16px;height:16px;accent-color:var(--dds-accent)" />
+          Default type
+        </label>
+      </div>
+
+      <!-- Product node default (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-product-node-default-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--dds-text-base)">
+          <input type="checkbox" id="dds-set-product-node-default" style="width:16px;height:16px;accent-color:var(--dds-accent)" />
+          Default type for "Add product on map"
+        </label>
+      </div>
+
+      <!-- Icon key (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-icon-field">
+        <label class="dds-label" for="dds-set-icon-key">Icon</label>
+        <select class="dds-select" id="dds-set-icon-key">
+          <option value="">— none —</option>
+        </select>
+      </div>
+
+      <!-- Label position (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-label-pos-field">
+        <label class="dds-label" for="dds-set-label-pos">Label position</label>
+        <select class="dds-select" id="dds-set-label-pos">
+          <option value="center">Center (default)</option>
+          <option value="below">Below</option>
+          <option value="above">Above</option>
+        </select>
+      </div>
+
+      <!-- Transparent background (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-transparent-bg-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--dds-text-base)">
+          <input type="checkbox" id="dds-set-transparent-bg" style="width:16px;height:16px;accent-color:var(--dds-accent)" />
+          Transparent background (colored icon mode)
+        </label>
+      </div>
+
+    </div>
+    <div class="dds-modal-footer">
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-settings-cancel">Cancel</button>
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-settings-save" disabled>Save</button>
+      <button class="dds-btn dds-btn-primary" id="dds-modal-settings-save-close" disabled>Save &amp; Close</button>
+    </div>
+  </div>
+</div>

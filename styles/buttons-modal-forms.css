@@ -1,0 +1,222 @@
+/* STYLE 400 — Buttons, modal overlay, form fields, radio group, empty/loading states */
+
+/* ===== Buttons ===== */
+.dds-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 7px 14px !important;
+  border-radius: var(--dds-radius) !important;
+  font-size: var(--dds-text-md) !important;
+  font-weight: 500 !important;
+  transition: background var(--dds-transition), color var(--dds-transition), border-color var(--dds-transition) !important;
+  cursor: pointer !important;
+  border: 1px solid transparent !important;
+  line-height: 1.4 !important;
+  white-space: nowrap !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  text-decoration: none !important;
+}
+
+.dds-btn-primary {
+  background: var(--dds-accent) !important;
+  color: #fff !important;
+  border-color: var(--dds-accent) !important;
+}
+.dds-btn-primary:hover { background: var(--dds-accent-hover) !important; border-color: var(--dds-accent-hover) !important; color: #fff !important; }
+.dds-btn-primary:disabled,
+.dds-btn-primary[disabled] {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  display: inline-flex !important;
+  background: var(--dds-accent) !important;
+  color: #fff !important;
+}
+
+.dds-btn-secondary {
+  background: var(--dds-surface) !important;
+  color: var(--dds-text) !important;
+  border-color: var(--dds-border) !important;
+}
+.dds-btn-secondary:hover { border-color: var(--dds-border-hover) !important; background: var(--dds-bg) !important; color: var(--dds-text) !important; }
+
+.dds-btn-ghost {
+  color: var(--dds-text-muted) !important;
+}
+.dds-btn-ghost:hover { background: var(--dds-bg) !important; color: var(--dds-text) !important; }
+.dds-btn-ghost:disabled,
+.dds-btn-ghost[disabled] {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  color: var(--dds-text-muted) !important;
+  background: var(--dds-bg) !important;
+  border-color: var(--dds-border) !important;
+  visibility: visible !important;
+  display: inline-flex !important;
+}
+
+.dds-btn-danger {
+  background: var(--dds-danger-light) !important;
+  color: var(--dds-danger) !important;
+  border-color: transparent !important;
+}
+.dds-btn-danger:hover { background: var(--dds-danger) !important; color: #fff !important; }
+
+.dds-btn-sm {
+  padding: 5px 10px;
+  font-size: var(--dds-text-sm);
+}
+
+/* ===== Modal — pattern CommWise (opacity/visibility) ===== */
+.dds-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dds-transition), visibility var(--dds-transition);
+}
+.dds-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.dds-modal {
+  background: var(--dds-surface);
+  border-radius: var(--dds-radius-lg);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow: hidden;  /* scroll uniquement sur .dds-modal-body */
+  display: flex;
+  flex-direction: column;
+}
+
+.dds-modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--dds-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.dds-modal-title {
+  font-size: var(--dds-text-modal-title) !important;
+  font-weight: 700 !important;
+}
+.dds-modal-close {
+  color: var(--dds-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.dds-modal-close:hover { background: var(--dds-bg); color: var(--dds-text); }
+
+.dds-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;  /* seul endroit avec scroll */
+  flex: 1;
+}
+
+.dds-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--dds-border);
+  background: #f8f9fa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ===== Form fields ===== */
+.dds-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dds-label {
+  font-size: var(--dds-text-xs) !important;
+  font-weight: 600 !important;
+  color: var(--dds-text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+}
+.dds-input,
+.dds-textarea,
+.dds-select {
+  border: 1px solid var(--dds-border) !important;
+  border-radius: var(--dds-radius) !important;
+  padding: 9px 12px !important;
+  font-size: var(--dds-text-md) !important;
+  color: var(--dds-text) !important;
+  background: var(--dds-surface) !important;
+  transition: border-color var(--dds-transition) !important;
+  width: 100% !important;
+}
+.dds-input:focus, .dds-textarea:focus, .dds-select:focus {
+  outline: none;
+  border-color: var(--dds-accent);
+}
+.dds-input.error { border-color: var(--dds-danger); }
+.dds-textarea { resize: vertical; min-height: 80px; }
+.dds-field-error {
+  font-size: var(--dds-text-sm);
+  color: var(--dds-danger);
+}
+
+/* ===== Radio group (copy modes) ===== */
+.dds-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dds-radio-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  padding: 10px 12px;
+  border-radius: var(--dds-radius);
+  border: 1px solid var(--dds-border);
+  transition: border-color var(--dds-transition), background var(--dds-transition);
+}
+.dds-radio-option:hover { border-color: var(--dds-accent); }
+.dds-radio-option.selected { border-color: var(--dds-accent); background: var(--dds-accent-light); }
+.dds-radio-option input[type=radio] { margin-top: 3px; accent-color: var(--dds-accent); flex-shrink: 0; }
+.dds-radio-label { font-size: var(--dds-text-base); font-weight: 500; }
+.dds-radio-desc { font-size: var(--dds-text-sm); color: var(--dds-text-muted); margin-top: 2px; }
+
+/* ===== Loading / empty state ===== */
+.dds-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--dds-text-muted);
+}
+.dds-empty-icon { font-size: 40px; margin-bottom: 12px; }
+.dds-empty-title { font-size: var(--dds-text-lg); font-weight: 600; color: var(--dds-text); margin-bottom: 6px; }
+.dds-empty-desc { font-size: var(--dds-text-base); }
+
+.dds-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--dds-border);
+  border-top-color: var(--dds-accent);
+  border-radius: 50%;
+  animation: dds-spin 0.7s linear infinite;
+}
+@keyframes dds-spin { to { transform: rotate(360deg); } }

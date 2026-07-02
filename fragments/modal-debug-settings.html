@@ -1,0 +1,66 @@
+<!-- DIV 110 — Settings Modal (Debug toggle)
+     NOTE: outer shell uses CommWise-provided b2w-settings-modal-* classes
+     (platform modal chrome); inner content (dds-settings-*) is DDScope-owned.
+     Kept as a single fragment since JS (DDS_SETTINGS_UI / SETTINGS) targets
+     both the shell ids and the inner content together. -->
+<div id="b2w-settings-modal-backdrop" class="b2w-settings-modal-backdrop">
+    <div class="b2w-settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+        <div class="b2w-settings-modal-header">
+            <h2 id="settings-modal-title" class="b2w-settings-modal-title">
+                <span>⚙️</span> Settings
+            </h2>
+            <button class="b2w-settings-modal-close" aria-label="Close settings" onclick="SETTINGS.close()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="b2w-settings-modal-content">
+            <div class="dds-settings-section">
+                <h3 class="dds-settings-section-title">Developer</h3>
+                <label class="dds-settings-row" for="dds-debug-toggle">
+                    <span class="dds-settings-label">
+                        <span class="dds-settings-label-text">Debug AI</span>
+                        <span class="dds-settings-label-hint">Shows AI request/response details in the assistant panel</span>
+                    </span>
+                    <input type="checkbox" id="dds-debug-toggle" class="dds-settings-toggle"
+                        onchange="DDS_SETTINGS.set('debug_ai', this.checked ? 'true' : 'false')">
+                </label>
+                <label class="dds-settings-row" for="dds-log-actions-toggle">
+                    <span class="dds-settings-label">
+                        <span class="dds-settings-label-text">Log actions</span>
+                        <span class="dds-settings-label-hint">Shows a live panel of all DDS_ACTIONS.execute() calls</span>
+                    </span>
+                    <input type="checkbox" id="dds-log-actions-toggle" class="dds-settings-toggle"
+                        onchange="DDS_SETTINGS.set('log_actions', this.checked ? 'true' : 'false').then(function() { if (window.DDS_ACTIONS_LOG) DDS_ACTIONS_LOG.applyVisibility(); })">
+                </label>
+                <label class="dds-settings-row" for="dds-show-bfs-ranks-toggle">
+                    <span class="dds-settings-label">
+                        <span class="dds-settings-label-text">Show BFS ranks</span>
+                        <span class="dds-settings-label-hint">Displays min-max BFS rank badges on map nodes (requires running layout)</span>
+                    </span>
+                    <input type="checkbox" id="dds-show-bfs-ranks-toggle" class="dds-settings-toggle"
+                        onchange="DDS_SETTINGS.set('show_bfs_ranks', this.checked ? 'true' : 'false').then(function() { if (window.DDS_MAP) { DDS_MAP.clearBfsRankBadges(); if (DDS_SETTINGS.isShowBfsRanks()) DDS_MAP.renderBfsRankBadges(DDS_MAP.state.currentMapId); } })">
+                </label>
+                <div class="dds-settings-row">
+                    <span class="dds-settings-label">
+                        <span class="dds-settings-label-text">Log level</span>
+                        <span class="dds-settings-label-hint">Controls DDS_TOOLS.log verbosity (debug / info / warn / error / off)</span>
+                    </span>
+                    <select id="dds-log-level-select" class="dds-select" style="width:110px"
+                        onchange="DDS_SETTINGS.set('log_level', this.value).then(function() { DDS_TOOLS.log.setLevel(document.getElementById('dds-log-level-select').value); })">
+                        <option value="debug">debug</option>
+                        <option value="info">info</option>
+                        <option value="warn">warn</option>
+                        <option value="error">error</option>
+                        <option value="off">off</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="b2w-settings-modal-footer">
+            <button class="b2w-settings-btn-close" onclick="SETTINGS.close()">Close</button>
+        </div>
+    </div>
+</div>
