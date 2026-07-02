@@ -202,16 +202,18 @@ describe('DDS_TX.NOTE_CATEGORY_REORDER', () => {
 describe('DDS_TX.NOTE_CREATE', () => {
   beforeEach(setup);
 
-  it('returns { ok: false } when mapId is null', () => {
+  it('returns { ok: true } and creates the note even when mapId is null (graceful fallback — corrected 2026-07-02: TX.NOTE_CREATE has always fallen back to _activeMapId() rather than requiring mapId, per DDScope_Commands.md §0.6 ("mapId used: No"); this test previously asserted the opposite and only surfaced as a failure once the src mirror was resynced against the live command, exercising this call site for the first time in CI)', () => {
     const { id: catId } = DDS_CMD.execute(DDS_TX.NOTE_CATEGORY_CREATE, { label: 'Cat' }, null);
     const result = DDS_CMD.execute(DDS_TX.NOTE_CREATE, { category_id: catId, content: 'No map' }, null);
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBe(true);
+    expect(typeof result.id).toBe('number');
   });
 
-  it('rolls back cleanly when mapId is null — no note or map_notes created', () => {
+  it('creates the note but no map_notes row when mapId is null and no map is active', () => {
     const { id: catId } = DDS_CMD.execute(DDS_TX.NOTE_CATEGORY_CREATE, { label: 'Cat' }, null);
-    DDS_CMD.execute(DDS_TX.NOTE_CREATE, { category_id: catId, content: 'No map' }, null);
-    expect(DDS_STORE.query('notes', { category_id: catId }).length).toBe(0);
+    const { id: noteId } = DDS_CMD.execute(DDS_TX.NOTE_CREATE, { category_id: catId, content: 'No map' }, null);
+    expect(DDS_STORE.query('notes', { category_id: catId }).length).toBe(1);
+    expect(DDS_STORE.query('notes', { id: noteId })[0].content).toBe('No map');
     expect(DDS_STORE.query('map_notes').length).toBe(0);
   });
 
