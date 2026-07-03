@@ -57,8 +57,8 @@ After every PULL or PUSH, update the relevant row immediately.
 | `presentation/DDS_PANEL.js` | SCRIPT 1500 | render-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-023: annotation notes/lane/tags handlers (openAnnotation) rewired from legacy `DDS_TX_HELPER` + `DDS_ANNOTATIONS.update()` to `DDS_CMD.execute(TX.ANNOTATION_UPDATE, ...)`. Font-size handler (`_applyFont`) left untouched — confirmed it writes `map_annotations.font_size` directly via `DDS_STORE`, never touches `DDS_ANNOTATIONS`, out of T-023 scope. Not yet pushed. |
 | `presentation/DDS_PANEL_demand.js` | SCRIPT 1505 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `presentation/DDS_ELEMENTS.js` | SCRIPT 2000 | store-dependent | NO | PULL | 2026-07-02 | — | — |
-| `presentation/DDS_REMOVE.js` | SCRIPT 2050 | render-dependent | NO | PULL | 2026-07-02 | — | — |
-| `ui/DDS_INIT.js` | SCRIPT 800 | render-dependent | NO | PULL | 2026-07-02 | — | — |
+| `presentation/DDS_REMOVE.js` | SCRIPT 2050 | render-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-036 step 2: removed the `_elemPanelOpen` / `DDS_ELEMENTS_UI.render()` refresh call in `execute()` (dead reference after panel deletion). Not yet pushed. |
+| `ui/DDS_INIT.js` | SCRIPT 800 | render-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-036 step 2: removed `DDS_ELEMENTS_UI.bindEvents()` call. Not yet pushed. |
 | `ui/DDS_UI_NAV.js` | SCRIPT 700 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_NODE_UI.js` | SCRIPT 1300 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_ANNOTATIONS_UI.js` | SCRIPT 1780 | render-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-023: 3 table inline-edit call sites (notes/lane/tags) rewired from untransacted `DDS_ANNOTATIONS.update()` + manual `markDirty()` to `DDS_CMD.execute(TX.ANNOTATION_UPDATE, ...)` — also closes the pre-existing no-transaction gap (no undo/redo previously). Follow-up: `api.refresh()` now queries `DDS_STORE.query('annotations')` directly instead of `DDS_ANNOTATIONS.getAll()`. Not yet pushed. |
@@ -68,7 +68,6 @@ After every PULL or PUSH, update the relevant row immediately.
 | `ui/DDS_DEMANDS_UI.js` | SCRIPT 1770 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_FLOWS_UI.js` | SCRIPT 1760 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_BOMS_UI.js` | SCRIPT 1900 | render-dependent | NO | PULL | 2026-07-02 | — | — |
-| `ui/DDS_ELEMENTS_UI.js` | SCRIPT 2100 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_ACTIONS_LOG.js` | SCRIPT 2515 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_NOTES_UI.js` | SCRIPT 1785 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_CONFIGURATION_UI.js` | SCRIPT 2600 | render-dependent | YES | RENAME | 2026-07-03 | — | — | Renamed from `ui/DDS_SETTINGS_UI.js` (T-034) — CommWise block still holds the old identifiers, not yet pushed. |
@@ -82,10 +81,9 @@ HTML fragments, assembled in CommWise position order. Not JS modules — no test
 | File | CommWise block | Dirty | Last operation | Date | Notes |
 |---|---|---|---|---|---|
 | `fragments/modal-debug-settings.html` | DIV 110 | YES | LOCAL-EDIT | 2026-07-03 | T-016: outer shell rebuilt on DDScope's own portable `.dds-overlay`/`.dds-modal` chrome (STYLE 400) instead of CommWise-borrowed `b2w-settings-modal-*` classes — no longer depends on STYLE 110. Wrapper id renamed `b2w-settings-modal-backdrop` → `dds-header-settings-overlay`. Inner content (`dds-settings-*`) unchanged. Not yet pushed. |
-| `fragments/app-shell.html` | DIV 200 | NO | PULL | 2026-07-02 | Main app shell: nav, workspace (AI panel + main + side panel), all view containers, all in-page modals except product/BOM/elements/settings-CRUD. Chunked fetch, 2 chunks. |
+| `fragments/app-shell.html` | DIV 200 | YES | LOCAL-EDIT | 2026-07-03 | Main app shell: nav, workspace (AI panel + main + side panel), all view containers, all in-page modals except product/BOM/settings-CRUD. Chunked fetch, 2 chunks. T-036 step 2: `#dds-btn-elements` toolbar button removed. Not yet pushed. |
 | `fragments/modal-product.html` | DIV 400 | NO | PULL | 2026-07-02 | |
 | `fragments/modal-bom.html` | DIV 500 | NO | PULL | 2026-07-02 | |
-| `fragments/panel-elements.html` | DIV 600 | NO | PULL | 2026-07-02 | |
 | `fragments/modal-configuration-crud.html` | DIV 800 | YES | RENAME | 2026-07-03 | Renamed from `fragments/modal-settings-crud.html` (T-034) — shared CRUD modal for swim-lanes / node types / product types / tag styles / note categories. CommWise block not yet pushed. |
 
 ---
@@ -104,13 +102,26 @@ CSS files. Not JS modules — no testability class.
 | `styles/demand-section.css` | STYLE 650 | NO | PULL | 2026-07-02 | |
 | `styles/ctt-overlay.css` | STYLE 660 | NO | PULL | 2026-07-02 | |
 | `styles/tables.css` | STYLE 700 | NO | PULL | 2026-07-02 | |
-| `styles/elements-panel.css` | STYLE 800 | NO | PULL | 2026-07-02 | |
+| `styles/elements-panel.css` | STYLE 800 | YES | LOCAL-EDIT | 2026-07-03 | T-036 step 2: Elements panel + contextual remove-from-map button rules removed (dead code, panel deleted). Remove-modal rules (`#dds-remove-modal-overlay` and children) kept — unrelated, still used by DDS_REMOVE. File not renamed despite scope change (avoids breaking CommWise block correspondence) — header comment updated instead. Not yet pushed. |
 | `styles/ai-panel.css` | STYLE 900 | NO | PULL | 2026-07-02 | |
 | `styles/ai-debug-panel.css` | STYLE 905 | NO | PULL | 2026-07-02 | |
 | `styles/actions-log-panel.css` | STYLE 910 | NO | PULL | 2026-07-02 | |
 | `styles/settings-content.css` | STYLE 950 | NO | PULL | 2026-07-02 | Styles the DDScope content inside the debug settings modal (DIV 110 / STYLE 110's `b2w-*` shell is CommWise-provided and NOT mirrored here). |
 | `styles/configuration-tab.css` | STYLE 1000 | YES | RENAME | 2026-07-03 | Renamed from `styles/settings-tab.css` (T-034) — CommWise block not yet pushed. |
 | `styles/notes-panel.css` | STYLE 1020 | NO | PULL | 2026-07-02 | |
+
+---
+
+## Pending block deletions (removed from tracker, still live in CommWise)
+
+Rows below no longer appear in the Tracking Table / Fragments table above (removing them there
+keeps `frameworks/local/build.js` from trying to read the now-deleted local files). Recorded
+here so the corresponding CommWise blocks are not forgotten on the next PUSH session.
+
+| File (deleted locally) | CommWise block (pending delete) | Date | Notes |
+|---|---|---|---|
+| ui/DDS_ELEMENTS_UI.js | SCRIPT 2100 | 2026-07-03 | T-036 step 2: Elements panel + dead ctx-remove code, deleted locally (superseded by search/create mechanisms, see docs/DDScope_ElementsLifecycle.md §8). Delete this block in CommWise on next PUSH session. |
+| fragments/panel-elements.html | DIV 600 | 2026-07-03 | T-036 step 2: Elements panel + contextual remove button markup, deleted locally. Delete this block in CommWise on next PUSH session. |
 
 ---
 

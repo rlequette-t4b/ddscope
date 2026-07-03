@@ -40,7 +40,6 @@
     DDS_BOMS_UI.bindEvents();
     DDS_DEMANDS_UI.bindEvents();
     DDS_ANNOTATIONS_UI.bindEvents();
-    DDS_ELEMENTS_UI.bindEvents();
     DDS_REMOVE.bindEvents();
     DDS_AI_UI.bindEvents();
     DDS_NODES_UI.bindEvents();

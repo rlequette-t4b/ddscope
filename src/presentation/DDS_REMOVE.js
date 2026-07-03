@@ -280,7 +280,6 @@ DDS_REMOVE.execute = function() {
       DDS_MAP.loadMap(DDS_MAP.state.currentMapId, true);
     }
     DDS_PANEL.close();
-    if (typeof DDS_ELEMENTS_UI !== 'undefined' && _elemPanelOpen) DDS_ELEMENTS_UI.render();
     DDS_MAP.renderLegend();
   });
 };
