@@ -18,7 +18,9 @@
 
   Module/fragment/style order is read from frameworks/commwise/sync-tracker.md by build.js —
   it is not hardcoded here. The two CDN loader positions (SCRIPT 350, 1784) are injected by
-  build.js from frameworks/local/fixtures/, verbatim copies of the live CommWise blocks.
+  build.js from frameworks/local/fixtures/, verbatim copies of the live CommWise blocks. The
+  local-only header (fragment + style, fixtures/header-local.*) is injected the same way — no
+  CommWise block equivalent (CommWise's own DIV 100/STYLE 100 header is platform chrome).
 -->
 
 <!-- Platform stub: jQuery — required by src/core/DDS_SETTINGS.js (SETTINGS/NAV_MENU
@@ -29,9 +31,10 @@
 <!-- Styles, in STYLE block order (chrome/token blocks excluded — see sync-tracker.md) -->
 {{STYLES}}
 
-<!-- Platform stubs: commwiseConfigClient, APP_CONTEXT, DataStore for DDS_SETTINGS.
-     Minimal — just enough for DDS_INIT.boot() to complete. Not real IService
-     implementations (Step C). See docs/DDScope_Framework_Local.md §Stub status. -->
+<!-- Platform stubs: commwiseConfigClient, APP_CONTEXT (not real IService implementations,
+     Step C — see docs/DDScope_Framework_Local.md §Stub status), plus a real
+     window.DDS_SETTINGS_BACKEND (settings-impl-2, LocalStorageSettings) — this one is not a
+     stub, it's the local framework's actual ISettingsService implementation. -->
 <script>
   window.commwiseConfigClient = {
     secureRequest: function() {
@@ -48,13 +51,31 @@
     }
   };
 
-  // Mimics the B2W DataStore module shape expected by DDS_SETTINGS.ready() —
-  // without this, ready() retries via setTimeout(tryLoad, 100) forever and never resolves.
-  window.B2W_DATA_DDS_APP_SETTINGS_VKVR7N = {
-    isLoaded: function() { return true; },
-    getLoadError: function() { return null; },
-    getRawRecords: function() { return []; }
-  };
+  // ISettingsService backend (settings-impl-2 — LocalStorageSettings, see
+  // docs/DDScope_Service_Settings.md). core/DDS_SETTINGS.js consumes
+  // window.DDS_SETTINGS_BACKEND directly when present — real persistence,
+  // not a stub: settings survive reloads via the browser's localStorage,
+  // with zero CommWise-specific coupling (no DataStore shim needed here).
+  (function() {
+    var PREFIX = 'ddscope.settings.';
+    window.DDS_SETTINGS_BACKEND = {
+      load: function() {
+        var records = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(PREFIX) === 0) {
+            records.push({ key: k.slice(PREFIX.length), value: localStorage.getItem(k) });
+          }
+        }
+        return Promise.resolve(records);
+      },
+      upsert: function(key, value) {
+        try { localStorage.setItem(PREFIX + key, value); }
+        catch (e) { console.warn('[local runner] localStorage write failed', e); }
+        return Promise.resolve();
+      }
+    };
+  })();
 </script>
 </head>
 <body>

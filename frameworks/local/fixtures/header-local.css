@@ -1,0 +1,48 @@
+/* Local framework — minimal header styling (see fixtures/header-local.html).
+   Uses DDScope's own design tokens (--dds-*, styles/variables-reset.css) —
+   not CommWise's --b2w-* platform tokens — so it renders identically with
+   zero dependency on the CommWise theme. */
+
+.dds-header {
+    flex-shrink: 0;
+    padding: 0.75rem 1.5rem;
+    background: var(--dds-surface);
+    border-bottom: 1px solid var(--dds-border);
+    box-shadow: var(--dds-shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dds-header-brand {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--dds-accent);
+}
+
+.dds-header-settings-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--dds-radius);
+    border: 1px solid var(--dds-border);
+    background: var(--dds-bg);
+    color: var(--dds-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--dds-transition);
+    padding: 0;
+}
+
+.dds-header-settings-btn:hover {
+    background: var(--dds-accent-light);
+    border-color: var(--dds-accent);
+    color: var(--dds-accent);
+}
+
+.dds-header-settings-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--dds-accent-light);
+    border-color: var(--dds-accent);
+}

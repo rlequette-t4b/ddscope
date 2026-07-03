@@ -18,7 +18,9 @@
 
   Module/fragment/style order is read from frameworks/commwise/sync-tracker.md by build.js —
   it is not hardcoded here. The two CDN loader positions (SCRIPT 350, 1784) are injected by
-  build.js from frameworks/local/fixtures/, verbatim copies of the live CommWise blocks.
+  build.js from frameworks/local/fixtures/, verbatim copies of the live CommWise blocks. The
+  local-only header (fragment + style, fixtures/header-local.*) is injected the same way — no
+  CommWise block equivalent (CommWise's own DIV 100/STYLE 100 header is platform chrome).
 -->
 
 <!-- Platform stub: jQuery — required by src/core/DDS_SETTINGS.js (SETTINGS/NAV_MENU
@@ -40,12 +42,64 @@
 <link rel="stylesheet" href="../../styles/ai-debug-panel.css">
 <link rel="stylesheet" href="../../styles/actions-log-panel.css">
 <link rel="stylesheet" href="../../styles/settings-content.css">
-<link rel="stylesheet" href="../../styles/settings-tab.css">
+<link rel="stylesheet" href="../../styles/configuration-tab.css">
 <link rel="stylesheet" href="../../styles/notes-panel.css">
+<!-- Local-only header styling (see fixtures/header-local.css) -->
+<style>
+/* Local framework — minimal header styling (see fixtures/header-local.html).
+   Uses DDScope's own design tokens (--dds-*, styles/variables-reset.css) —
+   not CommWise's --b2w-* platform tokens — so it renders identically with
+   zero dependency on the CommWise theme. */
 
-<!-- Platform stubs: commwiseConfigClient, APP_CONTEXT, DataStore for DDS_SETTINGS.
-     Minimal — just enough for DDS_INIT.boot() to complete. Not real IService
-     implementations (Step C). See docs/DDScope_Framework_Local.md §Stub status. -->
+.dds-header {
+    flex-shrink: 0;
+    padding: 0.75rem 1.5rem;
+    background: var(--dds-surface);
+    border-bottom: 1px solid var(--dds-border);
+    box-shadow: var(--dds-shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dds-header-brand {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--dds-accent);
+}
+
+.dds-header-settings-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--dds-radius);
+    border: 1px solid var(--dds-border);
+    background: var(--dds-bg);
+    color: var(--dds-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--dds-transition);
+    padding: 0;
+}
+
+.dds-header-settings-btn:hover {
+    background: var(--dds-accent-light);
+    border-color: var(--dds-accent);
+    color: var(--dds-accent);
+}
+
+.dds-header-settings-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--dds-accent-light);
+    border-color: var(--dds-accent);
+}
+</style>
+
+<!-- Platform stubs: commwiseConfigClient, APP_CONTEXT (not real IService implementations,
+     Step C — see docs/DDScope_Framework_Local.md §Stub status), plus a real
+     window.DDS_SETTINGS_BACKEND (settings-impl-2, LocalStorageSettings) — this one is not a
+     stub, it's the local framework's actual ISettingsService implementation. -->
 <script>
   window.commwiseConfigClient = {
     secureRequest: function() {
@@ -62,38 +116,52 @@
     }
   };
 
-  // Mimics the B2W DataStore module shape expected by DDS_SETTINGS.ready() —
-  // without this, ready() retries via setTimeout(tryLoad, 100) forever and never resolves.
-  window.B2W_DATA_DDS_APP_SETTINGS_VKVR7N = {
-    isLoaded: function() { return true; },
-    getLoadError: function() { return null; },
-    getRawRecords: function() { return []; }
-  };
+  // ISettingsService backend (settings-impl-2 — LocalStorageSettings, see
+  // docs/DDScope_Service_Settings.md). core/DDS_SETTINGS.js consumes
+  // window.DDS_SETTINGS_BACKEND directly when present — real persistence,
+  // not a stub: settings survive reloads via the browser's localStorage,
+  // with zero CommWise-specific coupling (no DataStore shim needed here).
+  (function() {
+    var PREFIX = 'ddscope.settings.';
+    window.DDS_SETTINGS_BACKEND = {
+      load: function() {
+        var records = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(PREFIX) === 0) {
+            records.push({ key: k.slice(PREFIX.length), value: localStorage.getItem(k) });
+          }
+        }
+        return Promise.resolve(records);
+      },
+      upsert: function(key, value) {
+        try { localStorage.setItem(PREFIX + key, value); }
+        catch (e) { console.warn('[local runner] localStorage write failed', e); }
+        return Promise.resolve();
+      }
+    };
+  })();
 </script>
 </head>
 <body>
 
 <!-- Fragments, in DIV block order (chrome blocks excluded — see sync-tracker.md) -->
 <!-- DIV 110 — fragments/modal-debug-settings.html -->
-<!-- DIV 110 — Settings Modal (Debug toggle)
-     NOTE: outer shell uses CommWise-provided b2w-settings-modal-* classes
-     (platform modal chrome); inner content (dds-settings-*) is DDScope-owned.
-     Kept as a single fragment since JS (DDS_SETTINGS_UI / SETTINGS) targets
-     both the shell ids and the inner content together. -->
-<div id="b2w-settings-modal-backdrop" class="b2w-settings-modal-backdrop">
-    <div class="b2w-settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
-        <div class="b2w-settings-modal-header">
-            <h2 id="settings-modal-title" class="b2w-settings-modal-title">
-                <span>⚙️</span> Settings
-            </h2>
-            <button class="b2w-settings-modal-close" aria-label="Close settings" onclick="SETTINGS.close()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
+<!-- DIV 110 — Settings Modal (developer toggles), opened from the header gear
+     icon (#dds-header-settings-btn). Fully portable DDScope-owned modal
+     chrome (.dds-overlay / .dds-modal, see styles/buttons-modal-forms.css) —
+     no CommWise-specific classes, works unmodified in every framework.
+     Controlled by SETTINGS (open/close) and DDS_SETTINGS (ISettingsService,
+     get/set), both in core/DDS_SETTINGS.js — see docs/DDScope_Service_Settings.md.
+     Not DDS_CONFIGURATION_UI (formerly DDS_SETTINGS_UI) — that module never
+     touches this modal, see T-034. -->
+<div id="dds-header-settings-overlay" class="dds-overlay">
+    <div class="dds-modal" style="max-width:480px" role="dialog" aria-modal="true" aria-labelledby="dds-header-settings-title">
+        <div class="dds-modal-header">
+            <span class="dds-modal-title" id="dds-header-settings-title">⚙️ Settings</span>
+            <button class="dds-btn dds-modal-close" aria-label="Close settings" onclick="SETTINGS.close()">&times;</button>
         </div>
-        <div class="b2w-settings-modal-content">
+        <div class="dds-modal-body">
             <div class="dds-settings-section">
                 <h3 class="dds-settings-section-title">Developer</h3>
                 <label class="dds-settings-row" for="dds-debug-toggle">
@@ -136,11 +204,38 @@
                 </div>
             </div>
         </div>
-        <div class="b2w-settings-modal-footer">
-            <button class="b2w-settings-btn-close" onclick="SETTINGS.close()">Close</button>
+        <div class="dds-modal-footer">
+            <button class="dds-btn dds-btn-secondary" onclick="SETTINGS.close()">Close</button>
         </div>
     </div>
 </div>
+
+<!-- Local-only header — DDScope brand + settings gear (see docs/DDScope_Framework_Local.md) -->
+<!-- Local framework — minimal header (DDScope brand + settings gear).
+     Not mirrored from any CommWise block: CommWise's own DIV 100 (App
+     Header) carries platform-specific info/nav-dropdown/logo chrome with no
+     local equivalent (see frameworks/commwise/sync-tracker.md — DIV 100 /
+     STYLE 100 skipped, "standard CommWise header, not customized"). This
+     fixture is local-only, injected by frameworks/local/build.js at a
+     hardcoded position — not tracked in sync-tracker.md (same pattern as the
+     CDN loader fixtures).
+     The settings button uses the same id (#dds-header-settings-btn) the
+     portable SETTINGS controller (core/DDS_SETTINGS.js) binds to in every
+     framework — see docs/DDScope_Service_Settings.md. -->
+<header class="dds-header">
+    <span class="dds-header-brand">DDScope</span>
+    <button id="dds-header-settings-btn"
+            class="dds-header-settings-btn"
+            title="Settings"
+            aria-label="Open settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+    </button>
+</header>
 
 <!-- DIV 200 — fragments/app-shell.html -->
 <div class="dds-app" id="dds-app">
@@ -158,7 +253,7 @@
       <button class="dds-nav-tab dds-hidden" id="dds-tab-boms"     data-view="boms">BOMs</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-demand"      data-view="demand">Demand</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-annotations" data-view="annotations">Annotations</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-settings"    data-view="settings">Settings</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-configuration"    data-view="configuration">Configuration</button>
     </div>
 
     <!-- Project name (centered) -->
@@ -442,9 +537,9 @@
         </div>
       </div>
 
-      <!-- View: Settings -->
-      <div class="dds-view" id="dds-view-settings">
-        <div class="dds-settings-view" id="dds-settings-content"></div>
+      <!-- View: Configuration -->
+      <div class="dds-view" id="dds-view-configuration">
+        <div class="dds-configuration-view" id="dds-configuration-content"></div>
       </div>
 
     </main>
@@ -901,14 +996,14 @@
   <button class="dds-btn dds-btn-danger dds-btn-sm" id="dds-ctx-remove-btn">Remove from map</button>
 </div>
 
-<!-- DIV 800 — fragments/modal-settings-crud.html -->
-<!-- DIV 800 — Shared settings CRUD modal (swim-lane / node type / product type /
-     tag style / note category). Fields shown or hidden by DDS_SETTINGS_UI.openModal(). -->
-<div class="dds-overlay dds-hidden" id="dds-modal-settings-overlay">
+<!-- DIV 800 — fragments/modal-configuration-crud.html -->
+<!-- DIV 800 — Shared configuration CRUD modal (swim-lane / node type / product type /
+     tag style / note category). Fields shown or hidden by DDS_CONFIGURATION_UI.openModal(). -->
+<div class="dds-overlay dds-hidden" id="dds-modal-configuration-overlay">
   <div class="dds-modal" style="max-width:420px">
     <div class="dds-modal-header">
-      <span class="dds-modal-title" id="dds-modal-settings-title">Edit</span>
-      <button class="dds-btn dds-modal-close" id="dds-modal-settings-close">&times;</button>
+      <span class="dds-modal-title" id="dds-modal-configuration-title">Edit</span>
+      <button class="dds-btn dds-modal-close" id="dds-modal-configuration-close">&times;</button>
     </div>
     <div class="dds-modal-body">
 
@@ -1022,9 +1117,9 @@
 
     </div>
     <div class="dds-modal-footer">
-      <button class="dds-btn dds-btn-secondary" id="dds-modal-settings-cancel">Cancel</button>
-      <button class="dds-btn dds-btn-secondary" id="dds-modal-settings-save" disabled>Save</button>
-      <button class="dds-btn dds-btn-primary" id="dds-modal-settings-save-close" disabled>Save &amp; Close</button>
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-configuration-cancel">Cancel</button>
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-configuration-save" disabled>Save</button>
+      <button class="dds-btn dds-btn-primary" id="dds-modal-configuration-save-close" disabled>Save &amp; Close</button>
     </div>
   </div>
 </div>
@@ -1138,7 +1233,7 @@
 <script src="../../src/ai/DDS_AI_UI_DEBUG.js"></script>
 <script src="../../src/ai/DDS_AI_UI_REPLAY.js"></script>
 <script src="../../src/ui/DDS_ACTIONS_LOG.js"></script>
-<script src="../../src/ui/DDS_SETTINGS_UI.js"></script>
+<script src="../../src/ui/DDS_CONFIGURATION_UI.js"></script>
 
 </body>
 </html>

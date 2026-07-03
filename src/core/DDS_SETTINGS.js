@@ -1,24 +1,29 @@
 /**
- * SETTINGS Module - Settings Modal Controller
+ * SETTINGS Module - Settings Modal Controller (header gear icon)
+ *
+ * Framework-agnostic: binds to a neutral button id (#dds-header-settings-btn)
+ * present in every framework's header, and toggles DDScope's own portable
+ * modal chrome (.dds-overlay / .dds-modal, see styles/buttons-modal-forms.css)
+ * — not CommWise-borrowed markup. See docs/DDScope_Service_Settings.md.
  */
 var SETTINGS = (function() {
     'use strict';
 
-    var $backdrop = null;
+    var $overlay = null;
     var $modal = null;
     var isOpen = false;
 
     function init() {
-        $backdrop = jQuery('#b2w-settings-modal-backdrop');
-        $modal = $backdrop.find('.b2w-settings-modal');
+        $overlay = jQuery('#dds-header-settings-overlay');
+        $modal = $overlay.find('.dds-modal');
 
-        jQuery('#commwise-header-settings-btn').on('click', function(e) {
+        jQuery('#dds-header-settings-btn').on('click', function(e) {
             e.preventDefault();
             open();
         });
 
-        $backdrop.on('click', function(e) {
-            if (e.target === $backdrop[0]) { close(); }
+        $overlay.on('click', function(e) {
+            if (e.target === $overlay[0]) { close(); }
         });
 
         jQuery(document).on('keydown', function(e) {
@@ -46,13 +51,15 @@ var SETTINGS = (function() {
         if (selectLogLevel && window.DDS_SETTINGS) {
             selectLogLevel.value = DDS_SETTINGS.get('log_level') || 'warn';
         }
-        $backdrop.addClass('visible');
+        if (!$overlay || !$overlay.length) return;
+        $overlay.addClass('visible');
         isOpen = true;
-        $modal.find('.b2w-settings-modal-close').focus();
+        $modal.find('.dds-modal-close').focus();
     }
 
     function close() {
-        $backdrop.removeClass('visible');
+        if (!$overlay || !$overlay.length) return;
+        $overlay.removeClass('visible');
         isOpen = false;
     }
 
@@ -66,7 +73,13 @@ var SETTINGS = (function() {
 })();
 
 /**
- * NAV_MENU Module - Header Navigation Dropdown Controller
+ * NAV_MENU Module - CommWise header navigation dropdown controller.
+ *
+ * CommWise-chrome only (Your Profile / Your Apps / App Store links, DIV 100 —
+ * a skipped/non-portable block, see frameworks/commwise/sync-tracker.md).
+ * The local framework's header has no nav dropdown, so this module simply
+ * no-ops there (#commwise-header-nav-btn / #commwise-header-nav-dropdown
+ * don't exist in frameworks/local/fixtures/header-local.html).
  */
 var NAV_MENU = (function() {
     'use strict';
@@ -115,18 +128,30 @@ var NAV_MENU = (function() {
 })();
 
 /**
- * DDS_SETTINGS — App-level settings backed by DataStore
+ * DDS_SETTINGS — ISettingsService: application-level settings/toggles
+ * (developer toggles: debug_ai, log_actions, show_bfs_ranks, log_level).
+ * See docs/DDScope_Service_Settings.md for the interface contract.
  *
- * Reads key/value pairs from cw_c3_22645_app_settings at boot.
- * Exposes DDS.state.settings and a simple get/set/isDebug API.
- *
- * Boot sequence:
- *   await DDS_SETTINGS.ready()        -> resolves when DataStore has loaded
- *   DDS_SETTINGS.isDebug()            -> true if debug_mode === 'true'
+ * Public API (framework-agnostic):
+ *   await DDS_SETTINGS.ready()        -> resolves once initial values are loaded
  *   DDS_SETTINGS.get('key')           -> string value or null
- *   await DDS_SETTINGS.set('k', 'v') -> upsert to DataStore
+ *   await DDS_SETTINGS.set('k', 'v')  -> persist a value
+ *   DDS_SETTINGS.isDebugAI() / isLogActions() / isShowBfsRanks() / getLogLevel()
  *
- * DataStore module: window.B2W_DATA_DDS_APP_SETTINGS_VKVR7N
+ * Persistence backend (the actual decoupling seam):
+ *   A backend is a plain object { load(): Promise<Array<{key,value}>>,
+ *   upsert(key, value): Promise<void> }. A framework may inject one
+ *   explicitly via window.DDS_SETTINGS_BACKEND, set *before* DDS_SETTINGS.
+ *   ready() is first called — same convention as the commwiseConfigClient /
+ *   APP_CONTEXT stubs (see frameworks/local/template.html).
+ *
+ *   - settings-impl-1 CommWiseDataStoreSettings (framework-1/CommWise):
+ *     no wiring required — if no backend was injected, DDS_SETTINGS falls
+ *     back to the CommWise DataStore module (window.B2W_DATA_DDS_APP_SETTINGS_VKVR7N),
+ *     preserving the original behaviour unchanged.
+ *   - settings-impl-2 LocalStorageSettings (framework-2/Local): injected by
+ *     frameworks/local/template.html via window.DDS_SETTINGS_BACKEND, backed
+ *     by window.localStorage — no CommWise DataStore stub needed anymore.
  */
 var DDS_SETTINGS = (function() {
     'use strict';
@@ -134,34 +159,98 @@ var DDS_SETTINGS = (function() {
     var DS_MODULE = 'B2W_DATA_DDS_APP_SETTINGS_VKVR7N';
     var _cache = {};
     var _readyPromise = null;
+    var _backend = null;
 
     if (window.DDS && window.DDS.state) {
         window.DDS.state.settings = window.DDS.state.settings || {};
     }
 
-    function ready() {
-        if (_readyPromise) return _readyPromise;
+    function _memoryBackend() {
+        // Last-resort fallback: no persistence (e.g. Vitest/jsdom with no
+        // injected backend and no CommWise DataStore global).
+        return {
+            load: function() { return Promise.resolve([]); },
+            upsert: function() { return Promise.resolve(); }
+        };
+    }
 
-        _readyPromise = new Promise(function(resolve) {
+    // settings-impl-1 — CommWiseDataStoreSettings. Unchanged polling logic:
+    // the DataStore DATA block loads after this SCRIPT block in CommWise's
+    // assembly order, so window[DS_MODULE] genuinely does not exist yet when
+    // this file first runs. Bounded (was previously unbounded) so that an
+    // environment where the global never appears (e.g. tests) degrades to
+    // memory-only instead of hanging ready() forever.
+    function _commwiseDataStoreBackend() {
+        return new Promise(function(resolve) {
+            var attempts = 0;
+            var MAX_ATTEMPTS = 30; // ~3s at 100ms
+
             function tryLoad() {
                 var ds = window[DS_MODULE];
-                if (!ds) { setTimeout(tryLoad, 100); return; }
-                if (ds.isLoaded()) { _populate(ds.getRawRecords()); resolve(); return; }
-                if (ds.getLoadError()) {
-                    console.warn('[DDS_SETTINGS] DataStore error — using defaults:', ds.getLoadError());
-                    resolve(); return;
+                if (!ds) {
+                    attempts++;
+                    if (attempts > MAX_ATTEMPTS) {
+                        console.warn('[DDS_SETTINGS] ' + DS_MODULE + ' never appeared — memory-only.');
+                        resolve(_memoryBackend());
+                        return;
+                    }
+                    setTimeout(tryLoad, 100);
+                    return;
                 }
-                document.addEventListener('B2W_DATA_DDS_APP_SETTINGS_VKVR7N_ready', function onReady() {
-                    _populate(window[DS_MODULE].getRawRecords());
-                    resolve();
-                }, { once: true });
-                document.addEventListener('B2W_DATA_DDS_APP_SETTINGS_VKVR7N_error', function onErr() {
-                    console.warn('[DDS_SETTINGS] DataStore error event — using defaults');
-                    resolve();
-                }, { once: true });
+                resolve({
+                    load: function() {
+                        return new Promise(function(res) {
+                            if (ds.isLoaded()) { res(ds.getRawRecords()); return; }
+                            if (ds.getLoadError()) {
+                                console.warn('[DDS_SETTINGS] DataStore error — using defaults:', ds.getLoadError());
+                                res([]);
+                                return;
+                            }
+                            document.addEventListener(DS_MODULE + '_ready', function onReady() {
+                                res(window[DS_MODULE].getRawRecords());
+                            }, { once: true });
+                            document.addEventListener(DS_MODULE + '_error', function onErr() {
+                                console.warn('[DDS_SETTINGS] DataStore error event — using defaults');
+                                res([]);
+                            }, { once: true });
+                        });
+                    },
+                    upsert: async function(key, value) {
+                        var existing = ds.getRawRecords().find(function(r) { return r.key === key; });
+                        if (existing) {
+                            await ds.update({ id: existing.id }, { value: value });
+                        } else {
+                            await ds.insert({ key: key, value: value });
+                        }
+                    }
+                });
             }
             tryLoad();
         });
+    }
+
+    function _resolveBackend() {
+        if (window.DDS_SETTINGS_BACKEND) {
+            return Promise.resolve(window.DDS_SETTINGS_BACKEND);
+        }
+        return _commwiseDataStoreBackend();
+    }
+
+    function ready() {
+        if (_readyPromise) return _readyPromise;
+
+        _readyPromise = _resolveBackend()
+            .then(function(backend) {
+                _backend = backend;
+                return backend.load();
+            })
+            .then(function(records) {
+                _populate(records);
+            })
+            .catch(function(e) {
+                console.warn('[DDS_SETTINGS] Failed to load settings — using defaults:', e);
+                _backend = _backend || _memoryBackend();
+            });
 
         return _readyPromise;
     }
@@ -190,22 +279,11 @@ var DDS_SETTINGS = (function() {
     }
 
     async function set(key, value) {
-        var ds = window[DS_MODULE];
-        if (!ds) {
-            console.warn('[DDS_SETTINGS] DataStore not available — memory only');
-            _cache[key] = value;
-            _syncState();
-            return;
-        }
         _cache[key] = value;
         _syncState();
+        var backend = _backend || _memoryBackend();
         try {
-            var existing = ds.getRawRecords().find(function(r) { return r.key === key; });
-            if (existing) {
-                await ds.update({ id: existing.id }, { value: value });
-            } else {
-                await ds.insert({ key: key, value: value });
-            }
+            await backend.upsert(key, value);
             console.log('[DDS_SETTINGS] Saved:', key, '=', value);
         } catch(e) {
             console.error('[DDS_SETTINGS] Save failed for key', key, e);

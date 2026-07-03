@@ -1,24 +1,18 @@
-<!-- DIV 110 — Settings Modal (Debug toggle)
-     NOTE: outer shell uses CommWise-provided b2w-settings-modal-* classes
-     (platform modal chrome); inner content (dds-settings-*) is DDScope-owned.
-     Kept as a single fragment since JS (SETTINGS / DDS_SETTINGS, SCRIPT 50 —
-     via the inline onchange handlers below) targets both the shell ids and
-     the inner content together. Not DDS_CONFIGURATION_UI (formerly
-     DDS_SETTINGS_UI) — that module never touches this modal, see T-034. -->
-<div id="b2w-settings-modal-backdrop" class="b2w-settings-modal-backdrop">
-    <div class="b2w-settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
-        <div class="b2w-settings-modal-header">
-            <h2 id="settings-modal-title" class="b2w-settings-modal-title">
-                <span>⚙️</span> Settings
-            </h2>
-            <button class="b2w-settings-modal-close" aria-label="Close settings" onclick="SETTINGS.close()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
+<!-- DIV 110 — Settings Modal (developer toggles), opened from the header gear
+     icon (#dds-header-settings-btn). Fully portable DDScope-owned modal
+     chrome (.dds-overlay / .dds-modal, see styles/buttons-modal-forms.css) —
+     no CommWise-specific classes, works unmodified in every framework.
+     Controlled by SETTINGS (open/close) and DDS_SETTINGS (ISettingsService,
+     get/set), both in core/DDS_SETTINGS.js — see docs/DDScope_Service_Settings.md.
+     Not DDS_CONFIGURATION_UI (formerly DDS_SETTINGS_UI) — that module never
+     touches this modal, see T-034. -->
+<div id="dds-header-settings-overlay" class="dds-overlay">
+    <div class="dds-modal" style="max-width:480px" role="dialog" aria-modal="true" aria-labelledby="dds-header-settings-title">
+        <div class="dds-modal-header">
+            <span class="dds-modal-title" id="dds-header-settings-title">⚙️ Settings</span>
+            <button class="dds-btn dds-modal-close" aria-label="Close settings" onclick="SETTINGS.close()">&times;</button>
         </div>
-        <div class="b2w-settings-modal-content">
+        <div class="dds-modal-body">
             <div class="dds-settings-section">
                 <h3 class="dds-settings-section-title">Developer</h3>
                 <label class="dds-settings-row" for="dds-debug-toggle">
@@ -61,8 +55,8 @@
                 </div>
             </div>
         </div>
-        <div class="b2w-settings-modal-footer">
-            <button class="b2w-settings-btn-close" onclick="SETTINGS.close()">Close</button>
+        <div class="dds-modal-footer">
+            <button class="dds-btn dds-btn-secondary" onclick="SETTINGS.close()">Close</button>
         </div>
     </div>
 </div>

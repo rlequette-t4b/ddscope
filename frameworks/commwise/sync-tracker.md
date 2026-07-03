@@ -36,7 +36,7 @@ After every PULL or PUSH, update the relevant row immediately.
 | `domain/DDS_PRODUCTS.js` | SCRIPT 1610 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
 | `domain/DDS_BOMS.js` | SCRIPT 1800 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
 | `domain/DDS_DEMANDS.js` | SCRIPT 1660 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
-| `core/DDS_SETTINGS.js` | SCRIPT 50 | store-dependent | NO | PULL | 2026-07-02 | — | — |
+| `core/DDS_SETTINGS.js` | SCRIPT 50 | store-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-016: `DDS_SETTINGS` refactored behind `ISettingsService` (pluggable backend via `window.DDS_SETTINGS_BACKEND`, CommWise DataStore auto-detected as fallback — behaviour-preserving for CommWise). `SETTINGS` modal controller retargeted to neutral `#dds-header-settings-btn` id + portable `.dds-overlay`/`.dds-modal` chrome. Not yet pushed — CommWise SCRIPT 50 still holds the pre-T-016 version. |
 | `core/DDS_ICONS.js` | SCRIPT 110 | pure | NO | PULL | 2026-07-02 | — | — |
 | `core/DDS_JSON.js` | SCRIPT 600 | store-dependent | NO | PULL | 2026-07-02 | — | — |
 | `core/DDS_TX_HELPER.js` | SCRIPT 1870 | store-dependent | NO | PULL | 2026-07-02 | — | — |
@@ -84,7 +84,7 @@ HTML fragments, assembled in CommWise position order. Not JS modules — no test
 
 | File | CommWise block | Dirty | Last operation | Date | Notes |
 |---|---|---|---|---|---|
-| `fragments/modal-debug-settings.html` | DIV 110 | NO | PULL | 2026-07-02 | Outer shell uses CommWise `b2w-settings-modal-*` classes (platform chrome); inner content is DDScope-owned (`dds-settings-*`). Kept as one fragment — JS targets both together. |
+| `fragments/modal-debug-settings.html` | DIV 110 | YES | LOCAL-EDIT | 2026-07-03 | T-016: outer shell rebuilt on DDScope's own portable `.dds-overlay`/`.dds-modal` chrome (STYLE 400) instead of CommWise-borrowed `b2w-settings-modal-*` classes — no longer depends on STYLE 110. Wrapper id renamed `b2w-settings-modal-backdrop` → `dds-header-settings-overlay`. Inner content (`dds-settings-*`) unchanged. Not yet pushed. |
 | `fragments/app-shell.html` | DIV 200 | NO | PULL | 2026-07-02 | Main app shell: nav, workspace (AI panel + main + side panel), all view containers, all in-page modals except product/BOM/elements/settings-CRUD. Chunked fetch, 2 chunks. |
 | `fragments/modal-product.html` | DIV 400 | NO | PULL | 2026-07-02 | |
 | `fragments/modal-bom.html` | DIV 500 | NO | PULL | 2026-07-02 | |
@@ -136,14 +136,14 @@ CommWise platform infrastructure, CDN loaders, empty stubs, or temporary debug c
 ### DIV (2 skipped)
 | Block | Title | Reason |
 |---|---|---|
-| DIV 100 | App Header | Standard CommWise header, not customized. |
+| DIV 100 | App Header | Standard CommWise header, not customized. Local framework gets its own minimal header instead — not a mirror of this block, see `frameworks/local/fixtures/header-local.html` and `docs/DDScope_Framework_Local.md`. **T-016 coupling (2026-07-03, not yet applied):** when SCRIPT 50 / DIV 110 are eventually pushed, this block's settings button `id` must be manually renamed `commwise-header-settings-btn` → `dds-header-settings-btn` in the same push — SCRIPT 50's `SETTINGS` controller now binds the new id only; without this rename the CommWise gear icon stops opening the modal. DIV 100 is otherwise untracked (no `src/` row), so this can't be diffed automatically — manual step, do not forget it. |
 | DIV 300 | [STUB — moved to DIV 200] | Intentionally empty. |
 
 ### STYLE (6 skipped)
 | Block | Title | Reason |
 |---|---|---|
-| STYLE 100 | App Header | Standard CommWise header styling. |
-| STYLE 110 | Settings Modal (placeholder) | Styles only the CommWise-provided `b2w-settings-modal-*` shell chrome (backdrop/header/footer); no DDScope-specific classes. The DDScope content inside (`dds-settings-*`) is styled separately by STYLE 950, which **is** extracted. |
+| STYLE 100 | App Header | Standard CommWise header styling. Local framework's header is styled independently, see `frameworks/local/fixtures/header-local.css`. |
+| STYLE 110 | Settings Modal (placeholder) | Styled only the CommWise-provided `b2w-settings-modal-*` shell chrome (backdrop/header/footer); no DDScope-specific classes. **Superseded by T-016** (2026-07-03): `fragments/modal-debug-settings.html` no longer uses that markup at all — it now uses DDScope's own portable `.dds-overlay`/`.dds-modal` chrome (STYLE 400). STYLE 110 is dead once SCRIPT 50 / DIV 110 are pushed; candidate for deletion in CommWise at that point. The DDScope content inside the modal (`dds-settings-*`) is styled separately by STYLE 950, which **is** extracted and unaffected by this change. |
 | STYLE 810 | Color Tokens — Immutable (T810) | CommWise/DDMRP shared design-system tokens (`--b2w-*` prefixed), reused across CommWise apps — platform infra, not DDScope-authored. |
 | STYLE 820 | Color Tokens — Mutable (T820) | Same as above — rebrandable `--b2w-*` tokens, platform infra. |
 | STYLE 830 | Typography & Spacing (T830) | Same as above — shared `--b2w-*` typography/spacing scale, platform infra. |

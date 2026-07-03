@@ -10,9 +10,13 @@
  * can never drift from it silently. Files removed from the tracker (dead facades,
  * not-yet-extracted modules like DDS_AI_SERVICE / T-005) are automatically absent here.
  *
- * The two CDN loader positions (SCRIPT 350, 1784) are not src/ files — they are
- * injected from frameworks/local/fixtures/, verbatim copies of the live CommWise
- * blocks (see docs/DDScope_Modular_Architecture.md §8 Decoupling Log, Step 2).
+ * The two CDN loader positions (SCRIPT 350, 1784) and the local-only header
+ * (fragment + style, see fixtures/header-local.*) are not src/ files and have
+ * no CommWise-block equivalent tracked in sync-tracker.md — they are injected
+ * from frameworks/local/fixtures/ at hardcoded positions. The CDN loaders are
+ * verbatim copies of the live CommWise blocks; the header is local-only (see
+ * docs/DDScope_Framework_Local.md §Local-only additions — CommWise's own
+ * DIV 100/STYLE 100 header is platform chrome with no local equivalent).
  *
  * Usage:
  *   node frameworks/local/build.js
@@ -35,6 +39,19 @@ const OUTPUT = path.join(__dirname, 'index.html');
 const CDN_INJECTIONS = [
   { position: 350, fixture: 'fixtures/script-350-cdn-cytoscape.js', comment: 'SCRIPT 350 — CDN: Cytoscape + Dagre (verbatim, see fixtures/)' },
   { position: 1784, fixture: 'fixtures/script-1784-cdn-sortablejs.js', comment: 'SCRIPT 1784 — CDN: SortableJS (verbatim, see fixtures/). Must precede SCRIPT 1785.' }
+];
+
+// Local-only fragment — not tracked in sync-tracker.md (no CommWise block:
+// DIV 100/STYLE 100 are CommWise platform chrome, skipped/non-portable).
+// Position 150 places it just before DIV 200 (app shell), where CommWise's
+// own header sits in the assembly order.
+const LOCAL_FRAGMENTS = [
+  { position: 150, fixture: 'fixtures/header-local.html', comment: 'Local-only header — DDScope brand + settings gear (see docs/DDScope_Framework_Local.md)' }
+];
+
+// Local-only style — same rationale as LOCAL_FRAGMENTS above.
+const LOCAL_STYLES = [
+  { fixture: 'fixtures/header-local.css', comment: 'Local-only header styling (see fixtures/header-local.css)' }
 ];
 
 /**
@@ -64,16 +81,32 @@ async function main() {
   if (divs.length === 0) throw new Error('No DIV rows found in sync-tracker.md — check the table format.');
   if (styles.length === 0) throw new Error('No STYLE rows found in sync-tracker.md — check the table format.');
 
-  // --- Styles: <link> tags, in STYLE order ---
-  const stylesHtml = styles
+  // --- Styles: <link> tags (tracker order) + inline local-only styles ---
+  const trackerStylesHtml = styles
     .map(({ file }) => `<link rel="stylesheet" href="../../${file}">`)
     .join('\n');
+  const localStylesParts = [];
+  for (const { fixture, comment } of LOCAL_STYLES) {
+    const content = await readFile(path.join(__dirname, fixture), 'utf8');
+    localStylesParts.push(`<!-- ${comment} -->\n<style>\n${content.trim()}\n</style>`);
+  }
+  const stylesHtml = [trackerStylesHtml, ...localStylesParts].join('\n');
 
-  // --- Fragments: concatenated content, in DIV order ---
+  // --- Fragments: concatenated content, in DIV order, local-only fragments merged in ---
+  const mergedFragments = [
+    ...divs.map(d => ({ ...d, kind: 'tracker' })),
+    ...LOCAL_FRAGMENTS.map(f => ({ ...f, kind: 'local' }))
+  ].sort((a, b) => a.position - b.position);
+
   const fragmentParts = [];
-  for (const { file, position } of divs) {
-    const content = await readFile(path.join(REPO_ROOT, file), 'utf8');
-    fragmentParts.push(`<!-- DIV ${position} — ${file} -->\n${content.trim()}`);
+  for (const entry of mergedFragments) {
+    if (entry.kind === 'tracker') {
+      const content = await readFile(path.join(REPO_ROOT, entry.file), 'utf8');
+      fragmentParts.push(`<!-- DIV ${entry.position} — ${entry.file} -->\n${content.trim()}`);
+    } else {
+      const content = await readFile(path.join(__dirname, entry.fixture), 'utf8');
+      fragmentParts.push(`<!-- ${entry.comment} -->\n${content.trim()}`);
+    }
   }
   const fragmentsHtml = fragmentParts.join('\n\n');
 
@@ -103,7 +136,7 @@ async function main() {
 
   await writeFile(OUTPUT, output, 'utf8');
 
-  console.log(`[build] ${scripts.length} modules, ${CDN_INJECTIONS.length} CDN loaders, ${divs.length} fragments, ${styles.length} styles.`);
+  console.log(`[build] ${scripts.length} modules, ${CDN_INJECTIONS.length} CDN loaders, ${divs.length} fragments (+${LOCAL_FRAGMENTS.length} local-only), ${styles.length} styles (+${LOCAL_STYLES.length} local-only).`);
   console.log(`[build] Wrote ${path.relative(REPO_ROOT, OUTPUT)}`);
 }
 
