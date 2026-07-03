@@ -51,6 +51,3 @@ var DDS_DURATION = (function() {
 
 }());
 
-export default DDS_DURATION;
-
-

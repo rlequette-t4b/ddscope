@@ -130,5 +130,3 @@ var DDS_TRANSACTIONS = (function () {
   };
 }());
 
-// ESM export for Vitest compatibility
-export default DDS_TRANSACTIONS;

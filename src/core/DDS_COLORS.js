@@ -14,5 +14,3 @@ var DDS_COLORS = [
   '#8e24aa',
   '#6d4c41'
 ];
-
-export default DDS_COLORS;

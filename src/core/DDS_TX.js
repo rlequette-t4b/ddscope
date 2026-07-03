@@ -115,5 +115,3 @@ var TX = {
 
 window.TX = TX;
 
-// ESM export for Vitest compatibility
-export default TX;

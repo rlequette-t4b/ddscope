@@ -263,7 +263,3 @@ var DDS_MODEL = (function () {
 
 }());
 
-export default DDS_MODEL;
-
-
-

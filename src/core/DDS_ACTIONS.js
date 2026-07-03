@@ -683,8 +683,3 @@ window.DDS_ACTIONS = (function () {
 
 })();
 
-
-export default window.DDS_ACTIONS;
-
-
-

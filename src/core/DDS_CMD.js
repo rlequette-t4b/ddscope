@@ -1707,5 +1707,3 @@ var DDS_CMD = (function () {
 
 window.DDS_CMD = DDS_CMD;
 
-// ESM export for Vitest compatibility
-export default DDS_CMD;
