@@ -1,53 +1,73 @@
 // ============================================================
-// DDS_NODE_UI — node creation modal + canvas add
+// DDS_NODE_UI — node search/create modal (map toolbar) + canvas add
+//
+// T-036 part 1: the map `+ Node` modal is a combined create-and-add-to-map
+// mechanism. The name field is a search/create input (same pattern as the
+// `+ Product` modal _apmOnInput dropdown):
+//   — existing node already on active map → shown grayed "(on map)", not
+//     selectable;
+//   — existing node not on active map → place it via TX.MAP_ADD_NODE
+//     (undoable — the Elements panel bypassed the command layer);
+//   — no exact match → `+ Create "[name]"` → TX.NODE_CREATE with mapId;
+//     type and swim-lane fields shown only in the create case.
+// Exact-name matches suppress the create entry — duplicate node names are
+// avoided by construction.
+//
+// ID NAMESPACE: this injected modal uses `dds-map-node-*` ids — distinct
+// from the static `dds-modal-node-*` / `dds-node-*` modal in
+// fragments/app-shell.html owned by DDS_NODES_UI (table view). The previous
+// version injected under the SAME ids, destroying the static modal and its
+// bindings on first use of the map `+ Node` button (pre-existing collision,
+// fixed with the T-036 rework).
 // ============================================================
 
 var DDS_NODE_UI = {};
 
+// { id: int, name } existing node (not on map) | { id: null, name } create | null
+DDS_NODE_UI._selectedNode = null;
+
 DDS_NODE_UI.injectModal = function() {
-  var existing = document.getElementById('dds-modal-node-overlay');
+  var existing = document.getElementById('dds-map-node-overlay');
   if (existing) existing.parentNode.removeChild(existing);
   var html = [
-    '<div class="dds-overlay dds-hidden" id="dds-modal-node-overlay">',
-    '  <div class="dds-modal" style="max-width:400px">',
+    '<div class="dds-overlay dds-hidden" id="dds-map-node-overlay">',
+    '  <div class="dds-modal" style="max-width:420px">',
     '    <div class="dds-modal-header">',
     '      <span class="dds-modal-title">Add node</span>',
-    '      <button class="dds-btn dds-modal-close" id="dds-modal-node-close">&times;</button>',
+    '      <button class="dds-btn dds-modal-close" id="dds-map-node-close">&times;</button>',
     '    </div>',
     '    <div class="dds-modal-body">',
-    '      <div class="dds-field"><label class="dds-label" for="dds-node-name">Name *</label>',
-    '        <input class="dds-input" id="dds-node-name" type="text" placeholder="Node name" autocomplete="off" /></div>',
-    '      <div class="dds-field"><label class="dds-label" for="dds-node-type">Type</label>',
-    '        <select class="dds-select" id="dds-node-type"></select></div>',
-    '      <div class="dds-field"><label class="dds-label" for="dds-node-lane">Swim-lane</label>',
-    '        <select class="dds-select" id="dds-node-lane"></select></div>',
+    '      <div class="dds-field" style="position:relative">',
+    '        <label class="dds-label" for="dds-map-node-input">Node *</label>',
+    '        <input class="dds-input" id="dds-map-node-input" type="text" placeholder="Search or create..." autocomplete="off" />',
+    '        <div id="dds-map-node-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--dds-border-light,#e2e8f0);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:9999;max-height:200px;overflow-y:auto"></div>',
+    '      </div>',
+    '      <div class="dds-field dds-hidden" id="dds-map-node-type-field"><label class="dds-label" for="dds-map-node-type">Type</label>',
+    '        <select class="dds-select" id="dds-map-node-type"></select></div>',
+    '      <div class="dds-field dds-hidden" id="dds-map-node-lane-field"><label class="dds-label" for="dds-map-node-lane">Swim-lane</label>',
+    '        <select class="dds-select" id="dds-map-node-lane"></select></div>',
     '    </div>',
     '    <div class="dds-modal-footer">',
-    '      <button class="dds-btn dds-btn-secondary" id="dds-modal-node-cancel">Cancel</button>',
-    '      <button class="dds-btn dds-btn-secondary" id="dds-modal-node-save" disabled>Save</button>',
-    '      <button class="dds-btn dds-btn-primary" id="dds-modal-node-save-close" disabled>Save &amp; Close</button>',
+    '      <button class="dds-btn dds-btn-secondary" id="dds-map-node-cancel">Cancel</button>',
+    '      <button class="dds-btn dds-btn-secondary" id="dds-map-node-save" disabled>Save</button>',
+    '      <button class="dds-btn dds-btn-primary" id="dds-map-node-save-close" disabled>Save &amp; Close</button>',
     '    </div></div></div>'
   ].join('\n');
   var tmp = document.createElement('div');
   tmp.innerHTML = html;
   document.body.appendChild(tmp.firstElementChild);
 
-  document.getElementById('dds-node-name').addEventListener('input', function() {
-    var ok = !!this.value.trim();
-    document.getElementById('dds-modal-node-save').disabled = !ok;
-    document.getElementById('dds-modal-node-save-close').disabled = !ok;
-  });
-  document.getElementById('dds-modal-node-close').addEventListener('click', function() { DDS_NODE_UI.closeModal(); });
-  document.getElementById('dds-modal-node-cancel').addEventListener('click', function() { DDS_NODE_UI.closeModal(); });
-  document.getElementById('dds-modal-node-save').addEventListener('click', function() { DDS_NODE_UI._doSave(false); });
-  document.getElementById('dds-modal-node-save-close').addEventListener('click', function() { DDS_NODE_UI._doSave(true); });
-  document.getElementById('dds-modal-node-overlay').addEventListener('click', function(e) {
+  document.getElementById('dds-map-node-close').addEventListener('click', function() { DDS_NODE_UI.closeModal(); });
+  document.getElementById('dds-map-node-cancel').addEventListener('click', function() { DDS_NODE_UI.closeModal(); });
+  document.getElementById('dds-map-node-save').addEventListener('click', function() { DDS_NODE_UI._doSave(false); });
+  document.getElementById('dds-map-node-save-close').addEventListener('click', function() { DDS_NODE_UI._doSave(true); });
+  document.getElementById('dds-map-node-overlay').addEventListener('click', function(e) {
     if (e.target === this) DDS_NODE_UI.closeModal();
   });
   // Enter = Save & Close
-  document.getElementById('dds-modal-node-overlay').addEventListener('keydown', function(e) {
+  document.getElementById('dds-map-node-overlay').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-      var btn = document.getElementById('dds-modal-node-save-close');
+      var btn = document.getElementById('dds-map-node-save-close');
       if (btn && !btn.disabled) { e.preventDefault(); DDS_NODE_UI._doSave(true); }
     }
   });
@@ -55,8 +75,9 @@ DDS_NODE_UI.injectModal = function() {
 
 DDS_NODE_UI.openModal = function() {
   DDS_NODE_UI.injectModal();
+  DDS_NODE_UI._selectedNode = null;
 
-  var typeEl = document.getElementById('dds-node-type');
+  var typeEl = document.getElementById('dds-map-node-type');
   typeEl.innerHTML = '<option value="">— no type —</option>';
   var types = DDS_STORE.query('node_types');
   var defaultType = types.find(function(t) { return t.is_default; }) || types[0];
@@ -68,7 +89,7 @@ DDS_NODE_UI.openModal = function() {
     typeEl.appendChild(opt);
   });
 
-  var laneEl = document.getElementById('dds-node-lane');
+  var laneEl = document.getElementById('dds-map-node-lane');
   var lanes = DDS_STORE.query('swim_lanes');
   function _populateLanes(preselectedId) {
     laneEl.innerHTML = '<option value="">— no swim-lane —</option>';
@@ -90,42 +111,152 @@ DDS_NODE_UI.openModal = function() {
     _populateLanes(selectedType ? (selectedType.default_swim_lane_id || null) : null);
   });
 
-  document.getElementById('dds-node-name').value = '';
-  document.getElementById('dds-modal-node-save').disabled = true;
-  document.getElementById('dds-modal-node-save-close').disabled = true;
-  var overlay = document.getElementById('dds-modal-node-overlay');
+  // Create-only fields hidden until the create entry is selected
+  document.getElementById('dds-map-node-type-field').classList.add('dds-hidden');
+  document.getElementById('dds-map-node-lane-field').classList.add('dds-hidden');
+
+  var input = document.getElementById('dds-map-node-input');
+  input.value = '';
+  DDS_NODE_UI._setButtons(null);
+  DDS_NODE_UI._hideDropdown();
+
+  input.oninput = function() { DDS_NODE_UI._onInput(this.value); };
+  input.onblur  = function() { setTimeout(DDS_NODE_UI._hideDropdown, 150); };
+
+  var overlay = document.getElementById('dds-map-node-overlay');
   overlay.classList.remove('dds-hidden');
   void overlay.offsetWidth;
   overlay.classList.add('visible');
-  document.getElementById('dds-node-name').focus();
+  input.focus();
+};
+
+// Set save-button labels and enabled state from the current selection.
+// sel: null (nothing selected) | { id: int } (existing → "Add to map") |
+//      { id: null } (create → "Save").
+DDS_NODE_UI._setButtons = function(sel) {
+  var saveBtn      = document.getElementById('dds-map-node-save');
+  var saveCloseBtn = document.getElementById('dds-map-node-save-close');
+  var disabled = !sel;
+  saveBtn.disabled = disabled;
+  saveCloseBtn.disabled = disabled;
+  if (sel && sel.id !== null) {
+    saveBtn.textContent = 'Add to map';
+    saveCloseBtn.innerHTML = 'Add &amp; Close';
+  } else {
+    saveBtn.textContent = 'Save';
+    saveCloseBtn.innerHTML = 'Save &amp; Close';
+  }
+};
+
+DDS_NODE_UI._onInput = function(val) {
+  val = val.trim();
+  DDS_NODE_UI._selectedNode = null;
+  DDS_NODE_UI._setButtons(null);
+  document.getElementById('dds-map-node-type-field').classList.add('dds-hidden');
+  document.getElementById('dds-map-node-lane-field').classList.add('dds-hidden');
+
+  var dropdown = document.getElementById('dds-map-node-dropdown');
+  var nodes = DDS_STORE.query('nodes');
+  var lower = val.toLowerCase();
+  var matches = val ? nodes.filter(function(n) {
+    return (n.name || '').toLowerCase().indexOf(lower) !== -1;
+  }) : nodes;
+
+  var onMapIds = DDS_STORE.query('map_nodes', { map_id: DDS_MAP.state.currentMapId })
+    .map(function(r) { return r.node_id; });
+
+  var laneMap = {};
+  DDS_STORE.query('swim_lanes').forEach(function(l) { laneMap[l.id] = l.name || ('Lane ' + l.id); });
+  var typeMap = {};
+  DDS_STORE.query('node_types').forEach(function(t) { typeMap[t.code] = t.label || t.code; });
+
+  dropdown.innerHTML = '';
+  var items = [];
+
+  matches.forEach(function(n) {
+    items.push({ id: n.id, name: n.name, isNew: false, onMap: onMapIds.indexOf(n.id) !== -1,
+      meta: [n.type_code ? (typeMap[n.type_code] || n.type_code) : null,
+             n.swim_lane_id ? (laneMap[n.swim_lane_id] || null) : null]
+            .filter(Boolean).join(' · ') });
+  });
+
+  var exactMatch = nodes.find(function(n) {
+    return (n.name || '').toLowerCase() === lower;
+  });
+  if (val && !exactMatch) {
+    items.push({ id: null, name: val, isNew: true, onMap: false, meta: '' });
+  }
+
+  if (items.length === 0) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  items.forEach(function(item) {
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:var(--dds-text-sm);border-bottom:1px solid var(--dds-border-light,#f1f5f9)';
+    if (item.isNew) {
+      div.textContent = '+ Create "' + item.name + '"';
+      div.style.color = 'var(--dds-accent)';
+    } else {
+      div.textContent = item.name + (item.meta ? ' — ' + item.meta : '') + (item.onMap ? ' (on map)' : '');
+    }
+    if (item.onMap) {
+      // Already on the active map — grayed, not selectable
+      div.style.color = 'var(--dds-text-muted,#94a3b8)';
+      div.style.cursor = 'default';
+    } else {
+      div.onmousedown = function() {
+        DDS_NODE_UI._selectedNode = { id: item.id, name: item.name };
+        document.getElementById('dds-map-node-input').value = item.name;
+        DDS_NODE_UI._hideDropdown();
+        DDS_NODE_UI._setButtons(DDS_NODE_UI._selectedNode);
+        // Type / lane fields only for the create case
+        document.getElementById('dds-map-node-type-field').classList.toggle('dds-hidden', !item.isNew);
+        document.getElementById('dds-map-node-lane-field').classList.toggle('dds-hidden', !item.isNew);
+      };
+      div.onmouseover = function() { this.style.background = 'var(--dds-bg-hover,#f8fafc)'; };
+      div.onmouseout  = function() { this.style.background = ''; };
+    }
+    dropdown.appendChild(div);
+  });
+
+  dropdown.style.display = 'block';
+};
+
+DDS_NODE_UI._hideDropdown = function() {
+  var d = document.getElementById('dds-map-node-dropdown');
+  if (d) d.style.display = 'none';
 };
 
 DDS_NODE_UI.closeModal = function() {
-  var overlay = document.getElementById('dds-modal-node-overlay');
+  var overlay = document.getElementById('dds-map-node-overlay');
   if (overlay) overlay.classList.remove('visible');
+  DDS_NODE_UI._hideDropdown();
+  DDS_NODE_UI._selectedNode = null;
 };
 
-// _doSave: shared logic for Save (closeAfter=false) and Save & Close (closeAfter=true)
+// _doSave: shared logic for Save (closeAfter=false) and Save & Close (closeAfter=true).
+// Selection required: { id: int } → TX.MAP_ADD_NODE (place existing node);
+// { id: null } → TX.NODE_CREATE with mapId (create and place).
 DDS_NODE_UI._doSave = function(closeAfter) {
-  var saveBtn      = document.getElementById('dds-modal-node-save');
-  var saveCloseBtn = document.getElementById('dds-modal-node-save-close');
+  var sel = DDS_NODE_UI._selectedNode;
+  if (!sel) return;
+
+  var saveBtn      = document.getElementById('dds-map-node-save');
+  var saveCloseBtn = document.getElementById('dds-map-node-save-close');
   saveBtn.disabled = true;
   saveCloseBtn.disabled = true;
   saveBtn.innerHTML = '<span class="dds-spinner"></span>';
 
-  var mapId      = DDS_MAP.state.currentMapId;
-  var name       = document.getElementById('dds-node-name').value.trim();
-  var typeCode   = document.getElementById('dds-node-type').value || null;
-  var laneVal    = document.getElementById('dds-node-lane').value;
-  var swimLaneId = laneVal ? parseInt(laneVal) : null;
+  var mapId = DDS_MAP.state.currentMapId;
 
-  var result = DDS_CMD.execute(TX.NODE_CREATE, {
-    name: name, type_code: typeCode, swim_lane_id: swimLaneId
-  }, mapId, function(cmdResult) {
+  function onSuccess(cmdResult) {
     // Add to Cytoscape (presentation — after commit)
     DDS_CY.add({ group: 'nodes', data: {
       id: 'n' + cmdResult.nodeId, nodeId: cmdResult.nodeId, mapNodeId: cmdResult.mapNodeId,
-      label: name, shape: DDS_MAP.getShape(typeCode), typeCode: typeCode
+      label: cmdResult.name !== undefined ? cmdResult.name : sel.name,
+      shape: DDS_MAP.getShape(cmdResult.typeCode), typeCode: cmdResult.typeCode
     }, position: { x: cmdResult.x, y: cmdResult.y } });
 
     var emptyEl = document.getElementById('dds-map-empty');
@@ -137,13 +268,34 @@ DDS_NODE_UI._doSave = function(closeAfter) {
       DDS_NODE_UI.closeModal();
     } else {
       // Reset for next entry
-      document.getElementById('dds-node-name').value = '';
+      DDS_NODE_UI._selectedNode = null;
+      document.getElementById('dds-map-node-input').value = '';
+      document.getElementById('dds-map-node-type-field').classList.add('dds-hidden');
+      document.getElementById('dds-map-node-lane-field').classList.add('dds-hidden');
+      DDS_NODE_UI._hideDropdown();
       saveBtn.innerHTML = 'Save';
-      saveBtn.disabled = true;
-      saveCloseBtn.disabled = true;
-      document.getElementById('dds-node-name').focus();
+      DDS_NODE_UI._setButtons(null);
+      document.getElementById('dds-map-node-input').focus();
     }
-  });
+  }
+
+  var result;
+  if (sel.id !== null) {
+    // Existing node not on map → place it
+    result = DDS_CMD.execute(TX.MAP_ADD_NODE, { node_id: sel.id }, mapId, onSuccess);
+  } else {
+    // Create and place
+    var typeCode   = document.getElementById('dds-map-node-type').value || null;
+    var laneVal    = document.getElementById('dds-map-node-lane').value;
+    var swimLaneId = laneVal ? parseInt(laneVal) : null;
+    result = DDS_CMD.execute(TX.NODE_CREATE, {
+      name: sel.name, type_code: typeCode, swim_lane_id: swimLaneId
+    }, mapId, function(cmdResult) {
+      cmdResult.name = sel.name;
+      cmdResult.typeCode = typeCode;
+      onSuccess(cmdResult);
+    });
+  }
 
   if (!result.ok) {
     console.error('[DDS] Add node error');
@@ -153,7 +305,8 @@ DDS_NODE_UI._doSave = function(closeAfter) {
   }
 };
 
-// Keep handleSave as alias (used by DDS_NODES_UI which rebinds the button)
+// Backward-compat alias. Note: since the dds-map-node-* id namespace split
+// (T-036 part 1), this modal no longer shares DOM with DDS_NODES_UI.
 DDS_NODE_UI.handleSave = function() { DDS_NODE_UI._doSave(true); };
 
 DDS_NODE_UI.bindEvents = function() {

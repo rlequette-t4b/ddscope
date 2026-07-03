@@ -1100,3 +1100,93 @@ describe('DDS_TX.DEMAND_DELETE — cascade via DDS_MODEL.deleteDemand', () => {
     expect(DDS_STORE.query('demands', { node_id: node.id, product_id: productId }).length).toBe(1);
   });
 });
+
+// ------------------------------------------------------------------ //
+// MAP_ADD_NODE — place an existing node on the map (T-036 part 1)
+//
+// DDS_LAYOUT (src/presentation) is not part of the vitest shims
+// (shims/modules.js loads src/core only). placeNode is stubbed locally so
+// the handler's store mutation, idempotent guard, and undo are covered —
+// the placement algorithm itself is out of scope here.
+// ------------------------------------------------------------------ //
+
+describe('DDS_TX.MAP_ADD_NODE', () => {
+  beforeEach(() => {
+    setup();
+    globalThis.DDS_LAYOUT = { placeNode: () => ({ x: 123, y: 456 }) };
+  });
+
+  it('exposes the TX key', () => {
+    expect(DDS_TX.MAP_ADD_NODE).toBe('map.add_node');
+  });
+
+  it('inserts a map_nodes row with the placed position', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1', type_code: 'plant' })[0];
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_NODE, { node_id: node.id }, mapId);
+    expect(result.ok).toBe(true);
+    const rows = DDS_STORE.query('map_nodes', { map_id: mapId, node_id: node.id });
+    expect(rows.length).toBe(1);
+    expect(rows[0].x).toBe(123);
+    expect(rows[0].y).toBe(456);
+    expect(result.mapNodeId).toBe(rows[0].id);
+    expect(result.name).toBe('N1');
+    expect(result.typeCode).toBe('plant');
+  });
+
+  it('fails without a mapId', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_NODE, { node_id: node.id }, null);
+    expect(result.ok).toBe(false);
+  });
+
+  it('fails for an unknown node', () => {
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_NODE, { node_id: 99999 }, getMapId());
+    expect(result.ok).toBe(false);
+  });
+
+  it('is idempotent — no duplicate map_nodes row, alreadyOnMap flagged', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    DDS_CMD.execute(DDS_TX.MAP_ADD_NODE, { node_id: node.id }, mapId);
+    const second = DDS_CMD.execute(DDS_TX.MAP_ADD_NODE, { node_id: node.id }, mapId);
+    expect(second.ok).toBe(true);
+    expect(second.alreadyOnMap).toBe(true);
+    expect(DDS_STORE.query('map_nodes', { map_id: mapId, node_id: node.id }).length).toBe(1);
+  });
+
+  it('coerces a string node_id (AI-string-id pattern)', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_NODE, { node_id: String(node.id) }, mapId);
+    expect(result.ok).toBe(true);
+    expect(DDS_STORE.query('map_nodes', { map_id: mapId, node_id: node.id }).length).toBe(1);
+  });
+
+  it('is undoable — undo removes the map_nodes row, node record untouched', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    DDS_TRANSACTIONS.clear();
+    DDS_CMD.execute(DDS_TX.MAP_ADD_NODE, { node_id: node.id }, mapId);
+    expect(DDS_STORE.query('map_nodes', { map_id: mapId, node_id: node.id }).length).toBe(1);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('map_nodes', { map_id: mapId, node_id: node.id }).length).toBe(0);
+    expect(DDS_STORE.query('nodes', { id: node.id }).length).toBe(1);
+  });
+
+  it('is redoable', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    DDS_TRANSACTIONS.clear();
+    DDS_CMD.execute(DDS_TX.MAP_ADD_NODE, { node_id: node.id }, mapId);
+    DDS_TRANSACTIONS.undo();
+    DDS_TRANSACTIONS.redo();
+    expect(DDS_STORE.query('map_nodes', { map_id: mapId, node_id: node.id }).length).toBe(1);
+  });
+
+  it('describe() labels it with the node name', () => {
+    const node = DDS_STORE.insert('nodes', { name: 'Plant Lyon' })[0];
+    const labels = DDS_CMD.describe([{ type: DDS_TX.MAP_ADD_NODE, params: { node_id: node.id } }]);
+    expect(labels[0].label).toBe('Add node "Plant Lyon" to map');
+  });
+});

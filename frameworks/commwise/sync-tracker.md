@@ -28,19 +28,16 @@ After every PULL or PUSH, update the relevant row immediately.
 | `core/DDS_COLORS.js` | SCRIPT 105 | pure | NO | PULL | 2026-05-23 | v100 | #23900 |
 | `core/DDS_STORE.js` | SCRIPT 150 | store-dependent | NO | PULL | 2026-05-24 | v100 | #23962 |
 | `core/DDS_DURATION.js` | SCRIPT 1650 | pure | NO | PULL | 2026-05-23 | v101 | #23899 |
-| `core/DDS_MODEL.js` | SCRIPT 1550 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
+| `core/DDS_MODEL.js` | SCRIPT 1550 | store-dependent | NO | PULL | 2026-07-03 | — | — | Tracker was stale — previous pull (2026-05-23) predated the live 2026-07-02 rewrite (ensureSku/cleanupSku, DDS_PRODUCTS dependency removed, deleteSwimLane now cascades annotation deletion). Re-pulled while retiring the DDS_PRODUCTS/DDS_DEMANDS/DDS_BOMS dead facades. |
 | `core/DDS_ACTIONS.js` | SCRIPT 1850 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
 | `core/DDS_TRANSACTIONS.js` | SCRIPT 1860 | store-dependent | NO | PUSH | 2026-05-24 | v100 | #23913 |
 | `core/DDS_TX.js` | SCRIPT 1865 | pure | NO | PUSH | 2026-07-01 | — | #28133 | (Phase 5 §3.3: added MAP_SHOW_DEMAND / MAP_HIDE_DEMAND keys, annotated NODE_ASSIGN_LANE / SKU_ADD / SKU_REMOVE as unused) |
 | `core/DDS_CMD.js` | SCRIPT 1875 | store-dependent | NO | PUSH | 2026-07-01 | — | #28133 | (Phase 5 §3.3: added NODE_UPDATE, FLOW_UPDATE, FLOW_ADD_PRODUCT, FLOW_REMOVE_PRODUCT, SKU_UPDATE, DEMAND_CREATE, MAP_SHOW_DEMAND, MAP_HIDE_DEMAND commands) |
-| `domain/DDS_PRODUCTS.js` | SCRIPT 1610 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
-| `domain/DDS_BOMS.js` | SCRIPT 1800 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
-| `domain/DDS_DEMANDS.js` | SCRIPT 1660 | store-dependent | NO | PULL | 2026-05-23 | v101 | #23899 |
 | `core/DDS_SETTINGS.js` | SCRIPT 50 | store-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-016: `DDS_SETTINGS` refactored behind `ISettingsService` (pluggable backend via `window.DDS_SETTINGS_BACKEND`, CommWise DataStore auto-detected as fallback — behaviour-preserving for CommWise). `SETTINGS` modal controller retargeted to neutral `#dds-header-settings-btn` id + portable `.dds-overlay`/`.dds-modal` chrome. Not yet pushed — CommWise SCRIPT 50 still holds the pre-T-016 version. |
 | `core/DDS_ICONS.js` | SCRIPT 110 | pure | NO | PULL | 2026-07-02 | — | — |
 | `core/DDS_JSON.js` | SCRIPT 600 | store-dependent | NO | PULL | 2026-07-02 | — | — |
 | `core/DDS_TX_HELPER.js` | SCRIPT 1870 | store-dependent | NO | PULL | 2026-07-02 | — | — |
-| `domain/DDS_ANNOTATIONS.js` | SCRIPT 1670 | store-dependent | NO | PULL | 2026-07-02 | — | — |
+| `domain/DDS_ANNOTATIONS.js` | SCRIPT 1670 | store-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-023 follow-up: `getAll()` removed (dead — its only caller, `DDS_ANNOTATIONS_UI.refresh()`, now calls `DDS_STORE.query('annotations')` directly). Remaining live methods: `showOnMap()`/`hideFromMap()` (called by `DDS_ELEMENTS`). Remaining dead-but-present: `create()`, `update()`, `delete()`, `updatePosition()`, `getById()`, `getOnMap()` — zero callers each, not yet stripped. Not yet pushed. |
 | `domain/DDS_PROJECTS.js` | SCRIPT 500 | store-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ai/DDS_AI_CONTEXT.js` | SCRIPT 2200 | store-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ai/DDS_AI.js` | SCRIPT 2400 | out-of-scope | NO | PULL | 2026-07-02 | — | — |
@@ -57,16 +54,16 @@ After every PULL or PUSH, update the relevant row immediately.
 | `presentation/DDS_SWIMLANE_GROUP.js` | SCRIPT 1150 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `presentation/DDS_LAYOUT.js` | SCRIPT 1250 | store-dependent | NO | PULL | 2026-07-02 | — | — |
 | `presentation/DDS_FLOW_UI.js` | SCRIPT 1400 | render-dependent | NO | PULL | 2026-07-02 | — | — |
-| `presentation/DDS_PANEL.js` | SCRIPT 1500 | render-dependent | NO | PULL | 2026-07-02 | — | — |
+| `presentation/DDS_PANEL.js` | SCRIPT 1500 | render-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-023: annotation notes/lane/tags handlers (openAnnotation) rewired from legacy `DDS_TX_HELPER` + `DDS_ANNOTATIONS.update()` to `DDS_CMD.execute(TX.ANNOTATION_UPDATE, ...)`. Font-size handler (`_applyFont`) left untouched — confirmed it writes `map_annotations.font_size` directly via `DDS_STORE`, never touches `DDS_ANNOTATIONS`, out of T-023 scope. Not yet pushed. |
 | `presentation/DDS_PANEL_demand.js` | SCRIPT 1505 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `presentation/DDS_ELEMENTS.js` | SCRIPT 2000 | store-dependent | NO | PULL | 2026-07-02 | — | — |
 | `presentation/DDS_REMOVE.js` | SCRIPT 2050 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_INIT.js` | SCRIPT 800 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_UI_NAV.js` | SCRIPT 700 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_NODE_UI.js` | SCRIPT 1300 | render-dependent | NO | PULL | 2026-07-02 | — | — |
-| `ui/DDS_ANNOTATIONS_UI.js` | SCRIPT 1780 | render-dependent | NO | PULL | 2026-07-02 | — | — |
+| `ui/DDS_ANNOTATIONS_UI.js` | SCRIPT 1780 | render-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-023: 3 table inline-edit call sites (notes/lane/tags) rewired from untransacted `DDS_ANNOTATIONS.update()` + manual `markDirty()` to `DDS_CMD.execute(TX.ANNOTATION_UPDATE, ...)` — also closes the pre-existing no-transaction gap (no undo/redo previously). Follow-up: `api.refresh()` now queries `DDS_STORE.query('annotations')` directly instead of `DDS_ANNOTATIONS.getAll()`. Not yet pushed. |
 | `ui/DDS_PRODUCTS_UI.js` | SCRIPT 1700 | render-dependent | NO | PULL | 2026-07-02 | — | — |
-| `ui/DDS_MAP_UI.js` | SCRIPT 1200 | render-dependent | NO | PULL | 2026-07-02 | — | — |
+| `ui/DDS_MAP_UI.js` | SCRIPT 1200 | render-dependent | YES | LOCAL-EDIT | 2026-07-03 | — | — | T-023: annotation create-on-map modal confirm handler rewired from untransacted `DDS_ANNOTATIONS.create()` to `DDS_CMD.execute(TX.ANNOTATION_CREATE, ...)`. Not yet pushed. Note: pre-existing `DDS_CONFIGURATION_UI` rename (T-034) in this same file is unrelated, already tracked. |
 | `ui/DDS_NODES_UI.js` | SCRIPT 1750 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_DEMANDS_UI.js` | SCRIPT 1770 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_FLOWS_UI.js` | SCRIPT 1760 | render-dependent | NO | PULL | 2026-07-02 | — | — |

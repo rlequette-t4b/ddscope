@@ -773,6 +773,47 @@ var DDS_CMD = (function () {
   });
 
   // ---------------------------------------------------------------------------
+  // Map presentation — element visibility (T-036 part 1)
+  // ---------------------------------------------------------------------------
+
+  // TX.MAP_ADD_NODE
+  // params: { node_id: integer }
+  // mapId (2nd arg to execute) is required — places an EXISTING node on the
+  // map: DDS_LAYOUT.placeNode (pure position computation, no Cytoscape
+  // mutation), insert map_nodes. Replaces the legacy Elements-panel path
+  // (DDS_ELEMENTS.addNode — direct store insert outside any transaction, so
+  // never undoable; see T-036). The Cytoscape add stays in the caller's
+  // onSuccess — same mutation/presentation split as TX.NODE_CREATE.
+  // Idempotent: if the node is already on the map, no-ops and returns the
+  // existing map_nodes row (alreadyOnMap: true) — mirrors the
+  // DEMAND_CREATE / SKU_ADD duplicate-guard style.
+  _register(TX.MAP_ADD_NODE, function (params, mapId) {
+    if (!mapId) throw new Error('[DDS_CMD] MAP_ADD_NODE requires a mapId');
+    var nodeId = parseInt(params.node_id, 10);
+    var node = _rec('nodes', nodeId);
+    if (!node) throw new Error('[DDS_CMD] Node not found');
+
+    var existing = DDS_STORE.query('map_nodes', { map_id: mapId, node_id: nodeId });
+    if (existing.length > 0) {
+      return {
+        ok: true, id: nodeId, nodeId: nodeId, mapNodeId: existing[0].id,
+        x: existing[0].x, y: existing[0].y,
+        name: node.name, typeCode: node.type_code, alreadyOnMap: true
+      };
+    }
+
+    var pos = DDS_LAYOUT.placeNode(nodeId, mapId);
+    var x = pos ? pos.x : 200;
+    var y = pos ? pos.y : 200;
+    var mnRows = DDS_STORE.insert('map_nodes', [{ map_id: mapId, node_id: nodeId, x: x, y: y }]);
+    DDS_STORE.markDirty();
+    return {
+      ok: true, id: nodeId, nodeId: nodeId, mapNodeId: mnRows[0].id,
+      x: x, y: y, name: node.name, typeCode: node.type_code
+    };
+  });
+
+  // ---------------------------------------------------------------------------
   // Nodes domain (Phase 5 — DDS_CMD_Migration.md)
   // ---------------------------------------------------------------------------
 
@@ -1402,6 +1443,10 @@ var DDS_CMD = (function () {
             break;
           case TX.ANNOTATION_UPDATE:
             label = 'Update annotation "' + _entityLabel('annotations', params.id, newLabelMap) + '"';
+            break;
+
+          case TX.MAP_ADD_NODE:
+            label = 'Add node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" to map';
             break;
 
           case TX.MAP_CREATE:

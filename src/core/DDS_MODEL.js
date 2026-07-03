@@ -1,21 +1,19 @@
 // AUDITOR:LARGE_BLOCK_JUSTIFIED - complete integrity API, all operations must be co-located.
 // ============================================================
-// DDS_MODEL  functional integrity layer
+// DDS_MODEL — functional integrity layer
 // ============================================================
-// Authoritative runtime implementation of DDScope_DataModel.md 17.
+// Authoritative runtime implementation of DDScope_DataModel.md §17.
 // The ONLY module allowed to perform cascade deletions on the
 // functional model. DDS_STORE is the data layer; DDS_MODEL is
 // the business rules layer above it.
 //
 // v1 strategy: thin facade delegating to existing modules.
-// Migration to direct DDS_STORE calls happens progressively
-// as DDS_PRODUCTS / DDS_BOMS / DDS_DEMANDS are deprecated.
+// Migration to direct DDS_STORE calls happened progressively as
+// DDS_PRODUCTS / DDS_BOMS / DDS_DEMANDS were deprecated. As of
+// 2026-07-02, DDS_MODEL owns SKU lifecycle logic directly
+// (ensureSku/cleanupSku, below) — DDS_PRODUCTS is no longer a dependency.
 //
-// Depends on: DDS_STORE    (SCRIPT 150)
-//             DDS_NODES    (in SCRIPT 1600, loaded before this block)
-//             DDS_PRODUCTS (SCRIPT 1600)
-// Note: DDS_BOMS and DDS_DEMANDS are no longer dependencies 
-//       cascade logic inlined directly via DDS_STORE calls.
+// Depends on: DDS_STORE (SCRIPT 150) only.
 // ============================================================
 
 var DDS_MODEL = (function () {
@@ -44,19 +42,26 @@ var DDS_MODEL = (function () {
         });
       }
     }
-    // Cascade: flows + map_flows + SKU cleanup
+    // Cascade: flows + map_flows + SKU cleanup.
+    // SKU cleanup runs AFTER every flow is removed from the store (not
+    // per-flow inline) — cleanupSku's "still referenced by another flow"
+    // check queries DDS_STORE live, so checking before removal would always
+    // find the very flow being deleted and never actually clean up the
+    // surviving endpoint's SKU (fixed 2026-07-02 — see cleanupSku below).
     var flows = DDS_STORE.query('flows').filter(function (f) {
       return f.source_node_id === nodeId || f.target_node_id === nodeId;
     });
+    var skuCleanupPairs = [];
     flows.forEach(function (f) {
       (f.product_ids || []).forEach(function (pid) {
-        if (typeof DDS_PRODUCTS !== 'undefined') {
-          DDS_PRODUCTS.cleanSku(f.source_node_id, pid);
-          DDS_PRODUCTS.cleanSku(f.target_node_id, pid);
-        }
+        skuCleanupPairs.push({ nodeId: f.source_node_id, productId: pid });
+        skuCleanupPairs.push({ nodeId: f.target_node_id, productId: pid });
       });
       DDS_STORE.remove('map_flows', { flow_id: f.id });
       DDS_STORE.remove('flows',     { id: f.id });
+    });
+    skuCleanupPairs.forEach(function (pair) {
+      api.cleanupSku(pair.nodeId, pair.productId);
     });
     DDS_STORE.remove('skus', { node_id: nodeId });
     // BOMs
@@ -160,12 +165,54 @@ var DDS_MODEL = (function () {
     nodes.forEach(function (node) {
       api.deleteNode(node.id);
     });
+    // Delete annotations assigned to this lane
+    DDS_STORE.query('annotations', { swim_lane_id: swimLaneId }).forEach(function (ann) {
+      api.deleteAnnotation(ann.id);
+    });
     DDS_STORE.remove('map_swim_lanes', { swim_lane_id: swimLaneId });
     var affectedTypes = DDS_STORE.query('node_types', { default_swim_lane_id: swimLaneId });
     affectedTypes.forEach(function (nt) {
       DDS_STORE.update('node_types', { id: nt.id }, { default_swim_lane_id: null });
     });
     DDS_STORE.remove('swim_lanes', { id: swimLaneId });
+  };
+
+  // ------------------------------------------------------------------
+  // ensureSku
+  // Inserts a skus row for this node x product pair if one doesn't
+  // already exist. No-op if the SKU is already present.
+  // ------------------------------------------------------------------
+  api.ensureSku = function (nodeId, productId) {
+    var existing = DDS_STORE.query('skus', { node_id: nodeId, product_id: productId });
+    if (existing.length > 0) return;
+    DDS_STORE.insert('skus', [{ node_id: nodeId, product_id: productId, tags: [], notes: '' }]);
+  };
+
+  // ------------------------------------------------------------------
+  // cleanupSku
+  // Removes a node x product SKU only if it is no longer needed:
+  //   - never removes the SKU of a product-node (it owns its SKU
+  //     independently of any flow)
+  //   - never removes it while any flow still references this node x
+  //     product pair
+  //   - otherwise delegates to removeSku (below) for the full cascade
+  // Single source of truth for this guard — called from deleteNode's
+  // cascade above and from DDS_CMD's TX.FLOW_ADD_PRODUCT/FLOW_REMOVE_PRODUCT
+  // and DDS_FLOWS_UI's flow-delete call site (consolidated 2026-07-02,
+  // replacing the retired DDS_PRODUCTS.cleanSku facade).
+  // ------------------------------------------------------------------
+  api.cleanupSku = function (nodeId, productId) {
+    var productNodeType = DDS_STORE.query('node_types').find(function (t) { return t.is_product_node_default; });
+    if (productNodeType) {
+      var node = DDS_STORE.query('nodes', { id: nodeId })[0];
+      if (node && node.type_code === productNodeType.code) return;
+    }
+    var stillNeeded = DDS_STORE.query('flows').some(function (f) {
+      return (f.source_node_id === nodeId || f.target_node_id === nodeId) &&
+        Array.isArray(f.product_ids) && f.product_ids.map(Number).indexOf(Number(productId)) !== -1;
+    });
+    if (stillNeeded) return;
+    api.removeSku(nodeId, productId);
   };
 
   // ------------------------------------------------------------------
@@ -212,6 +259,11 @@ var DDS_MODEL = (function () {
   };
 
   // ------------------------------------------------------------------
+  // rerouteFlow
+  // Updates source_node_id and/or target_node_id on the flows record.
+  // No SKU modification.
+  // ------------------------------------------------------------------
+  // ------------------------------------------------------------------
   // deleteAnnotation
   // Deletes all map_annotations for this annotation, then the record.
   // ------------------------------------------------------------------
@@ -220,11 +272,6 @@ var DDS_MODEL = (function () {
     DDS_STORE.remove('annotations',     { id: annotationId });
   };
 
-  // ------------------------------------------------------------------
-  // rerouteFlow
-  // Updates source_node_id and/or target_node_id on the flows record.
-  // No SKU modification.
-  // ------------------------------------------------------------------
   api.rerouteFlow = function (flowId, newSourceId, newTargetId) {
     var updates = {};
     if (newSourceId !== undefined && newSourceId !== null) updates.source_node_id = newSourceId;
@@ -262,4 +309,3 @@ var DDS_MODEL = (function () {
   return api;
 
 }());
-

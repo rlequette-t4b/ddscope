@@ -331,15 +331,16 @@ DDS_MAP_UI.openAnnotationModal = function() {
       var laneVal = document.getElementById('dds-ann-modal-lane').value;
       var tagsRaw = document.getElementById('dds-ann-modal-tags').value;
       var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
-      var ann = DDS_ANNOTATIONS.create({
+      // T-023: routed via DDS_CMD (was DDS_ANNOTATIONS.create(), untransacted)
+      DDS_CMD.execute(TX.ANNOTATION_CREATE, {
         notes: notes,
         swim_lane_id: laneVal ? parseInt(laneVal, 10) : null,
         tags: tags
+      }, null, function(result) {
+        if (result && result.id) {
+          DDS_ELEMENTS.addAnnotation(result.id);
+        }
       });
-      if (ann) {
-        DDS_ELEMENTS.addAnnotation(ann.id);
-        DDS_STORE.markDirty();
-      }
       modal.classList.remove('visible');
     });
   }

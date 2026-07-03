@@ -84,10 +84,6 @@ var DDS_ANNOTATIONS = (function () {
   // Read helpers
   // ------------------------------------------------------------------
 
-  api.getAll = function () {
-    return DDS_STORE.query('annotations');
-  };
-
   api.getById = function (annotationId) {
     return DDS_STORE.query('annotations', { id: annotationId })[0] || null;
   };

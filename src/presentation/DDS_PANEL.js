@@ -725,12 +725,10 @@ DDS_PANEL.openAnnotation = function(annotationId) {
     notesEl.value = ann.notes || '';
     notesEl.onblur = function() {
       var val = this.value;
-      DDS_TX_HELPER.run(TX.ANNOTATION_UPDATE, function() {
-        DDS_ANNOTATIONS.update(annotationId, { notes: val });
-      }, function() {
+      // T-023: routed via DDS_CMD (was DDS_TX_HELPER + DDS_ANNOTATIONS.update)
+      DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: annotationId, notes: val }, null, function() {
         var ghost = DDS_CY && DDS_CY.$('#ann-' + annotationId);
         if (ghost && ghost.length) ghost.data('label', val);
-        DDS_STORE.markDirty();
       });
     };
   }
@@ -748,20 +746,16 @@ DDS_PANEL.openAnnotation = function(annotationId) {
     });
     laneEl.onchange = function() {
       var laneId = this.value ? parseInt(this.value, 10) : null;
-      DDS_TX_HELPER.run(TX.ANNOTATION_UPDATE, function() {
-        DDS_ANNOTATIONS.update(annotationId, { swim_lane_id: laneId });
-      }, function() {
-        DDS_STORE.markDirty();
-      });
+      // T-023: routed via DDS_CMD (was DDS_TX_HELPER + DDS_ANNOTATIONS.update)
+      DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: annotationId, swim_lane_id: laneId }, null);
     };
   }
 
   // Tags
   var tags = Array.isArray(ann.tags) ? ann.tags.slice() : [];
   var _onAnnTagUpdate = function(updated) {
-    DDS_TX_HELPER.run(TX.ANNOTATION_UPDATE, function() {
-      DDS_ANNOTATIONS.update(annotationId, { tags: updated.slice() });
-    });
+    // T-023: routed via DDS_CMD (was DDS_TX_HELPER + DDS_ANNOTATIONS.update)
+    DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: annotationId, tags: updated.slice() }, null);
   };
   DDS_PANEL.renderTags('dds-pa-tags-wrap', 'dds-pa-tag-input', tags, _onAnnTagUpdate);
   DDS_PANEL.bindTagInput('dds-pa-tag-input', tags, 'dds-pa-tags-wrap', _onAnnTagUpdate);

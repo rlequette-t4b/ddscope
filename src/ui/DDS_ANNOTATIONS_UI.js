@@ -42,7 +42,7 @@ var DDS_ANNOTATIONS_UI = (function () {
     var container = document.getElementById('dds-annotations-view');
     if (!container || !DDS_STORE.getProject()) return;
 
-    var annotations = DDS_ANNOTATIONS.getAll();
+    var annotations = DDS_STORE.query('annotations');
 
     if (annotations.length === 0) {
       container.innerHTML = '<p class="dds-table-empty">No annotations in this project.</p>';
@@ -100,8 +100,8 @@ var DDS_ANNOTATIONS_UI = (function () {
     container.querySelectorAll('.dds-ann-notes').forEach(function (el) {
       el.addEventListener('blur', function () {
         var id = parseInt(el.dataset.annId, 10);
-        DDS_ANNOTATIONS.update(id, { notes: el.value });
-        DDS_STORE.markDirty();
+        // T-023: routed via DDS_CMD (was untransacted DDS_ANNOTATIONS.update)
+        DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: id, notes: el.value });
       });
     });
 
@@ -110,8 +110,8 @@ var DDS_ANNOTATIONS_UI = (function () {
       el.addEventListener('change', function () {
         var id = parseInt(el.dataset.annId, 10);
         var laneId = el.value ? parseInt(el.value, 10) : null;
-        DDS_ANNOTATIONS.update(id, { swim_lane_id: laneId });
-        DDS_STORE.markDirty();
+        // T-023: routed via DDS_CMD (was untransacted DDS_ANNOTATIONS.update)
+        DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: id, swim_lane_id: laneId });
       });
     });
 
@@ -120,8 +120,8 @@ var DDS_ANNOTATIONS_UI = (function () {
       el.addEventListener('blur', function () {
         var id = parseInt(el.dataset.annId, 10);
         var tags = el.value.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
-        DDS_ANNOTATIONS.update(id, { tags: tags });
-        DDS_STORE.markDirty();
+        // T-023: routed via DDS_CMD (was untransacted DDS_ANNOTATIONS.update)
+        DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: id, tags: tags });
       });
     });
 
