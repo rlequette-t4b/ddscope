@@ -1,4 +1,4 @@
-// JS: DDS_CMD — unified command layer (notes domain + Phase 2: lanes, annotations, settings + Phase 3: products, BOMs, demands + Phase 4: maps, project, add-product-on-map)
+// JS: DDS_CMD — unified command layer (notes domain + Phase 2: lanes, annotations, configuration + Phase 3: products, BOMs, demands + Phase 4: maps, project, add-product-on-map)
 // CommWise block: SCRIPT 1875
 // Testability: store-dependent
 // Depends on: DDS_STORE (SCRIPT 150), DDS_TRANSACTIONS (SCRIPT 1860), TX (SCRIPT 1865), DDS_MODEL (SCRIPT 1550), DDS_LAYOUT (map placement, Phase 4 only)
@@ -6,7 +6,7 @@
 //
 // Bootstrap of the future unified command layer.
 // Domains covered: notes (FEAT-002), swim lanes, annotations (delete),
-// settings node/product types, products / BOMs / demands (Phase 3 tabular CRUD),
+// configuration node/product types (formerly "settings", renamed T-034), products / BOMs / demands (Phase 3 tabular CRUD),
 // maps create/rename/duplicate/delete, project rename, add-product-on-map (Phase 4).
 // Legacy helpers (DDS_NODES, DDS_ACTIONS, etc.) remain in place for domains
 // not yet migrated.
@@ -387,22 +387,24 @@ var DDS_CMD = (function () {
   });
 
   // ---------------------------------------------------------------------------
-  // Settings domain (Phase 2) — node types / product types
+  // Configuration domain (Phase 2) — node types / product types
+  // Formerly "Settings domain" — renamed to disambiguate from the separate
+  // DDS_SETTINGS/ISettingsService developer-toggle Settings modal, see T-034.
   // Single TX key covers both create (no id) and update (id present).
   // forceInsert: true forces an insert even when id is present — mirrors
-  // the "Save as New" button in the Settings modal (edit mode, insert a
-  // new record instead of updating the one being edited).
+  // the "Save as New" button in the shared configuration CRUD modal (edit
+  // mode, insert a new record instead of updating the one being edited).
   // Single-default and single-product-node-default rules are enforced
   // here, inside the same transaction, so undo restores the previous
   // default flags atomically together with the saved record.
   // ---------------------------------------------------------------------------
 
-  // TX.SETTINGS_NODE_TYPE
+  // TX.CONFIGURATION_NODE_TYPE
   // params: { id?: integer, forceInsert?: boolean, fields: {
   //   code, label, shape, is_default, color, default_swim_lane_id,
   //   is_product_node_default, icon_key, label_position, transparent_bg
   // } }
-  _register(TX.SETTINGS_NODE_TYPE, function (params) {
+  _register(TX.CONFIGURATION_NODE_TYPE, function (params) {
     var fields = params.fields || {};
     if (fields.is_default) {
       DDS_STORE.update('node_types', {}, { is_default: false });
@@ -421,11 +423,11 @@ var DDS_CMD = (function () {
     return { ok: true, id: params.id };
   });
 
-  // TX.SETTINGS_PRODUCT_TYPE
+  // TX.CONFIGURATION_PRODUCT_TYPE
   // params: { id?: integer, forceInsert?: boolean, fields: {
   //   code, label, shape, is_default, color
   // } }
-  _register(TX.SETTINGS_PRODUCT_TYPE, function (params) {
+  _register(TX.CONFIGURATION_PRODUCT_TYPE, function (params) {
     var fields = params.fields || {};
     if (fields.is_default) {
       DDS_STORE.update('product_types', {}, { is_default: false });
@@ -1295,11 +1297,11 @@ var DDS_CMD = (function () {
             var ann = _rec('annotations', params.id);
             label = 'Delete annotation "' + _truncate(ann ? ann.notes : '', 30) + '"';
             break;
-          case TX.SETTINGS_NODE_TYPE:
+          case TX.CONFIGURATION_NODE_TYPE:
             var ntFields = params.fields || {};
             label = 'Save node type "' + (ntFields.label || ntFields.code || '?') + '"';
             break;
-          case TX.SETTINGS_PRODUCT_TYPE:
+          case TX.CONFIGURATION_PRODUCT_TYPE:
             var ptFields = params.fields || {};
             label = 'Save product type "' + (ptFields.label || ptFields.code || '?') + '"';
             break;
@@ -1642,7 +1644,7 @@ var DDS_CMD = (function () {
           return typeof v === 'string' ? _resolveId(v, newIdMap) : v;
         });
       } else if (val && typeof val === 'object') {
-        resolved[key] = _resolveParams(val, newIdMap); // nested objects (e.g. SETTINGS_* "fields")
+        resolved[key] = _resolveParams(val, newIdMap); // nested objects (e.g. CONFIGURATION_* "fields")
       } else {
         resolved[key] = val;
       }

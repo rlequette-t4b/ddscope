@@ -379,7 +379,7 @@ var DDS_NOTES_UI = (function () {
 
   // ---------------------------------------------------------------------------
   // B1 — Settings refresh: re-render when categories change
-  // Called by DDS_SETTINGS_UI after any notecat save/delete/reorder
+  // Called by DDS_CONFIGURATION_UI after any notecat save/delete/reorder
   // ---------------------------------------------------------------------------
 
   function refresh() {

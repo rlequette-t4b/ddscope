@@ -104,9 +104,10 @@ var TX = {
   // Project
   PROJECT_RENAME:           'project.rename',
 
-  // Settings
-  SETTINGS_NODE_TYPE:       'settings.node_type',
-  SETTINGS_PRODUCT_TYPE:    'settings.product_type',
+  // Configuration (formerly "Settings" — renamed to disambiguate from the
+  // DDS_SETTINGS/ISettingsService developer-toggle Settings modal, see T-034)
+  CONFIGURATION_NODE_TYPE:    'configuration.node_type',
+  CONFIGURATION_PRODUCT_TYPE: 'configuration.product_type',
 
   // AI
   AI_APPLY_ACTIONS:         'ai.apply_actions',

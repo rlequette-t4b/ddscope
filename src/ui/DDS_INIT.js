@@ -44,7 +44,7 @@
     DDS_REMOVE.bindEvents();
     DDS_AI_UI.bindEvents();
     DDS_NODES_UI.bindEvents();
-    DDS_SETTINGS_UI.bindEvents();
+    DDS_CONFIGURATION_UI.bindEvents();
     DDS_NOTES_UI.init();
 
     // Try to reopen last file (Chrome/Edge only)

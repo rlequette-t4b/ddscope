@@ -39,7 +39,7 @@ var DDS = {
     var aiBtn = document.getElementById('dds-btn-ai');
     if (aiBtn) aiBtn.classList.remove('dds-hidden');
 
-    ['map','nodes','flows','products','boms','demand','annotations','settings'].forEach(function(t) {
+    ['map','nodes','flows','products','boms','demand','annotations','configuration'].forEach(function(t) {
       var tab = document.getElementById('dds-tab-' + t);
       if (tab) tab.classList.remove('dds-hidden');
     });
@@ -63,7 +63,7 @@ var DDS = {
     var aiBtn = document.getElementById('dds-btn-ai');
     if (aiBtn) aiBtn.classList.add('dds-hidden');
 
-    ['map','nodes','flows','products','boms','demand','annotations','settings'].forEach(function(t) {
+    ['map','nodes','flows','products','boms','demand','annotations','configuration'].forEach(function(t) {
       var tab = document.getElementById('dds-tab-' + t); if (tab) tab.classList.add('dds-hidden');
     });
     var saveAsBtnC = document.getElementById('dds-btn-save-as');

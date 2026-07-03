@@ -510,48 +510,48 @@ describe('DDS_TX.ANNOTATION_DELETE', () => {
 });
 
 // ------------------------------------------------------------------ //
-// TX.SETTINGS_NODE_TYPE
+// TX.CONFIGURATION_NODE_TYPE (formerly TX.SETTINGS_NODE_TYPE — T-034)
 // ------------------------------------------------------------------ //
 
-describe('DDS_TX.SETTINGS_NODE_TYPE', () => {
+describe('DDS_TX.CONFIGURATION_NODE_TYPE', () => {
   beforeEach(setup);
 
   it('inserts a node_type when no id is given', () => {
-    const result = DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { fields: { code: 'SUPPLIER', label: 'Supplier', shape: 'rectangle' } }, null);
+    const result = DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { fields: { code: 'SUPPLIER', label: 'Supplier', shape: 'rectangle' } }, null);
     expect(result.ok).toBe(true);
     expect(DDS_STORE.query('node_types').length).toBe(1);
   });
 
   it('updates an existing node_type when id is given', () => {
-    const { id } = DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { fields: { code: 'A', label: 'Old' } }, null);
-    DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { id, fields: { code: 'A', label: 'New' } }, null);
+    const { id } = DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { fields: { code: 'A', label: 'Old' } }, null);
+    DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { id, fields: { code: 'A', label: 'New' } }, null);
     expect(DDS_STORE.query('node_types', { id })[0].label).toBe('New');
     expect(DDS_STORE.query('node_types').length).toBe(1);
   });
 
   it('forceInsert inserts a new record even when id is given (Save as New)', () => {
-    const { id } = DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { fields: { code: 'A', label: 'Original' } }, null);
-    const result = DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { id, forceInsert: true, fields: { code: 'B', label: 'Copy' } }, null);
+    const { id } = DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { fields: { code: 'A', label: 'Original' } }, null);
+    const result = DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { id, forceInsert: true, fields: { code: 'B', label: 'Copy' } }, null);
     expect(DDS_STORE.query('node_types').length).toBe(2);
     expect(result.id).not.toBe(id);
   });
 
   it('enforces single is_default across node_types', () => {
-    const { id: a } = DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { fields: { code: 'A', label: 'A', is_default: true } }, null);
-    DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { fields: { code: 'B', label: 'B', is_default: true } }, null);
+    const { id: a } = DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { fields: { code: 'A', label: 'A', is_default: true } }, null);
+    DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { fields: { code: 'B', label: 'B', is_default: true } }, null);
     expect(DDS_STORE.query('node_types', { id: a })[0].is_default).toBe(false);
     expect(DDS_STORE.query('node_types', { is_default: true }).length).toBe(1);
   });
 
   it('enforces single is_product_node_default across node_types', () => {
-    const { id: a } = DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { fields: { code: 'A', label: 'A', is_product_node_default: true } }, null);
-    DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { fields: { code: 'B', label: 'B', is_product_node_default: true } }, null);
+    const { id: a } = DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { fields: { code: 'A', label: 'A', is_product_node_default: true } }, null);
+    DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { fields: { code: 'B', label: 'B', is_product_node_default: true } }, null);
     expect(DDS_STORE.query('node_types', { id: a })[0].is_product_node_default).toBe(false);
     expect(DDS_STORE.query('node_types', { is_product_node_default: true }).length).toBe(1);
   });
 
   it('is undoable', () => {
-    DDS_CMD.execute(DDS_TX.SETTINGS_NODE_TYPE, { fields: { code: 'A', label: 'A' } }, null);
+    DDS_CMD.execute(DDS_TX.CONFIGURATION_NODE_TYPE, { fields: { code: 'A', label: 'A' } }, null);
     expect(DDS_STORE.query('node_types').length).toBe(1);
     DDS_TRANSACTIONS.undo();
     expect(DDS_STORE.query('node_types').length).toBe(0);
@@ -559,32 +559,32 @@ describe('DDS_TX.SETTINGS_NODE_TYPE', () => {
 });
 
 // ------------------------------------------------------------------ //
-// TX.SETTINGS_PRODUCT_TYPE
+// TX.CONFIGURATION_PRODUCT_TYPE (formerly TX.SETTINGS_PRODUCT_TYPE — T-034)
 // ------------------------------------------------------------------ //
 
-describe('DDS_TX.SETTINGS_PRODUCT_TYPE', () => {
+describe('DDS_TX.CONFIGURATION_PRODUCT_TYPE', () => {
   beforeEach(setup);
 
   it('inserts a product_type when no id is given', () => {
-    const result = DDS_CMD.execute(DDS_TX.SETTINGS_PRODUCT_TYPE, { fields: { code: 'RAW', label: 'Raw material' } }, null);
+    const result = DDS_CMD.execute(DDS_TX.CONFIGURATION_PRODUCT_TYPE, { fields: { code: 'RAW', label: 'Raw material' } }, null);
     expect(result.ok).toBe(true);
     expect(DDS_STORE.query('product_types').length).toBe(1);
   });
 
   it('updates an existing product_type when id is given', () => {
-    const { id } = DDS_CMD.execute(DDS_TX.SETTINGS_PRODUCT_TYPE, { fields: { code: 'A', label: 'Old' } }, null);
-    DDS_CMD.execute(DDS_TX.SETTINGS_PRODUCT_TYPE, { id, fields: { code: 'A', label: 'New' } }, null);
+    const { id } = DDS_CMD.execute(DDS_TX.CONFIGURATION_PRODUCT_TYPE, { fields: { code: 'A', label: 'Old' } }, null);
+    DDS_CMD.execute(DDS_TX.CONFIGURATION_PRODUCT_TYPE, { id, fields: { code: 'A', label: 'New' } }, null);
     expect(DDS_STORE.query('product_types', { id })[0].label).toBe('New');
   });
 
   it('enforces single is_default across product_types', () => {
-    const { id: a } = DDS_CMD.execute(DDS_TX.SETTINGS_PRODUCT_TYPE, { fields: { code: 'A', label: 'A', is_default: true } }, null);
-    DDS_CMD.execute(DDS_TX.SETTINGS_PRODUCT_TYPE, { fields: { code: 'B', label: 'B', is_default: true } }, null);
+    const { id: a } = DDS_CMD.execute(DDS_TX.CONFIGURATION_PRODUCT_TYPE, { fields: { code: 'A', label: 'A', is_default: true } }, null);
+    DDS_CMD.execute(DDS_TX.CONFIGURATION_PRODUCT_TYPE, { fields: { code: 'B', label: 'B', is_default: true } }, null);
     expect(DDS_STORE.query('product_types', { id: a })[0].is_default).toBe(false);
   });
 
   it('is undoable', () => {
-    DDS_CMD.execute(DDS_TX.SETTINGS_PRODUCT_TYPE, { fields: { code: 'A', label: 'A' } }, null);
+    DDS_CMD.execute(DDS_TX.CONFIGURATION_PRODUCT_TYPE, { fields: { code: 'A', label: 'A' } }, null);
     expect(DDS_STORE.query('product_types').length).toBe(1);
     DDS_TRANSACTIONS.undo();
     expect(DDS_STORE.query('product_types').length).toBe(0);

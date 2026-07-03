@@ -1,8 +1,10 @@
 <!-- DIV 110 — Settings Modal (Debug toggle)
      NOTE: outer shell uses CommWise-provided b2w-settings-modal-* classes
      (platform modal chrome); inner content (dds-settings-*) is DDScope-owned.
-     Kept as a single fragment since JS (DDS_SETTINGS_UI / SETTINGS) targets
-     both the shell ids and the inner content together. -->
+     Kept as a single fragment since JS (SETTINGS / DDS_SETTINGS, SCRIPT 50 —
+     via the inline onchange handlers below) targets both the shell ids and
+     the inner content together. Not DDS_CONFIGURATION_UI (formerly
+     DDS_SETTINGS_UI) — that module never touches this modal, see T-034. -->
 <div id="b2w-settings-modal-backdrop" class="b2w-settings-modal-backdrop">
     <div class="b2w-settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
         <div class="b2w-settings-modal-header">

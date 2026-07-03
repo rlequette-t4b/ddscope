@@ -207,7 +207,7 @@ DDS_MAP_UI.bindEvents = function() {
 
   if (addSwimLaneBtn)  addSwimLaneBtn.addEventListener('click', function() {
     if (!DDS_STORE.getProject()) return;
-    DDS_SETTINGS_UI.openModal('lane', null);
+    DDS_CONFIGURATION_UI.openModal('lane', null);
   });
 
   var addAnnotationBtn = document.getElementById('dds-btn-add-annotation');

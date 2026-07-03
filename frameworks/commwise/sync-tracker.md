@@ -3,7 +3,7 @@
 Correspondence table between `src/` modules and their CommWise block addresses.
 Tracks synchronisation state for PULL and PUSH operations.
 
-For PULL/PUSH procedures, see `conventions/commwise-framework.md` (KB) — section 6.
+For PULL/PUSH procedures, see `commwise/commwise-framework.md` — section 6.
 For DDScope app ID and AI proxy, see `docs/DDScope_Framework_CommWise.md`.
 
 ---
@@ -74,7 +74,7 @@ After every PULL or PUSH, update the relevant row immediately.
 | `ui/DDS_ELEMENTS_UI.js` | SCRIPT 2100 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_ACTIONS_LOG.js` | SCRIPT 2515 | render-dependent | NO | PULL | 2026-07-02 | — | — |
 | `ui/DDS_NOTES_UI.js` | SCRIPT 1785 | render-dependent | NO | PULL | 2026-07-02 | — | — |
-| `ui/DDS_SETTINGS_UI.js` | SCRIPT 2600 | render-dependent | NO | PULL | 2026-07-02 | — | — |
+| `ui/DDS_CONFIGURATION_UI.js` | SCRIPT 2600 | render-dependent | YES | RENAME | 2026-07-03 | — | — | Renamed from `ui/DDS_SETTINGS_UI.js` (T-034) — CommWise block still holds the old identifiers, not yet pushed. |
 
 ---
 
@@ -89,7 +89,7 @@ HTML fragments, assembled in CommWise position order. Not JS modules — no test
 | `fragments/modal-product.html` | DIV 400 | NO | PULL | 2026-07-02 | |
 | `fragments/modal-bom.html` | DIV 500 | NO | PULL | 2026-07-02 | |
 | `fragments/panel-elements.html` | DIV 600 | NO | PULL | 2026-07-02 | |
-| `fragments/modal-settings-crud.html` | DIV 800 | NO | PULL | 2026-07-02 | Shared CRUD modal for swim-lanes / node types / product types / tag styles / note categories. |
+| `fragments/modal-configuration-crud.html` | DIV 800 | YES | RENAME | 2026-07-03 | Renamed from `fragments/modal-settings-crud.html` (T-034) — shared CRUD modal for swim-lanes / node types / product types / tag styles / note categories. CommWise block not yet pushed. |
 
 ---
 
@@ -112,7 +112,7 @@ CSS files. Not JS modules — no testability class.
 | `styles/ai-debug-panel.css` | STYLE 905 | NO | PULL | 2026-07-02 | |
 | `styles/actions-log-panel.css` | STYLE 910 | NO | PULL | 2026-07-02 | |
 | `styles/settings-content.css` | STYLE 950 | NO | PULL | 2026-07-02 | Styles the DDScope content inside the debug settings modal (DIV 110 / STYLE 110's `b2w-*` shell is CommWise-provided and NOT mirrored here). |
-| `styles/settings-tab.css` | STYLE 1000 | NO | PULL | 2026-07-02 | |
+| `styles/configuration-tab.css` | STYLE 1000 | YES | RENAME | 2026-07-03 | Renamed from `styles/settings-tab.css` (T-034) — CommWise block not yet pushed. |
 | `styles/notes-panel.css` | STYLE 1020 | NO | PULL | 2026-07-02 | |
 
 ---

@@ -1,18 +1,20 @@
-// AUDITOR:LARGE_BLOCK_JUSTIFIED - unified settings controller.
+// AUDITOR:LARGE_BLOCK_JUSTIFIED - unified configuration controller.
 // ============================================================
-// DDS_SETTINGS_UI — Settings tab: swim-lanes, node types, product types (all via DDS_STORE)
+// DDS_CONFIGURATION_UI — Configuration tab: swim-lanes, node types, product types (all via DDS_STORE)
+// Formerly DDS_SETTINGS_UI — renamed to disambiguate from the separate DDS_SETTINGS /
+// Settings modal (developer toggles), see docs/DDScope_UI.md §7 vs §8, T-034.
 // ============================================================
 
-var DDS_SETTINGS_UI = {};
+var DDS_CONFIGURATION_UI = {};
 var _setMode = null, _setEditId = null, _setColor = null, _setLineColor = null, _setDirty = false;
 // Color palette — use DDS_COLORS (SCRIPT 105)
 var DDS_SETTINGS_SHAPES = ['rectangle','diamond','ellipse','hexagon','triangle','star','barrel','rhomboid'];
 
-DDS_SETTINGS_UI._esc = function(str) {
+DDS_CONFIGURATION_UI._esc = function(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 };
 
-DDS_SETTINGS_UI._table = function(type) {
+DDS_CONFIGURATION_UI._table = function(type) {
   if (type === 'lane')      return 'swim_lanes';
   if (type === 'nodetype')  return 'node_types';
   if (type === 'prodtype')  return 'product_types';
@@ -21,7 +23,7 @@ DDS_SETTINGS_UI._table = function(type) {
 };
 
 // Collect all tags used in the project (nodes, flows, products, skus, tag_styles)
-DDS_SETTINGS_UI._allTags = function() {
+DDS_CONFIGURATION_UI._allTags = function() {
   var seen = {};
   var add = function(arr) { (arr || []).forEach(function(t) { if (t) seen[t] = true; }); };
   var p = DDS_STORE.getProject();
@@ -34,19 +36,19 @@ DDS_SETTINGS_UI._allTags = function() {
   return Object.keys(seen).sort();
 };
 
-DDS_SETTINGS_UI.render = function() {
-  var el = document.getElementById('dds-settings-content'); if (!el) return;
+DDS_CONFIGURATION_UI.render = function() {
+  var el = document.getElementById('dds-configuration-content'); if (!el) return;
   if (!DDS_STORE.getProject()) {
     el.innerHTML = '<div class="dds-empty"><div class="dds-empty-title">No project open.</div></div>'; return;
   }
   el.innerHTML =
-    DDS_SETTINGS_UI._sectionHtml('swim-lanes',       'Swim-lanes',        'lane') +
-    DDS_SETTINGS_UI._sectionHtml('node-types',       'Node types',        'nodetype') +
-    DDS_SETTINGS_UI._sectionHtml('product-types',    'Product types',     'prodtype') +
-    DDS_SETTINGS_UI._sectionHtml('tag-styles',       'Tag styles',        'tagstyle') +
-    DDS_SETTINGS_UI._sectionHtml('note-categories',  'Note categories',   'notecat');
+    DDS_CONFIGURATION_UI._sectionHtml('swim-lanes',       'Swim-lanes',        'lane') +
+    DDS_CONFIGURATION_UI._sectionHtml('node-types',       'Node types',        'nodetype') +
+    DDS_CONFIGURATION_UI._sectionHtml('product-types',    'Product types',     'prodtype') +
+    DDS_CONFIGURATION_UI._sectionHtml('tag-styles',       'Tag styles',        'tagstyle') +
+    DDS_CONFIGURATION_UI._sectionHtml('note-categories',  'Note categories',   'notecat');
 
-  DDS_SETTINGS_UI._cache = {
+  DDS_CONFIGURATION_UI._cache = {
     lane:     DDS_STORE.query('swim_lanes'),
     nodetype: DDS_STORE.query('node_types'),
     prodtype: DDS_STORE.query('product_types'),
@@ -54,24 +56,24 @@ DDS_SETTINGS_UI.render = function() {
     notecat:  DDS_STORE.query('note_categories', {}, { order: 'position.asc' })
   };
 
-  ['lane','nodetype','prodtype','tagstyle','notecat'].forEach(function(t) { DDS_SETTINGS_UI._renderTable(t); });
+  ['lane','nodetype','prodtype','tagstyle','notecat'].forEach(function(t) { DDS_CONFIGURATION_UI._renderTable(t); });
 
   el.querySelectorAll('[data-add]').forEach(function(btn) {
-    btn.addEventListener('click', function() { DDS_SETTINGS_UI.openModal(this.dataset.add, null); });
+    btn.addEventListener('click', function() { DDS_CONFIGURATION_UI.openModal(this.dataset.add, null); });
   });
 };
 
-DDS_SETTINGS_UI._sectionHtml = function(id, title, type) {
-  return '<div class="dds-settings-section">' +
-    '<div class="dds-settings-section-header">' +
-    '<span class="dds-settings-section-title">' + title + '</span>' +
+DDS_CONFIGURATION_UI._sectionHtml = function(id, title, type) {
+  return '<div class="dds-configuration-section">' +
+    '<div class="dds-configuration-section-header">' +
+    '<span class="dds-configuration-section-title">' + title + '</span>' +
     '<button class="dds-btn dds-btn-primary dds-btn-sm" data-add="' + type + '">+ Add</button></div>' +
     '<div id="dds-set-table-' + type + '"></div></div>';
 };
 
-DDS_SETTINGS_UI._renderTable = function(type) {
+DDS_CONFIGURATION_UI._renderTable = function(type) {
   var wrap = document.getElementById('dds-set-table-' + type); if (!wrap) return;
-  var records = (DDS_SETTINGS_UI._cache && DDS_SETTINGS_UI._cache[type]) || [];
+  var records = (DDS_CONFIGURATION_UI._cache && DDS_CONFIGURATION_UI._cache[type]) || [];
   if (records.length === 0) {
     wrap.innerHTML = '<div style="color:var(--dds-text-muted);font-size:var(--dds-text-sm);padding:8px 0">None yet.</div>'; return;
   }
@@ -91,7 +93,7 @@ DDS_SETTINGS_UI._renderTable = function(type) {
   records.forEach(function(r, idx) {
     html += '<tr>';
     if (type === 'notecat') {
-      html += '<td>' + DDS_SETTINGS_UI._esc(r.label) + '</td>';
+      html += '<td>' + DDS_CONFIGURATION_UI._esc(r.label) + '</td>';
       html += '<td><div class="dds-table-actions">' +
         '<button class="dds-btn dds-btn-secondary dds-btn-sm" data-move="up" data-id="' + r.id + '"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
         '<button class="dds-btn dds-btn-secondary dds-btn-sm" data-move="down" data-id="' + r.id + '"' + (idx === records.length - 1 ? ' disabled' : '') + '>↓</button>' +
@@ -99,29 +101,29 @@ DDS_SETTINGS_UI._renderTable = function(type) {
         '<button class="dds-btn dds-btn-danger dds-btn-sm" data-del="notecat" data-id="' + r.id + '">Delete</button>' +
         '</div></td></tr>';
     } else if (type === 'lane') {
-      html += '<td><span class="dds-color-dot" style="background:' + DDS_SETTINGS_UI._esc(r.color||'#ccc') + '"></span></td>';
-      html += '<td>' + DDS_SETTINGS_UI._esc(r.name) + '</td>';
+      html += '<td><span class="dds-color-dot" style="background:' + DDS_CONFIGURATION_UI._esc(r.color||'#ccc') + '"></span></td>';
+      html += '<td>' + DDS_CONFIGURATION_UI._esc(r.name) + '</td>';
     } else if (type === 'tagstyle') {
-      html += '<td><strong>' + DDS_SETTINGS_UI._esc(r.tag) + '</strong></td>';
-      html += '<td>' + (r.color ? '<span class="dds-color-dot" style="background:' + DDS_SETTINGS_UI._esc(r.color) + '"></span>' : '<span style="color:var(--dds-text-muted)">—</span>') + '</td>';
-      html += '<td>' + (r.line_color ? '<span class="dds-color-dot" style="background:' + DDS_SETTINGS_UI._esc(r.line_color) + '"></span>' : '<span style="color:var(--dds-text-muted)">—</span>') + '</td>';
-      html += '<td>' + DDS_SETTINGS_UI._esc(r.line_style || '—') + '</td>';
-      html += '<td>' + DDS_SETTINGS_UI._esc(r.line_width || '—') + '</td>';
+      html += '<td><strong>' + DDS_CONFIGURATION_UI._esc(r.tag) + '</strong></td>';
+      html += '<td>' + (r.color ? '<span class="dds-color-dot" style="background:' + DDS_CONFIGURATION_UI._esc(r.color) + '"></span>' : '<span style="color:var(--dds-text-muted)">—</span>') + '</td>';
+      html += '<td>' + (r.line_color ? '<span class="dds-color-dot" style="background:' + DDS_CONFIGURATION_UI._esc(r.line_color) + '"></span>' : '<span style="color:var(--dds-text-muted)">—</span>') + '</td>';
+      html += '<td>' + DDS_CONFIGURATION_UI._esc(r.line_style || '—') + '</td>';
+      html += '<td>' + DDS_CONFIGURATION_UI._esc(r.line_width || '—') + '</td>';
     } else {
-      html += '<td><code>' + DDS_SETTINGS_UI._esc(r.code) + '</code></td>';
-      html += '<td>' + DDS_SETTINGS_UI._esc(r.label) + '</td>';
-      html += '<td><span class="dds-shape-badge">' + DDS_SETTINGS_UI._esc(r.shape||'—') + '</span></td>';
-      if (type === 'prodtype' || type === 'nodetype') html += '<td><span class="dds-color-dot" style="background:' + DDS_SETTINGS_UI._esc(r.color||'#ccc') + '"></span></td>';
+      html += '<td><code>' + DDS_CONFIGURATION_UI._esc(r.code) + '</code></td>';
+      html += '<td>' + DDS_CONFIGURATION_UI._esc(r.label) + '</td>';
+      html += '<td><span class="dds-shape-badge">' + DDS_CONFIGURATION_UI._esc(r.shape||'—') + '</span></td>';
+      if (type === 'prodtype' || type === 'nodetype') html += '<td><span class="dds-color-dot" style="background:' + DDS_CONFIGURATION_UI._esc(r.color||'#ccc') + '"></span></td>';
       if (type === 'nodetype') {
         var defLane = r.default_swim_lane_id
           ? (DDS_STORE.query('swim_lanes', { id: r.default_swim_lane_id })[0] || null)
           : null;
-        html += '<td>' + (defLane ? DDS_SETTINGS_UI._esc(defLane.name) : '<span style="color:var(--dds-text-muted)">—</span>') + '</td>';
+        html += '<td>' + (defLane ? DDS_CONFIGURATION_UI._esc(defLane.name) : '<span style="color:var(--dds-text-muted)">—</span>') + '</td>';
         // Icon key
         var iconLabel = r.icon_key && window.DDS_ICONS ? (DDS_ICONS.LIBRARY[r.icon_key] ? r.icon_key : '<em style="color:var(--dds-text-muted)">unknown</em>') : '<span style="color:var(--dds-text-muted)">—</span>';
         html += '<td>' + iconLabel + '</td>';
         // Label position
-        html += '<td>' + DDS_SETTINGS_UI._esc(r.label_position || 'center') + '</td>';
+        html += '<td>' + DDS_CONFIGURATION_UI._esc(r.label_position || 'center') + '</td>';
         // Transparent background
         html += '<td>' + (r.transparent_bg ? '<span class="dds-default-badge" style="background:var(--dds-accent-light,#e0f2fe);color:var(--dds-accent)">&#10003;</span>' : '') + '</td>';
       }
@@ -142,23 +144,23 @@ DDS_SETTINGS_UI._renderTable = function(type) {
   wrap.querySelectorAll('[data-edit]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var rec = records.find(function(r) { return r.id === parseInt(btn.dataset.id); });
-      if (rec) DDS_SETTINGS_UI.openModal(btn.dataset.edit, rec);
+      if (rec) DDS_CONFIGURATION_UI.openModal(btn.dataset.edit, rec);
     });
   });
   wrap.querySelectorAll('[data-del]').forEach(function(btn) {
-    btn.addEventListener('click', function() { DDS_SETTINGS_UI.handleDelete(btn.dataset.del, parseInt(btn.dataset.id)); });
+    btn.addEventListener('click', function() { DDS_CONFIGURATION_UI.handleDelete(btn.dataset.del, parseInt(btn.dataset.id)); });
   });
   // Reorder buttons for notecat
   if (type === 'notecat') {
     wrap.querySelectorAll('[data-move]').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        DDS_SETTINGS_UI._moveNoteCategory(parseInt(btn.dataset.id), btn.dataset.move);
+        DDS_CONFIGURATION_UI._moveNoteCategory(parseInt(btn.dataset.id), btn.dataset.move);
       });
     });
   }
 };
 
-DDS_SETTINGS_UI.openModal = function(type, record) {
+DDS_CONFIGURATION_UI.openModal = function(type, record) {
   _setMode = type; _setEditId = record ? record.id : null; _setDirty = false;
   _setColor = record ? (record.color || null) : null;
   _setLineColor = record ? (record.line_color || null) : null;
@@ -167,7 +169,7 @@ DDS_SETTINGS_UI.openModal = function(type, record) {
   var isTagStyle = type === 'tagstyle';
   var isNoteCat  = type === 'notecat';
   var titles = { lane: 'Swim-lane', nodetype: 'Node type', prodtype: 'Product type', tagstyle: 'Tag style', notecat: 'Note category' };
-  document.getElementById('dds-modal-settings-title').textContent = (record ? 'Edit ' : 'Add ') + titles[type];
+  document.getElementById('dds-modal-configuration-title').textContent = (record ? 'Edit ' : 'Add ') + titles[type];
   document.getElementById('dds-set-code-field').classList.toggle('dds-hidden', isLane || isTagStyle || isNoteCat);
   document.getElementById('dds-set-shape-field').classList.toggle('dds-hidden', isLane || isTagStyle || isNoteCat);
   document.getElementById('dds-set-color-field').classList.toggle('dds-hidden', !isLane && !isProd && !isTagStyle && type !== 'nodetype');
@@ -220,7 +222,7 @@ DDS_SETTINGS_UI.openModal = function(type, record) {
   if (isTagStyle) {
     var dl = document.createElement('datalist');
     dl.id = 'dds-set-name-datalist';
-    DDS_SETTINGS_UI._allTags().forEach(function(t) {
+    DDS_CONFIGURATION_UI._allTags().forEach(function(t) {
       var opt = document.createElement('option'); opt.value = t; dl.appendChild(opt);
     });
     document.body.appendChild(dl);
@@ -285,10 +287,10 @@ DDS_SETTINGS_UI.openModal = function(type, record) {
       });
     }
   }
-  DDS_SETTINGS_UI._validateModal();
+  DDS_CONFIGURATION_UI._validateModal();
   // Update button labels based on add vs edit mode
-  var saveBtn      = document.getElementById('dds-modal-settings-save');
-  var saveCloseBtn = document.getElementById('dds-modal-settings-save-close');
+  var saveBtn      = document.getElementById('dds-modal-configuration-save');
+  var saveCloseBtn = document.getElementById('dds-modal-configuration-save-close');
   if (_setEditId) {
     if (saveBtn)      { saveBtn.textContent = 'Save as New'; }
     if (saveCloseBtn) { saveCloseBtn.textContent = 'Save'; }
@@ -296,26 +298,26 @@ DDS_SETTINGS_UI.openModal = function(type, record) {
     if (saveBtn)      { saveBtn.textContent = 'Save'; }
     if (saveCloseBtn) { saveCloseBtn.textContent = 'Save and Close'; }
   }
-  var overlay = document.getElementById('dds-modal-settings-overlay');
+  var overlay = document.getElementById('dds-modal-configuration-overlay');
   overlay.classList.remove('dds-hidden'); void overlay.offsetWidth; overlay.classList.add('visible');
   document.getElementById('dds-set-name').focus();
 };
 
-DDS_SETTINGS_UI._validateModal = function() {
+DDS_CONFIGURATION_UI._validateModal = function() {
   var name = document.getElementById('dds-set-name').value.trim();
   var code = document.getElementById('dds-set-code').value.trim().toUpperCase();
   var needsCode = (_setMode !== 'lane' && _setMode !== 'tagstyle' && _setMode !== 'notecat');
   var baseOk = needsCode ? !!(name && code) : !!name;
   // Save and Close (or Save in edit mode) — enabled when fields are valid
-  var sc = document.getElementById('dds-modal-settings-save-close');
+  var sc = document.getElementById('dds-modal-configuration-save-close');
   if (sc) sc.disabled = !baseOk;
   // Save (add mode) / Save as New (edit mode) — also check code uniqueness in edit mode
-  var saveBtn = document.getElementById('dds-modal-settings-save');
+  var saveBtn = document.getElementById('dds-modal-configuration-save');
   if (saveBtn) {
     var saveAsNewOk = baseOk;
     if (_setEditId && needsCode && code) {
       // Disable Save as New if code already exists in the table
-      var table = DDS_SETTINGS_UI._table(_setMode);
+      var table = DDS_CONFIGURATION_UI._table(_setMode);
       var existing = table ? DDS_STORE.query(table, { code: code }) : [];
       if (existing.length > 0) saveAsNewOk = false;
     }
@@ -323,7 +325,7 @@ DDS_SETTINGS_UI._validateModal = function() {
   }
 };
 
-DDS_SETTINGS_UI._applyMapRefresh = function() {
+DDS_CONFIGURATION_UI._applyMapRefresh = function() {
   if (_setMode === 'nodetype' && typeof DDS_MAP !== 'undefined' && DDS_MAP.state.currentMapId) {
     DDS_MAP.loadMap(DDS_MAP.state.currentMapId, true);
   }
@@ -334,19 +336,19 @@ DDS_SETTINGS_UI._applyMapRefresh = function() {
   }
 };
 
-DDS_SETTINGS_UI.closeModal = function() {
-  var overlay = document.getElementById('dds-modal-settings-overlay');
+DDS_CONFIGURATION_UI.closeModal = function() {
+  var overlay = document.getElementById('dds-modal-configuration-overlay');
   if (overlay) overlay.classList.remove('visible');
   // Refresh map once on close if any saves were made
   if (_setDirty) {
     _setDirty = false;
-    DDS_SETTINGS_UI._applyMapRefresh();
+    DDS_CONFIGURATION_UI._applyMapRefresh();
   }
 };
 
-DDS_SETTINGS_UI._doSave = function(closeAfter) {
-  var saveBtn      = document.getElementById('dds-modal-settings-save');
-  var saveCloseBtn = document.getElementById('dds-modal-settings-save-close');
+DDS_CONFIGURATION_UI._doSave = function(closeAfter) {
+  var saveBtn      = document.getElementById('dds-modal-configuration-save');
+  var saveCloseBtn = document.getElementById('dds-modal-configuration-save-close');
   saveBtn.disabled = true;
   if (saveCloseBtn) saveCloseBtn.disabled = true;
   saveBtn.innerHTML = '<span class="dds-spinner"></span>';
@@ -354,7 +356,7 @@ DDS_SETTINGS_UI._doSave = function(closeAfter) {
   var code = document.getElementById('dds-set-code').value.trim().toUpperCase();
   var shape = document.getElementById('dds-set-shape').value;
   var isDefault = document.getElementById('dds-set-default').checked;
-  var table = DDS_SETTINGS_UI._table(_setMode);
+  var table = DDS_CONFIGURATION_UI._table(_setMode);
   var defaultLaneVal = document.getElementById('dds-set-default-lane').value;
   var defaultLaneId = defaultLaneVal ? parseInt(defaultLaneVal) : null;
   // notecat — routed through DDS_CMD, not the legacy store path
@@ -370,26 +372,26 @@ DDS_SETTINGS_UI._doSave = function(closeAfter) {
     if (closeAfter) {
       saveBtn.innerHTML = 'Save'; saveBtn.disabled = false;
       if (saveCloseBtn) saveCloseBtn.disabled = false;
-      DDS_SETTINGS_UI.closeModal();
-      DDS_SETTINGS_UI.render();
+      DDS_CONFIGURATION_UI.closeModal();
+      DDS_CONFIGURATION_UI.render();
     } else if (_setEditId) {
       saveBtn.innerHTML = 'Save as New'; saveBtn.disabled = false;
       if (saveCloseBtn) { saveCloseBtn.textContent = 'Save'; saveCloseBtn.disabled = false; }
-      DDS_SETTINGS_UI.render();
+      DDS_CONFIGURATION_UI.render();
       document.getElementById('dds-set-name').focus();
     } else {
       saveBtn.innerHTML = 'Save';
-      DDS_SETTINGS_UI._validateModal();
-      DDS_SETTINGS_UI.render();
+      DDS_CONFIGURATION_UI._validateModal();
+      DDS_CONFIGURATION_UI.render();
       document.getElementById('dds-set-name').value = '';
-      DDS_SETTINGS_UI._validateModal();
+      DDS_CONFIGURATION_UI._validateModal();
       document.getElementById('dds-set-name').focus();
     }
     return;
   }
   // lane, nodetype, prodtype — routed through DDS_CMD (Phase 2 migration)
   if (_setMode === 'lane' || _setMode === 'nodetype' || _setMode === 'prodtype') {
-    DDS_SETTINGS_UI._doSaveCmd(closeAfter, name, code, shape, isDefault, defaultLaneId);
+    DDS_CONFIGURATION_UI._doSaveCmd(closeAfter, name, code, shape, isDefault, defaultLaneId);
     return;
   }
   var record = Object.assign(
@@ -411,8 +413,8 @@ DDS_SETTINGS_UI._doSave = function(closeAfter) {
       saveBtn.innerHTML = 'Save';
       saveBtn.disabled = false;
       if (saveCloseBtn) saveCloseBtn.disabled = false;
-      DDS_SETTINGS_UI.closeModal(); // closeModal handles map refresh via _setDirty
-      DDS_SETTINGS_UI.render();
+      DDS_CONFIGURATION_UI.closeModal(); // closeModal handles map refresh via _setDirty
+      DDS_CONFIGURATION_UI.render();
     } else if (_setEditId) {
       // Save as New (edit mode) — the insert already ran above as a new record.
       // Find the newly created record by tag and pivot _setEditId to it.
@@ -426,19 +428,19 @@ DDS_SETTINGS_UI._doSave = function(closeAfter) {
       if (saveCloseBtn) saveCloseBtn.textContent = 'Save';
       saveBtn.disabled = false;
       if (saveCloseBtn) saveCloseBtn.disabled = false;
-      DDS_SETTINGS_UI._validateModal();
-      DDS_SETTINGS_UI.render();
+      DDS_CONFIGURATION_UI._validateModal();
+      DDS_CONFIGURATION_UI.render();
       document.getElementById('dds-set-name').focus();
     } else {
       saveBtn.innerHTML = 'Save';
-      DDS_SETTINGS_UI._validateModal();
-      DDS_SETTINGS_UI.render();
+      DDS_CONFIGURATION_UI._validateModal();
+      DDS_CONFIGURATION_UI.render();
       document.getElementById('dds-set-name').value = '';
-      DDS_SETTINGS_UI._validateModal();
+      DDS_CONFIGURATION_UI._validateModal();
       document.getElementById('dds-set-name').focus();
     }
   } catch(err) {
-    console.error('[DDS] Settings save error:', err);
+    console.error('[DDS] Configuration save error:', err);
     saveBtn.textContent = 'Error — retry';
     saveBtn.disabled = false;
     if (saveCloseBtn) saveCloseBtn.disabled = false;
@@ -446,9 +448,9 @@ DDS_SETTINGS_UI._doSave = function(closeAfter) {
 };
 
 // lane, nodetype, prodtype save path — routed through DDS_CMD (Phase 2)
-DDS_SETTINGS_UI._doSaveCmd = function(closeAfter, name, code, shape, isDefault, defaultLaneId) {
-  var saveBtn      = document.getElementById('dds-modal-settings-save');
-  var saveCloseBtn = document.getElementById('dds-modal-settings-save-close');
+DDS_CONFIGURATION_UI._doSaveCmd = function(closeAfter, name, code, shape, isDefault, defaultLaneId) {
+  var saveBtn      = document.getElementById('dds-modal-configuration-save');
+  var saveCloseBtn = document.getElementById('dds-modal-configuration-save-close');
   var forceInsert  = (!closeAfter && !!_setEditId);
   var txKey, fields, params;
   if (_setMode === 'lane') {
@@ -456,7 +458,7 @@ DDS_SETTINGS_UI._doSaveCmd = function(closeAfter, name, code, shape, isDefault, 
     fields = { name: name, color: _setColor || '#6b7280' };
     params = Object.assign({ id: _setEditId }, fields);
   } else {
-    txKey  = (_setMode === 'nodetype') ? TX.SETTINGS_NODE_TYPE : TX.SETTINGS_PRODUCT_TYPE;
+    txKey  = (_setMode === 'nodetype') ? TX.CONFIGURATION_NODE_TYPE : TX.CONFIGURATION_PRODUCT_TYPE;
     fields = Object.assign({ code: code, label: name, shape: shape, is_default: isDefault },
       _setMode === 'prodtype' ? { color: _setColor || '#6b7280' } : {},
       _setMode === 'nodetype' ? {
@@ -483,7 +485,7 @@ DDS_SETTINGS_UI._doSaveCmd = function(closeAfter, name, code, shape, isDefault, 
       }
     });
   } catch (err) {
-    console.error('[DDS] Settings save error:', err);
+    console.error('[DDS] Configuration save error:', err);
     saveBtn.textContent = 'Error — retry';
     saveBtn.disabled = false;
     if (saveCloseBtn) saveCloseBtn.disabled = false;
@@ -500,8 +502,8 @@ DDS_SETTINGS_UI._doSaveCmd = function(closeAfter, name, code, shape, isDefault, 
     saveBtn.innerHTML = 'Save';
     saveBtn.disabled = false;
     if (saveCloseBtn) saveCloseBtn.disabled = false;
-    DDS_SETTINGS_UI.closeModal(); // closeModal handles map refresh via _setDirty
-    DDS_SETTINGS_UI.render();
+    DDS_CONFIGURATION_UI.closeModal(); // closeModal handles map refresh via _setDirty
+    DDS_CONFIGURATION_UI.render();
   } else if (_setEditId) {
     // Save as New (edit mode) — DDS_CMD returns the new record's id directly
     if (result.id) { _setEditId = result.id; }
@@ -509,29 +511,29 @@ DDS_SETTINGS_UI._doSaveCmd = function(closeAfter, name, code, shape, isDefault, 
     if (saveCloseBtn) saveCloseBtn.textContent = 'Save';
     saveBtn.disabled = false;
     if (saveCloseBtn) saveCloseBtn.disabled = false;
-    DDS_SETTINGS_UI._validateModal();
-    DDS_SETTINGS_UI.render();
+    DDS_CONFIGURATION_UI._validateModal();
+    DDS_CONFIGURATION_UI.render();
     document.getElementById('dds-set-name').focus();
   } else {
     saveBtn.innerHTML = 'Save';
-    DDS_SETTINGS_UI._validateModal();
-    DDS_SETTINGS_UI.render();
+    DDS_CONFIGURATION_UI._validateModal();
+    DDS_CONFIGURATION_UI.render();
     document.getElementById('dds-set-name').value = '';
     if (!document.getElementById('dds-set-code-field').classList.contains('dds-hidden')) {
       document.getElementById('dds-set-code').value = '';
     }
-    DDS_SETTINGS_UI._validateModal();
+    DDS_CONFIGURATION_UI._validateModal();
     document.getElementById('dds-set-name').focus();
   }
 };
 
-DDS_SETTINGS_UI.handleSave = function() { DDS_SETTINGS_UI._doSave(true); }; // Save (edit) / Save and Close (add)
+DDS_CONFIGURATION_UI.handleSave = function() { DDS_CONFIGURATION_UI._doSave(true); }; // Save (edit) / Save and Close (add)
 
-DDS_SETTINGS_UI.handleDelete = function(type, id) {
+DDS_CONFIGURATION_UI.handleDelete = function(type, id) {
   if (!confirm('Delete this entry?')) return;
   if (type === 'notecat') {
     DDS_CMD.execute(TX.NOTE_CATEGORY_DELETE, { id: id }, null);
-    DDS_SETTINGS_UI.render();
+    DDS_CONFIGURATION_UI.render();
     if (window.DDS_NOTES_UI) DDS_NOTES_UI.refresh();
     return;
   }
@@ -545,7 +547,7 @@ DDS_SETTINGS_UI.handleDelete = function(type, id) {
       }
     });
   } else {
-    DDS_STORE.remove(DDS_SETTINGS_UI._table(type), { id: id });
+    DDS_STORE.remove(DDS_CONFIGURATION_UI._table(type), { id: id });
     if (typeof DDS_MAP !== 'undefined' && DDS_MAP.state.currentMapId) {
       if (type === 'tagstyle') {
         DDS_MAP.applyNodeColors();
@@ -554,10 +556,10 @@ DDS_SETTINGS_UI.handleDelete = function(type, id) {
       }
     }
   }
-  DDS_SETTINGS_UI.render();
+  DDS_CONFIGURATION_UI.render();
 };
 
-DDS_SETTINGS_UI._moveNoteCategory = function(id, direction) {
+DDS_CONFIGURATION_UI._moveNoteCategory = function(id, direction) {
   var cats = DDS_STORE.query('note_categories', {}, { order: 'position.asc' });
   var idx = cats.findIndex(function(c) { return c.id === id; });
   if (idx < 0) return;
@@ -569,23 +571,23 @@ DDS_SETTINGS_UI._moveNoteCategory = function(id, direction) {
     return { id: c.id, position: c.position };
   });
   DDS_CMD.execute(TX.NOTE_CATEGORY_REORDER, { order: order }, null);
-  DDS_SETTINGS_UI.render();
+  DDS_CONFIGURATION_UI.render();
   if (window.DDS_NOTES_UI) DDS_NOTES_UI.refresh();
 };
 
-DDS_SETTINGS_UI.bindEvents = function() {
-  document.getElementById('dds-tab-settings').addEventListener('click', function() { setTimeout(function() { DDS_SETTINGS_UI.render(); }, 50); });
-  document.getElementById('dds-set-name').addEventListener('input', DDS_SETTINGS_UI._validateModal);
-  document.getElementById('dds-set-code').addEventListener('input', DDS_SETTINGS_UI._validateModal);
-  document.getElementById('dds-modal-settings-close').addEventListener('click',       DDS_SETTINGS_UI.closeModal);
-  document.getElementById('dds-modal-settings-cancel').addEventListener('click',      DDS_SETTINGS_UI.closeModal);
-  document.getElementById('dds-modal-settings-save').addEventListener('click',        function() { DDS_SETTINGS_UI._doSave(false); });
-  document.getElementById('dds-modal-settings-save-close').addEventListener('click',  function() { DDS_SETTINGS_UI._doSave(true); });
-  document.getElementById('dds-modal-settings-overlay').addEventListener('click', function(e) { if (e.target === this) DDS_SETTINGS_UI.closeModal(); });
-  document.getElementById('dds-modal-settings-overlay').addEventListener('keydown', function(e) {
+DDS_CONFIGURATION_UI.bindEvents = function() {
+  document.getElementById('dds-tab-configuration').addEventListener('click', function() { setTimeout(function() { DDS_CONFIGURATION_UI.render(); }, 50); });
+  document.getElementById('dds-set-name').addEventListener('input', DDS_CONFIGURATION_UI._validateModal);
+  document.getElementById('dds-set-code').addEventListener('input', DDS_CONFIGURATION_UI._validateModal);
+  document.getElementById('dds-modal-configuration-close').addEventListener('click',       DDS_CONFIGURATION_UI.closeModal);
+  document.getElementById('dds-modal-configuration-cancel').addEventListener('click',      DDS_CONFIGURATION_UI.closeModal);
+  document.getElementById('dds-modal-configuration-save').addEventListener('click',        function() { DDS_CONFIGURATION_UI._doSave(false); });
+  document.getElementById('dds-modal-configuration-save-close').addEventListener('click',  function() { DDS_CONFIGURATION_UI._doSave(true); });
+  document.getElementById('dds-modal-configuration-overlay').addEventListener('click', function(e) { if (e.target === this) DDS_CONFIGURATION_UI.closeModal(); });
+  document.getElementById('dds-modal-configuration-overlay').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-      var btn = document.getElementById('dds-modal-settings-save-close');
-      if (btn && !btn.disabled) { e.preventDefault(); DDS_SETTINGS_UI._doSave(true); }
+      var btn = document.getElementById('dds-modal-configuration-save-close');
+      if (btn && !btn.disabled) { e.preventDefault(); DDS_CONFIGURATION_UI._doSave(true); }
     }
   });
 };

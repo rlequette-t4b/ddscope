@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DDScope — Local Runner</title>
+
+<!--
+  GENERATED FILE — DO NOT EDIT index.html BY HAND.
+  Run: node frameworks/local/build.js
+  Edit this file (template.html) or build.js instead.
+
+  DDScope — Local framework runner (framework-2, see docs/DDScope_Assemblies.md §2).
+  Assembles src/, fragments/, styles/ directly, outside CommWise.
+  See docs/DDScope_Framework_Local.md for stub status and rationale.
+
+  Serve via tools/local-server.js (KB conventions/local-server.md) — do not open via file://
+  (fetch()/File System Access API require an http:// origin).
+
+  Module/fragment/style order is read from frameworks/commwise/sync-tracker.md by build.js —
+  it is not hardcoded here. The two CDN loader positions (SCRIPT 350, 1784) are injected by
+  build.js from frameworks/local/fixtures/, verbatim copies of the live CommWise blocks.
+-->
+
+<!-- Platform stub: jQuery — required by src/core/DDS_SETTINGS.js (SETTINGS/NAV_MENU
+     sub-modules, undeclared CommWise coupling, see Decoupling Log §8 Step 2). Not a
+     DDScope-owned CDN loader block in CommWise — jQuery is assumed platform-provided there. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+<!-- Styles, in STYLE block order (chrome/token blocks excluded — see sync-tracker.md) -->
+{{STYLES}}
+
+<!-- Platform stubs: commwiseConfigClient, APP_CONTEXT, DataStore for DDS_SETTINGS.
+     Minimal — just enough for DDS_INIT.boot() to complete. Not real IService
+     implementations (Step C). See docs/DDScope_Framework_Local.md §Stub status. -->
+<script>
+  window.commwiseConfigClient = {
+    secureRequest: function() {
+      return Promise.reject(new Error(
+        '[local runner] commwiseConfigClient.secureRequest is stubbed — no AI proxy locally. ' +
+        'See docs/DDScope_Framework_Local.md.'
+      ));
+    }
+  };
+
+  window.APP_CONTEXT = {
+    ready: function() {
+      return Promise.resolve({ user: { email: 'local-dev@ddscope.local' } });
+    }
+  };
+
+  // Mimics the B2W DataStore module shape expected by DDS_SETTINGS.ready() —
+  // without this, ready() retries via setTimeout(tryLoad, 100) forever and never resolves.
+  window.B2W_DATA_DDS_APP_SETTINGS_VKVR7N = {
+    isLoaded: function() { return true; },
+    getLoadError: function() { return null; },
+    getRawRecords: function() { return []; }
+  };
+</script>
+</head>
+<body>
+
+<!-- Fragments, in DIV block order (chrome blocks excluded — see sync-tracker.md) -->
+{{FRAGMENTS}}
+
+<!-- Modules, in SCRIPT block order (see frameworks/commwise/sync-tracker.md).
+     CDN loader positions (350, 1784) injected verbatim from frameworks/local/fixtures/. -->
+{{SCRIPTS}}
+
+</body>
+</html>

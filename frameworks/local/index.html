@@ -1,3 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DDScope — Local Runner</title>
+
+<!--
+  GENERATED FILE — DO NOT EDIT index.html BY HAND.
+  Run: node frameworks/local/build.js
+  Edit this file (template.html) or build.js instead.
+
+  DDScope — Local framework runner (framework-2, see docs/DDScope_Assemblies.md §2).
+  Assembles src/, fragments/, styles/ directly, outside CommWise.
+  See docs/DDScope_Framework_Local.md for stub status and rationale.
+
+  Serve via tools/local-server.js (KB conventions/local-server.md) — do not open via file://
+  (fetch()/File System Access API require an http:// origin).
+
+  Module/fragment/style order is read from frameworks/commwise/sync-tracker.md by build.js —
+  it is not hardcoded here. The two CDN loader positions (SCRIPT 350, 1784) are injected by
+  build.js from frameworks/local/fixtures/, verbatim copies of the live CommWise blocks.
+-->
+
+<!-- Platform stub: jQuery — required by src/core/DDS_SETTINGS.js (SETTINGS/NAV_MENU
+     sub-modules, undeclared CommWise coupling, see Decoupling Log §8 Step 2). Not a
+     DDScope-owned CDN loader block in CommWise — jQuery is assumed platform-provided there. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+<!-- Styles, in STYLE block order (chrome/token blocks excluded — see sync-tracker.md) -->
+<link rel="stylesheet" href="../../styles/variables-reset.css">
+<link rel="stylesheet" href="../../styles/layout-nav-cards.css">
+<link rel="stylesheet" href="../../styles/buttons-modal-forms.css">
+<link rel="stylesheet" href="../../styles/map-view.css">
+<link rel="stylesheet" href="../../styles/side-panel.css">
+<link rel="stylesheet" href="../../styles/demand-section.css">
+<link rel="stylesheet" href="../../styles/ctt-overlay.css">
+<link rel="stylesheet" href="../../styles/tables.css">
+<link rel="stylesheet" href="../../styles/elements-panel.css">
+<link rel="stylesheet" href="../../styles/ai-panel.css">
+<link rel="stylesheet" href="../../styles/ai-debug-panel.css">
+<link rel="stylesheet" href="../../styles/actions-log-panel.css">
+<link rel="stylesheet" href="../../styles/settings-content.css">
+<link rel="stylesheet" href="../../styles/settings-tab.css">
+<link rel="stylesheet" href="../../styles/notes-panel.css">
+
+<!-- Platform stubs: commwiseConfigClient, APP_CONTEXT, DataStore for DDS_SETTINGS.
+     Minimal — just enough for DDS_INIT.boot() to complete. Not real IService
+     implementations (Step C). See docs/DDScope_Framework_Local.md §Stub status. -->
+<script>
+  window.commwiseConfigClient = {
+    secureRequest: function() {
+      return Promise.reject(new Error(
+        '[local runner] commwiseConfigClient.secureRequest is stubbed — no AI proxy locally. ' +
+        'See docs/DDScope_Framework_Local.md.'
+      ));
+    }
+  };
+
+  window.APP_CONTEXT = {
+    ready: function() {
+      return Promise.resolve({ user: { email: 'local-dev@ddscope.local' } });
+    }
+  };
+
+  // Mimics the B2W DataStore module shape expected by DDS_SETTINGS.ready() —
+  // without this, ready() retries via setTimeout(tryLoad, 100) forever and never resolves.
+  window.B2W_DATA_DDS_APP_SETTINGS_VKVR7N = {
+    isLoaded: function() { return true; },
+    getLoadError: function() { return null; },
+    getRawRecords: function() { return []; }
+  };
+</script>
+</head>
+<body>
+
+<!-- Fragments, in DIV block order (chrome blocks excluded — see sync-tracker.md) -->
+<!-- DIV 110 — fragments/modal-debug-settings.html -->
+<!-- DIV 110 — Settings Modal (Debug toggle)
+     NOTE: outer shell uses CommWise-provided b2w-settings-modal-* classes
+     (platform modal chrome); inner content (dds-settings-*) is DDScope-owned.
+     Kept as a single fragment since JS (DDS_SETTINGS_UI / SETTINGS) targets
+     both the shell ids and the inner content together. -->
+<div id="b2w-settings-modal-backdrop" class="b2w-settings-modal-backdrop">
+    <div class="b2w-settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+        <div class="b2w-settings-modal-header">
+            <h2 id="settings-modal-title" class="b2w-settings-modal-title">
+                <span>⚙️</span> Settings
+            </h2>
+            <button class="b2w-settings-modal-close" aria-label="Close settings" onclick="SETTINGS.close()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="b2w-settings-modal-content">
+            <div class="dds-settings-section">
+                <h3 class="dds-settings-section-title">Developer</h3>
+                <label class="dds-settings-row" for="dds-debug-toggle">
+                    <span class="dds-settings-label">
+                        <span class="dds-settings-label-text">Debug AI</span>
+                        <span class="dds-settings-label-hint">Shows AI request/response details in the assistant panel</span>
+                    </span>
+                    <input type="checkbox" id="dds-debug-toggle" class="dds-settings-toggle"
+                        onchange="DDS_SETTINGS.set('debug_ai', this.checked ? 'true' : 'false')">
+                </label>
+                <label class="dds-settings-row" for="dds-log-actions-toggle">
+                    <span class="dds-settings-label">
+                        <span class="dds-settings-label-text">Log actions</span>
+                        <span class="dds-settings-label-hint">Shows a live panel of all DDS_ACTIONS.execute() calls</span>
+                    </span>
+                    <input type="checkbox" id="dds-log-actions-toggle" class="dds-settings-toggle"
+                        onchange="DDS_SETTINGS.set('log_actions', this.checked ? 'true' : 'false').then(function() { if (window.DDS_ACTIONS_LOG) DDS_ACTIONS_LOG.applyVisibility(); })">
+                </label>
+                <label class="dds-settings-row" for="dds-show-bfs-ranks-toggle">
+                    <span class="dds-settings-label">
+                        <span class="dds-settings-label-text">Show BFS ranks</span>
+                        <span class="dds-settings-label-hint">Displays min-max BFS rank badges on map nodes (requires running layout)</span>
+                    </span>
+                    <input type="checkbox" id="dds-show-bfs-ranks-toggle" class="dds-settings-toggle"
+                        onchange="DDS_SETTINGS.set('show_bfs_ranks', this.checked ? 'true' : 'false').then(function() { if (window.DDS_MAP) { DDS_MAP.clearBfsRankBadges(); if (DDS_SETTINGS.isShowBfsRanks()) DDS_MAP.renderBfsRankBadges(DDS_MAP.state.currentMapId); } })">
+                </label>
+                <div class="dds-settings-row">
+                    <span class="dds-settings-label">
+                        <span class="dds-settings-label-text">Log level</span>
+                        <span class="dds-settings-label-hint">Controls DDS_TOOLS.log verbosity (debug / info / warn / error / off)</span>
+                    </span>
+                    <select id="dds-log-level-select" class="dds-select" style="width:110px"
+                        onchange="DDS_SETTINGS.set('log_level', this.value).then(function() { DDS_TOOLS.log.setLevel(document.getElementById('dds-log-level-select').value); })">
+                        <option value="debug">debug</option>
+                        <option value="info">info</option>
+                        <option value="warn">warn</option>
+                        <option value="error">error</option>
+                        <option value="off">off</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="b2w-settings-modal-footer">
+            <button class="b2w-settings-btn-close" onclick="SETTINGS.close()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- DIV 200 — fragments/app-shell.html -->
 <div class="dds-app" id="dds-app">
 
   <!-- Nav bar -->
@@ -13,7 +158,7 @@
       <button class="dds-nav-tab dds-hidden" id="dds-tab-boms"     data-view="boms">BOMs</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-demand"      data-view="demand">Demand</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-annotations" data-view="annotations">Annotations</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-configuration"    data-view="configuration">Configuration</button>
+      <button class="dds-nav-tab dds-hidden" id="dds-tab-settings"    data-view="settings">Settings</button>
     </div>
 
     <!-- Project name (centered) -->
@@ -297,9 +442,9 @@
         </div>
       </div>
 
-      <!-- View: Configuration -->
-      <div class="dds-view" id="dds-view-configuration">
-        <div class="dds-configuration-view" id="dds-configuration-content"></div>
+      <!-- View: Settings -->
+      <div class="dds-view" id="dds-view-settings">
+        <div class="dds-settings-view" id="dds-settings-content"></div>
       </div>
 
     </main>
@@ -661,3 +806,339 @@
   </div>
 
 </div>
+
+<!-- DIV 400 — fragments/modal-product.html -->
+<!-- DIV 400 — Product modal (add/edit) -->
+<div class="dds-overlay dds-hidden" id="dds-modal-product-overlay">
+  <div class="dds-modal" style="max-width:440px">
+    <div class="dds-modal-header">
+      <span class="dds-modal-title" id="dds-modal-product-title">Add product</span>
+      <button class="dds-btn dds-modal-close" id="dds-modal-product-close">&times;</button>
+    </div>
+    <div class="dds-modal-body">
+      <div class="dds-field">
+        <label class="dds-label" for="dds-prod-name">Name *</label>
+        <input class="dds-input" id="dds-prod-name" type="text" placeholder="Product name" autocomplete="off" />
+        <span class="dds-field-error dds-hidden" id="dds-prod-name-error"></span>
+      </div>
+      <div class="dds-field">
+        <label class="dds-label" for="dds-prod-type">Type</label>
+        <select class="dds-select" id="dds-prod-type">
+          <option value="">&mdash; no type &mdash;</option>
+        </select>
+      </div>
+      <div class="dds-field">
+        <label class="dds-label">Tags</label>
+        <div class="dds-tags-wrap" id="dds-prod-tags-wrap">
+          <input class="dds-tag-input" id="dds-prod-tag-input" placeholder="Add tag&hellip;" />
+        </div>
+      </div>
+      <div class="dds-field">
+        <label class="dds-label" for="dds-prod-notes">Notes</label>
+        <textarea class="dds-textarea" id="dds-prod-notes" style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div class="dds-modal-footer">
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-product-cancel">Cancel</button>
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-product-save" disabled>Save</button>
+      <button class="dds-btn dds-btn-primary" id="dds-modal-product-save-close" disabled>Save &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIV 500 — fragments/modal-bom.html -->
+<!-- DIV 500 — BOM modal (add/edit, node + output product + component lines) -->
+<div class="dds-overlay dds-hidden" id="dds-modal-bom-overlay">
+  <div class="dds-modal" style="max-width:500px">
+    <div class="dds-modal-header">
+      <span class="dds-modal-title" id="dds-modal-bom-title">Add BOM</span>
+      <button class="dds-btn dds-modal-close" id="dds-modal-bom-close">&times;</button>
+    </div>
+    <div class="dds-modal-body">
+
+      <div class="dds-field">
+        <label class="dds-label" for="dds-bom-node">Node *</label>
+        <select class="dds-select" id="dds-bom-node">
+          <option value="">Select a node&hellip;</option>
+        </select>
+      </div>
+
+      <div class="dds-field">
+        <label class="dds-label" for="dds-bom-output">Output product *</label>
+        <select class="dds-select" id="dds-bom-output">
+          <option value="">Select a product&hellip;</option>
+        </select>
+      </div>
+
+      <div class="dds-field">
+        <label class="dds-label">Components</label>
+        <div id="dds-bom-components-list"></div>
+        <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-bom-add-component" style="margin-top:8px">+ Component</button>
+      </div>
+
+    </div>
+    <div class="dds-modal-footer">
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-bom-cancel">Cancel</button>
+      <button class="dds-btn dds-btn-primary" id="dds-modal-bom-save" disabled>Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIV 600 — fragments/panel-elements.html -->
+<!-- DIV 600 — Elements panel (left drawer, inside canvas wrap) + contextual remove button -->
+<div class="dds-elements-panel" id="dds-elements-panel">
+  <div class="dds-elements-panel-header">
+    <span class="dds-elements-panel-title">Elements</span>
+    <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-elements-panel-close">&times;</button>
+  </div>
+  <div class="dds-elements-panel-body" id="dds-elements-panel-body">
+    <!-- Rendered by JS -->
+  </div>
+</div>
+
+<!-- Contextual remove button (canvas selection) -->
+<div class="dds-ctx-remove" id="dds-ctx-remove">
+  <button class="dds-btn dds-btn-danger dds-btn-sm" id="dds-ctx-remove-btn">Remove from map</button>
+</div>
+
+<!-- DIV 800 — fragments/modal-settings-crud.html -->
+<!-- DIV 800 — Shared settings CRUD modal (swim-lane / node type / product type /
+     tag style / note category). Fields shown or hidden by DDS_SETTINGS_UI.openModal(). -->
+<div class="dds-overlay dds-hidden" id="dds-modal-settings-overlay">
+  <div class="dds-modal" style="max-width:420px">
+    <div class="dds-modal-header">
+      <span class="dds-modal-title" id="dds-modal-settings-title">Edit</span>
+      <button class="dds-btn dds-modal-close" id="dds-modal-settings-close">&times;</button>
+    </div>
+    <div class="dds-modal-body">
+
+      <!-- Name (all types) -->
+      <div class="dds-field">
+        <label class="dds-label" for="dds-set-name">Name *</label>
+        <input class="dds-input" id="dds-set-name" type="text" autocomplete="off" />
+      </div>
+
+      <!-- Code (node/product types) -->
+      <div class="dds-field dds-hidden" id="dds-set-code-field">
+        <label class="dds-label" for="dds-set-code">Code *</label>
+        <input class="dds-input" id="dds-set-code" type="text"
+          placeholder="e.g. SUPPLIER" style="text-transform:uppercase" autocomplete="off" />
+      </div>
+
+      <!-- Shape (node/product types) -->
+      <div class="dds-field dds-hidden" id="dds-set-shape-field">
+        <label class="dds-label" for="dds-set-shape">Shape</label>
+        <select class="dds-select" id="dds-set-shape">
+          <option value="rectangle">Rectangle</option>
+          <option value="diamond">Diamond</option>
+          <option value="ellipse">Ellipse</option>
+          <option value="hexagon">Hexagon</option>
+          <option value="triangle">Triangle</option>
+          <option value="star">Star</option>
+          <option value="barrel">Barrel</option>
+          <option value="rhomboid">Rhomboid</option>
+        </select>
+      </div>
+
+      <!-- Color (swim-lanes + product types) -->
+      <div class="dds-field dds-hidden" id="dds-set-color-field">
+        <label class="dds-label">Color</label>
+        <div class="dds-swatches" id="dds-set-swatches"></div>
+      </div>
+
+      <!-- Flow style fields (tag styles only) -->
+      <div id="dds-set-flow-fields" class="dds-hidden">
+        <div class="dds-field">
+          <label class="dds-label">Line color</label>
+          <div class="dds-swatches" id="dds-set-line-swatches"></div>
+        </div>
+        <div class="dds-field">
+          <label class="dds-label" for="dds-set-line-style">Line style</label>
+          <select class="dds-select" id="dds-set-line-style">
+            <option value="">— none —</option>
+            <option value="solid">Solid</option>
+            <option value="dashed">Dashed</option>
+            <option value="dotted">Dotted</option>
+          </select>
+        </div>
+        <div class="dds-field">
+          <label class="dds-label" for="dds-set-line-width">Width</label>
+          <select class="dds-select" id="dds-set-line-width">
+            <option value="">— none —</option>
+            <option value="thin">Thin (1px)</option>
+            <option value="normal">Normal (2px)</option>
+            <option value="thick">Thick (4px)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Default swim-lane (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-default-lane-field">
+        <label class="dds-label" for="dds-set-default-lane">Default swim-lane</label>
+        <select class="dds-select" id="dds-set-default-lane"></select>
+      </div>
+
+      <!-- Default checkbox (node/product types) -->
+      <div class="dds-field dds-hidden" id="dds-set-default-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--dds-text-base)">
+          <input type="checkbox" id="dds-set-default" style="width:16px;height:16px;accent-color:var(--dds-accent)" />
+          Default type
+        </label>
+      </div>
+
+      <!-- Product node default (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-product-node-default-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--dds-text-base)">
+          <input type="checkbox" id="dds-set-product-node-default" style="width:16px;height:16px;accent-color:var(--dds-accent)" />
+          Default type for "Add product on map"
+        </label>
+      </div>
+
+      <!-- Icon key (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-icon-field">
+        <label class="dds-label" for="dds-set-icon-key">Icon</label>
+        <select class="dds-select" id="dds-set-icon-key">
+          <option value="">— none —</option>
+        </select>
+      </div>
+
+      <!-- Label position (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-label-pos-field">
+        <label class="dds-label" for="dds-set-label-pos">Label position</label>
+        <select class="dds-select" id="dds-set-label-pos">
+          <option value="center">Center (default)</option>
+          <option value="below">Below</option>
+          <option value="above">Above</option>
+        </select>
+      </div>
+
+      <!-- Transparent background (node types only) -->
+      <div class="dds-field dds-hidden" id="dds-set-transparent-bg-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--dds-text-base)">
+          <input type="checkbox" id="dds-set-transparent-bg" style="width:16px;height:16px;accent-color:var(--dds-accent)" />
+          Transparent background (colored icon mode)
+        </label>
+      </div>
+
+    </div>
+    <div class="dds-modal-footer">
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-settings-cancel">Cancel</button>
+      <button class="dds-btn dds-btn-secondary" id="dds-modal-settings-save" disabled>Save</button>
+      <button class="dds-btn dds-btn-primary" id="dds-modal-settings-save-close" disabled>Save &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modules, in SCRIPT block order (see frameworks/commwise/sync-tracker.md).
+     CDN loader positions (350, 1784) injected verbatim from frameworks/local/fixtures/. -->
+<script src="../../src/core/DDS_TOOLS.js"></script>
+<script src="../../src/core/DDS_SETTINGS.js"></script>
+<script src="../../src/core/DDS_COLORS.js"></script>
+<script src="../../src/core/DDS_ICONS.js"></script>
+<script src="../../src/core/DDS_STORE.js"></script>
+<!-- SCRIPT 350 — CDN: Cytoscape + Dagre (verbatim, see fixtures/) -->
+<script>
+// SCRIPT 350 — CDN: Cytoscape + Dagre
+// Verbatim copy fetched from CommWise app 22645 via the CommWise MCP tool
+// (commwise_get_block, code_type=script, position=350) on 2026-07-03.
+// Not re-authored — see docs/DDScope_Modular_Architecture.md §8 Decoupling Log, Step 2.
+// Injected by frameworks/local/build.js at its SCRIPT position (350).
+
+(function() {
+  function loadScript(src, onload) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = onload;
+    s.onerror = function() { console.error('[DDS] Failed to load: ' + src); };
+    document.head.appendChild(s);
+  }
+
+  // Load chain: cytoscape → dagre → cytoscape-dagre
+  loadScript(
+    'https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.33.1/cytoscape.min.js',
+    function() {
+      loadScript(
+        'https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js',
+        function() {
+          loadScript(
+            'https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.js',
+            function() {
+              if (window.cytoscape && window.dagre) {
+                cytoscape.use(cytoscapeDagre);
+                console.log('[DDS] Cytoscape ' + cytoscape.version + ' + Dagre ready');
+                document.dispatchEvent(new CustomEvent('dds-cytoscape-ready'));
+              }
+            }
+          );
+        }
+      );
+    }
+  );
+})();
+</script>
+<script src="../../src/presentation/DDS.js"></script>
+<script src="../../src/domain/DDS_PROJECTS.js"></script>
+<script src="../../src/core/DDS_JSON.js"></script>
+<script src="../../src/ui/DDS_UI_NAV.js"></script>
+<script src="../../src/ui/DDS_INIT.js"></script>
+<script src="../../src/presentation/DDS_MAP_state.js"></script>
+<script src="../../src/ai/DDS_AI_UI_FONT.js"></script>
+<script src="../../src/presentation/DDS_MAP_load.js"></script>
+<script src="../../src/presentation/DDS_MAP_tagstyles.js"></script>
+<script src="../../src/presentation/DDS_MAP_ctt.js"></script>
+<script src="../../src/presentation/DDS_SWIMLANES.js"></script>
+<script src="../../src/presentation/DDS_SWIMLANE_GROUP.js"></script>
+<script src="../../src/ui/DDS_MAP_UI.js"></script>
+<script src="../../src/presentation/DDS_LAYOUT.js"></script>
+<script src="../../src/ui/DDS_NODE_UI.js"></script>
+<script src="../../src/presentation/DDS_FLOW_UI.js"></script>
+<script src="../../src/presentation/DDS_PANEL.js"></script>
+<script src="../../src/presentation/DDS_PANEL_demand.js"></script>
+<script src="../../src/core/DDS_MODEL.js"></script>
+<script src="../../src/domain/DDS_PRODUCTS.js"></script>
+<script src="../../src/core/DDS_DURATION.js"></script>
+<script src="../../src/domain/DDS_DEMANDS.js"></script>
+<script src="../../src/domain/DDS_ANNOTATIONS.js"></script>
+<script src="../../src/ui/DDS_PRODUCTS_UI.js"></script>
+<script src="../../src/ui/DDS_NODES_UI.js"></script>
+<script src="../../src/ui/DDS_FLOWS_UI.js"></script>
+<script src="../../src/ui/DDS_DEMANDS_UI.js"></script>
+<script src="../../src/ui/DDS_ANNOTATIONS_UI.js"></script>
+<!-- SCRIPT 1784 — CDN: SortableJS (verbatim, see fixtures/). Must precede SCRIPT 1785. -->
+<script>
+// SCRIPT 1784 — CDN: SortableJS
+// Verbatim copy fetched from CommWise app 22645 via the CommWise MCP tool
+// (commwise_get_block, code_type=script, position=1784) on 2026-07-03.
+// Not re-authored — see docs/DDScope_Modular_Architecture.md §8 Decoupling Log, Step 2.
+// Injected by frameworks/local/build.js at its SCRIPT position (1784) —
+// must stay before SCRIPT 1785 (DDS_NOTES_UI), per the original block's own comment.
+
+(function () {
+  if (window.Sortable) return;
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
+  s.async = false;
+  document.head.appendChild(s);
+}());
+</script>
+<script src="../../src/ui/DDS_NOTES_UI.js"></script>
+<script src="../../src/domain/DDS_BOMS.js"></script>
+<script src="../../src/core/DDS_ACTIONS.js"></script>
+<script src="../../src/core/DDS_TRANSACTIONS.js"></script>
+<script src="../../src/core/DDS_TX.js"></script>
+<script src="../../src/core/DDS_TX_HELPER.js"></script>
+<script src="../../src/core/DDS_CMD.js"></script>
+<script src="../../src/ui/DDS_BOMS_UI.js"></script>
+<script src="../../src/presentation/DDS_ELEMENTS.js"></script>
+<script src="../../src/presentation/DDS_REMOVE.js"></script>
+<script src="../../src/ui/DDS_ELEMENTS_UI.js"></script>
+<script src="../../src/ai/DDS_AI_CONTEXT.js"></script>
+<script src="../../src/ai/DDS_AI.js"></script>
+<script src="../../src/ai/DDS_AI_UI.js"></script>
+<script src="../../src/ai/DDS_AI_UI_DEBUG.js"></script>
+<script src="../../src/ai/DDS_AI_UI_REPLAY.js"></script>
+<script src="../../src/ui/DDS_ACTIONS_LOG.js"></script>
+<script src="../../src/ui/DDS_SETTINGS_UI.js"></script>
+
+</body>
+</html>
