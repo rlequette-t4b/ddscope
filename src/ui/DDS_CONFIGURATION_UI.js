@@ -473,17 +473,13 @@ DDS_CONFIGURATION_UI._doSaveCmd = function(closeAfter, name, code, shape, isDefa
   }
   var result;
   try {
-    result = DDS_CMD.execute(txKey, params, null, function(cmdResult) {
-      // onSuccess — DOM/Cytoscape side effects only, per DDS_CMD architecture
-      if (_setMode === 'lane' && (!_setEditId || forceInsert) && cmdResult && cmdResult.id && DDS_MAP.state.currentMapId) {
-        DDS_STORE.insert('map_swim_lanes', {
-          map_id:       DDS_MAP.state.currentMapId,
-          swim_lane_id: cmdResult.id,
-          x: 50, y: 50, width: 200, height: 300
-        });
-        DDS_MAP.loadMap(DDS_MAP.state.currentMapId);
-      }
-    });
+    // T-036 part 4: no more auto-placement on the active map from this CRUD
+    // modal — that untransacted DDS_STORE.insert('map_swim_lanes', ...) call
+    // (never undoable) was replaced by the dedicated `+ Swim-lane` toolbar
+    // modal (DDS_LANE_UI), which places via TX.LANE_CREATE(mapId) /
+    // TX.MAP_ADD_LANE. This Configuration tab modal is pure lane management
+    // now — mapId is never passed (params has no mapId argument below).
+    result = DDS_CMD.execute(txKey, params, null);
   } catch (err) {
     console.error('[DDS] Configuration save error:', err);
     saveBtn.textContent = 'Error — retry';

@@ -167,7 +167,7 @@ DDS_REMOVE.openMulti = function(cyElements) {
   if (items.length === 0) return;
 
   // Aggregate consequences (deduplicated)
-  var nodeCount = 0, edgeCount = 0;
+  var nodeCount = 0, edgeCount = 0, annotationCount = 0;
   var allFlowIds = {}, allSkuKeys = {}, allBomIds = {};
   var seenFlowDeletes = {}; // flow IDs already targeted for deletion
 
@@ -177,6 +177,8 @@ DDS_REMOVE.openMulti = function(cyElements) {
       seenFlowDeletes[item.id] = true; // mark node as deleted — its flows will cascade
     } else if (item.type === 'edge') {
       edgeCount++;
+    } else if (item.type === 'annotation') {
+      annotationCount++;
     }
   });
 
@@ -211,6 +213,7 @@ DDS_REMOVE.openMulti = function(cyElements) {
   var parts = [];
   if (nodeCount > 0) parts.push(nodeCount + ' node' + (nodeCount > 1 ? 's' : ''));
   if (edgeCount > 0) parts.push(edgeCount + ' flow' + (edgeCount > 1 ? 's' : ''));
+  if (annotationCount > 0) parts.push(annotationCount + ' annotation' + (annotationCount > 1 ? 's' : ''));
   var title = 'Remove ' + parts.join(' and ');
 
   var bodyHtml = '<p>Remove <span class="dds-remove-entity-name">' + parts.join(' and ') + '</span>?</p>';
@@ -219,6 +222,11 @@ DDS_REMOVE.openMulti = function(cyElements) {
   if (cascadeSkus  > 0) bodyHtml += '&#8226; ' + cascadeSkus  + ' SKU(s) will be deleted<br>';
   if (cascadeBoms  > 0) bodyHtml += '&#8226; ' + cascadeBoms  + ' BOM(s) will be deleted<br>';
   bodyHtml += '</div>';
+  if (annotationCount > 0) {
+    bodyHtml += '<p class="dds-text-sm" style="color:var(--dds-text-muted)">' +
+      annotationCount + ' annotation' + (annotationCount > 1 ? 's are' : ' is') +
+      ' always fully deleted regardless of "Remove only from map" — annotations are mono-map.</p>';
+  }
 
   DDS_REMOVE._openModal(title, bodyHtml, { multi: true, items: items });
 };

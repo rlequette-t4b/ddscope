@@ -35,6 +35,7 @@
     DDS_UI_NAV.bindEvents();
     DDS_MAP_UI.bindEvents();
     DDS_NODE_UI.bindEvents();
+    DDS_LANE_UI.bindEvents();
     DDS_PANEL.bindEvents();
     DDS_PRODUCTS_UI.bindEvents();
     DDS_BOMS_UI.bindEvents();

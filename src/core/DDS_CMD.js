@@ -55,6 +55,25 @@ var DDS_CMD = (function () {
     return str.length > n ? str.substring(0, n) + '…' : str;
   }
 
+  // Pure store-based placement for a new/re-added swim-lane on a map —
+  // deliberately does NOT read Cytoscape viewport extent (unlike the legacy
+  // DDS_ELEMENTS.addLane, which used DDS_CY.extent() and is therefore not
+  // callable from the command layer, per DDS_CMD's store-dependent-only
+  // testability contract). Places to the right of the rightmost existing
+  // lane on the map, or at a fixed default if the map has none yet.
+  function _placeLane(mapId) {
+    var existing = DDS_STORE.query('map_swim_lanes', { map_id: mapId });
+    var width = 200, height = 300;
+    if (existing.length === 0) {
+      return { x: 50, y: 50, width: width, height: height };
+    }
+    var maxRight = existing.reduce(function (max, r) {
+      var right = (r.x || 0) + (r.width || width);
+      return right > max ? right : max;
+    }, 0);
+    return { x: maxRight + 40, y: 50, width: width, height: height };
+  }
+
   // _entityLabel / _flowEndpointNames / _bomNodeName — shared by describe()
   // for both real records and 'new_*' temporary ids referenced by an
   // in-progress AI plan (Phase 6 — DDS_CMD_Migration.md). Mirrors the
@@ -312,13 +331,31 @@ var DDS_CMD = (function () {
 
   // TX.LANE_CREATE
   // params: { name: string, color?: string }
-  _register(TX.LANE_CREATE, function (params) {
+  // mapId: optional (3rd execute() arg). When present, places the newly
+  // created lane on that map (map_swim_lanes insert, position computed by
+  // _placeLane) — mirrors the TX.NODE_CREATE mapId-optional pattern (T-036
+  // part 4). When absent (Configuration tab CRUD call site), the lane is
+  // added to the functional model only, unchanged from prior behaviour.
+  _register(TX.LANE_CREATE, function (params, mapId) {
     var inserted = DDS_STORE.insert('swim_lanes', [{
       name:  params.name || '',
       color: params.color || '#6b7280'
     }]);
+    var laneId = inserted[0].id;
+    var result = { ok: true, id: laneId, laneId: laneId };
+
+    if (mapId) {
+      var pos = _placeLane(mapId);
+      var mslRows = DDS_STORE.insert('map_swim_lanes', [{
+        map_id: mapId, swim_lane_id: laneId,
+        x: pos.x, y: pos.y, width: pos.width, height: pos.height, group_order: null
+      }]);
+      result.mapSwimLaneId = mslRows[0].id;
+      result.x = pos.x; result.y = pos.y; result.width = pos.width; result.height = pos.height;
+    }
+
     DDS_STORE.markDirty();
-    return { ok: true, id: inserted[0].id };
+    return result;
   });
 
   // TX.LANE_UPDATE
@@ -842,6 +879,40 @@ var DDS_CMD = (function () {
     return { ok: true, id: flowId, flowId: flowId, mapFlowId: mfRows[0].id };
   });
 
+  // TX.MAP_ADD_LANE (T-036 part 4 — swim-lane search/create dedicated modal)
+  // params: { swim_lane_id: integer }
+  // mapId (2nd arg to execute) is required — places an EXISTING swim-lane on
+  // the map: position computed by _placeLane (pure store computation, no
+  // Cytoscape read), insert map_swim_lanes. Mirrors TX.MAP_ADD_NODE /
+  // TX.MAP_ADD_FLOW. Idempotent: if the lane is already on the map, no-ops
+  // and returns the existing map_swim_lanes row (alreadyOnMap: true).
+  _register(TX.MAP_ADD_LANE, function (params, mapId) {
+    if (!mapId) throw new Error('[DDS_CMD] MAP_ADD_LANE requires a mapId');
+    var laneId = parseInt(params.swim_lane_id, 10);
+    var lane = _rec('swim_lanes', laneId);
+    if (!lane) throw new Error('[DDS_CMD] Swim-lane not found');
+
+    var existing = DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: laneId });
+    if (existing.length > 0) {
+      return {
+        ok: true, id: laneId, laneId: laneId, mapSwimLaneId: existing[0].id,
+        x: existing[0].x, y: existing[0].y, width: existing[0].width, height: existing[0].height,
+        name: lane.name, alreadyOnMap: true
+      };
+    }
+
+    var pos = _placeLane(mapId);
+    var mslRows = DDS_STORE.insert('map_swim_lanes', [{
+      map_id: mapId, swim_lane_id: laneId,
+      x: pos.x, y: pos.y, width: pos.width, height: pos.height, group_order: null
+    }]);
+    DDS_STORE.markDirty();
+    return {
+      ok: true, id: laneId, laneId: laneId, mapSwimLaneId: mslRows[0].id,
+      x: pos.x, y: pos.y, width: pos.width, height: pos.height, name: lane.name
+    };
+  });
+
   // ---------------------------------------------------------------------------
   // Nodes domain (Phase 5 — DDS_CMD_Migration.md)
   // ---------------------------------------------------------------------------
@@ -1211,15 +1282,23 @@ var DDS_CMD = (function () {
   // ---------------------------------------------------------------------------
 
   // TX.MAP_REMOVE_NODE
-  // params: { items: [{ type: 'node'|'edge', id: integer }] }
+  // params: { items: [{ type: 'node'|'edge'|'annotation', id: integer }] }
   // mapId: required — the active map to remove from.
   // Delegates to DDS_ELEMENTS.removeNode/removeFlow, which already cascade
   // map-scoped flows and handle their own Cytoscape cleanup.
+  // 'annotation' items are ALWAYS fully deleted (DDS_MODEL.deleteAnnotation),
+  // never map-only — annotations are mono-map (T-036 part 4 decision), so
+  // "remove from this map only" has no meaning for them. Bug fix (T-036 part
+  // 4): previously, an 'annotation' item reaching this command via a mixed
+  // multi-selection with "Remove only from map" checked was silently
+  // dropped — neither removed from the map nor deleted — because this
+  // handler only recognised 'node'/'edge' item types.
   _register(TX.MAP_REMOVE_NODE, function (params, mapId) {
     if (!mapId) throw new Error('[DDS_CMD] MAP_REMOVE_NODE requires a mapId');
     (params.items || []).forEach(function (item) {
       if (item.type === 'node') DDS_ELEMENTS.removeNode(item.id);
       else if (item.type === 'edge') DDS_ELEMENTS.removeFlow(item.id);
+      else if (item.type === 'annotation') DDS_MODEL.deleteAnnotation(item.id);
     });
     DDS_STORE.markDirty();
     return { ok: true };
@@ -1481,6 +1560,10 @@ var DDS_CMD = (function () {
           case TX.MAP_ADD_FLOW:
             var _mafEp = _flowEndpointNames(params.flow_id, newLabelMap);
             label = 'Add flow ' + _mafEp.src + ' → ' + _mafEp.tgt + ' to map';
+            break;
+
+          case TX.MAP_ADD_LANE:
+            label = 'Add swim-lane "' + _entityLabel('swim_lanes', params.swim_lane_id, newLabelMap) + '" to map';
             break;
 
           case TX.MAP_CREATE:

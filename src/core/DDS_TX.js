@@ -71,6 +71,7 @@ var TX = {
   // Map presentation — element visibility
   MAP_ADD_NODE:             'map.add_node',
   MAP_ADD_FLOW:             'map.add_flow',
+  MAP_ADD_LANE:             'map.add_lane', // T-036 part 4 — swim-lane search/create dedicated modal
   MAP_ADD_ANNOTATION:       'map.add_annotation',
   MAP_REMOVE_NODE:          'map.remove_node',
   MAP_REMOVE_FLOW:          'map.remove_flow',

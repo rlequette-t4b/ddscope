@@ -407,6 +407,35 @@ describe('DDS_TX.LANE_CREATE', () => {
     DDS_TRANSACTIONS.undo();
     expect(DDS_STORE.query('swim_lanes').length).toBe(0);
   });
+
+  it('does not create a map_swim_lanes row when mapId is absent (Configuration tab call site, T-036 part 4)', () => {
+    const { id } = DDS_CMD.execute(DDS_TX.LANE_CREATE, { name: 'N1' }, null);
+    expect(DDS_STORE.query('map_swim_lanes', { swim_lane_id: id }).length).toBe(0);
+  });
+
+  it('places the lane on the map when mapId is given (map toolbar + Swim-lane modal, T-036 part 4)', () => {
+    const mapId = getMapId();
+    const result = DDS_CMD.execute(DDS_TX.LANE_CREATE, { name: 'Supply' }, mapId);
+    expect(result.ok).toBe(true);
+    const rows = DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: result.id });
+    expect(rows.length).toBe(1);
+    expect(result.mapSwimLaneId).toBe(rows[0].id);
+  });
+
+  it('places a second lane to the right of the first on the same map', () => {
+    const mapId = getMapId();
+    const first = DDS_CMD.execute(DDS_TX.LANE_CREATE, { name: 'A' }, mapId);
+    const second = DDS_CMD.execute(DDS_TX.LANE_CREATE, { name: 'B' }, mapId);
+    expect(second.x).toBeGreaterThan(first.x);
+  });
+
+  it('is undoable when placed on a map — removes both swim_lane and map_swim_lanes', () => {
+    const mapId = getMapId();
+    const { id } = DDS_CMD.execute(DDS_TX.LANE_CREATE, { name: 'Undo me' }, mapId);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('swim_lanes', { id }).length).toBe(0);
+    expect(DDS_STORE.query('map_swim_lanes', { swim_lane_id: id }).length).toBe(0);
+  });
 });
 
 // ------------------------------------------------------------------ //
@@ -1274,5 +1303,145 @@ describe('DDS_TX.MAP_ADD_FLOW', () => {
     const { flowId } = makeFlowOffMap();
     const labels = DDS_CMD.describe([{ type: DDS_TX.MAP_ADD_FLOW, params: { flow_id: flowId } }]);
     expect(labels[0].label).toBe('Add flow N1 → N2 to map');
+  });
+});
+
+// ------------------------------------------------------------------ //
+// MAP_ADD_LANE — place an existing swim-lane on the map (T-036 part 4)
+// ------------------------------------------------------------------ //
+
+describe('DDS_TX.MAP_ADD_LANE', () => {
+  beforeEach(setup);
+
+  it('exposes the TX key', () => {
+    expect(DDS_TX.MAP_ADD_LANE).toBe('map.add_lane');
+  });
+
+  it('inserts a map_swim_lanes row with a computed position', () => {
+    const mapId = getMapId();
+    const lane = DDS_STORE.insert('swim_lanes', { name: 'Supply', color: '#4a90d9' })[0];
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_LANE, { swim_lane_id: lane.id }, mapId);
+    expect(result.ok).toBe(true);
+    const rows = DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: lane.id });
+    expect(rows.length).toBe(1);
+    expect(result.mapSwimLaneId).toBe(rows[0].id);
+    expect(result.name).toBe('Supply');
+  });
+
+  it('fails without a mapId', () => {
+    const lane = DDS_STORE.insert('swim_lanes', { name: 'N1' })[0];
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_LANE, { swim_lane_id: lane.id }, null);
+    expect(result.ok).toBe(false);
+  });
+
+  it('fails for an unknown swim-lane', () => {
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_LANE, { swim_lane_id: 99999 }, getMapId());
+    expect(result.ok).toBe(false);
+  });
+
+  it('is idempotent — no duplicate map_swim_lanes row, alreadyOnMap flagged', () => {
+    const mapId = getMapId();
+    const lane = DDS_STORE.insert('swim_lanes', { name: 'N1' })[0];
+    DDS_CMD.execute(DDS_TX.MAP_ADD_LANE, { swim_lane_id: lane.id }, mapId);
+    const second = DDS_CMD.execute(DDS_TX.MAP_ADD_LANE, { swim_lane_id: lane.id }, mapId);
+    expect(second.ok).toBe(true);
+    expect(second.alreadyOnMap).toBe(true);
+    expect(DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: lane.id }).length).toBe(1);
+  });
+
+  it('coerces a string swim_lane_id (AI-string-id pattern)', () => {
+    const mapId = getMapId();
+    const lane = DDS_STORE.insert('swim_lanes', { name: 'N1' })[0];
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_LANE, { swim_lane_id: String(lane.id) }, mapId);
+    expect(result.ok).toBe(true);
+    expect(DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: lane.id }).length).toBe(1);
+  });
+
+  it('is undoable — undo removes the map_swim_lanes row, lane record untouched', () => {
+    const mapId = getMapId();
+    const lane = DDS_STORE.insert('swim_lanes', { name: 'N1' })[0];
+    DDS_TRANSACTIONS.clear();
+    DDS_CMD.execute(DDS_TX.MAP_ADD_LANE, { swim_lane_id: lane.id }, mapId);
+    expect(DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: lane.id }).length).toBe(1);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: lane.id }).length).toBe(0);
+    expect(DDS_STORE.query('swim_lanes', { id: lane.id }).length).toBe(1);
+  });
+
+  it('is redoable', () => {
+    const mapId = getMapId();
+    const lane = DDS_STORE.insert('swim_lanes', { name: 'N1' })[0];
+    DDS_TRANSACTIONS.clear();
+    DDS_CMD.execute(DDS_TX.MAP_ADD_LANE, { swim_lane_id: lane.id }, mapId);
+    DDS_TRANSACTIONS.undo();
+    DDS_TRANSACTIONS.redo();
+    expect(DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: lane.id }).length).toBe(1);
+  });
+
+  it('describe() labels it with the lane name', () => {
+    const lane = DDS_STORE.insert('swim_lanes', { name: 'Assembly' })[0];
+    const labels = DDS_CMD.describe([{ type: DDS_TX.MAP_ADD_LANE, params: { swim_lane_id: lane.id } }]);
+    expect(labels[0].label).toBe('Add swim-lane "Assembly" to map');
+  });
+});
+
+// ------------------------------------------------------------------ //
+// MAP_REMOVE_NODE — annotation branch bug fix (T-036 part 4)
+// Multi-selection "Remove only from map" previously silently dropped
+// annotation items — neither removed from the map nor deleted — because
+// this handler only recognised 'node'/'edge'. Annotations are mono-map, so
+// they are always fully deleted here regardless of the map-only checkbox.
+// ------------------------------------------------------------------ //
+
+describe('DDS_TX.MAP_REMOVE_NODE — annotation items', () => {
+  // DDS_ELEMENTS (src/presentation) is not part of the vitest shims (same
+  // pre-existing gap as DDS_LAYOUT for TX.MAP_ADD_NODE) — stubbed locally so
+  // the 'node'/'edge' branches (exercised here for the first time by the
+  // mixed-selection test) don't throw. Only the store mutation this test
+  // cares about is stubbed; the real command's Cytoscape/flow-cascade
+  // behaviour is out of scope here.
+  beforeEach(() => {
+    setup();
+    globalThis.DDS_ELEMENTS = {
+      removeNode: (nodeId) => { DDS_STORE.remove('map_nodes', { node_id: nodeId }); },
+      removeFlow: (flowId) => { DDS_STORE.remove('map_flows', { flow_id: flowId }); }
+    };
+  });
+
+  it('fully deletes an annotation item, not just removes it from the map', () => {
+    const mapId = getMapId();
+    const ann = DDS_STORE.insert('annotations', { notes: 'A1' })[0];
+    DDS_STORE.insert('map_annotations', { map_id: mapId, annotation_id: ann.id, x: 0, y: 0 });
+    const result = DDS_CMD.execute(DDS_TX.MAP_REMOVE_NODE, { items: [{ type: 'annotation', id: ann.id }] }, mapId);
+    expect(result.ok).toBe(true);
+    expect(DDS_STORE.query('annotations', { id: ann.id }).length).toBe(0);
+    expect(DDS_STORE.query('map_annotations', { annotation_id: ann.id }).length).toBe(0);
+  });
+
+  it('handles a mixed selection — node map-only, annotation fully deleted', () => {
+    const mapId = getMapId();
+    const node = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const mn = DDS_STORE.insert('map_nodes', { map_id: mapId, node_id: node.id, x: 0, y: 0 })[0];
+    const ann = DDS_STORE.insert('annotations', { notes: 'A1' })[0];
+    DDS_STORE.insert('map_annotations', { map_id: mapId, annotation_id: ann.id, x: 0, y: 0 });
+    DDS_CMD.execute(DDS_TX.MAP_REMOVE_NODE, {
+      items: [{ type: 'node', id: node.id }, { type: 'annotation', id: ann.id }]
+    }, mapId);
+    // Node: removed from map only, functional record untouched
+    expect(DDS_STORE.query('map_nodes', { id: mn.id }).length).toBe(0);
+    expect(DDS_STORE.query('nodes', { id: node.id }).length).toBe(1);
+    // Annotation: fully deleted
+    expect(DDS_STORE.query('annotations', { id: ann.id }).length).toBe(0);
+  });
+
+  it('is undoable — restores the annotation and its map_annotations', () => {
+    const mapId = getMapId();
+    const ann = DDS_STORE.insert('annotations', { notes: 'A1' })[0];
+    DDS_STORE.insert('map_annotations', { map_id: mapId, annotation_id: ann.id, x: 0, y: 0 });
+    DDS_TRANSACTIONS.clear();
+    DDS_CMD.execute(DDS_TX.MAP_REMOVE_NODE, { items: [{ type: 'annotation', id: ann.id }] }, mapId);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('annotations', { id: ann.id }).length).toBe(1);
+    expect(DDS_STORE.query('map_annotations', { annotation_id: ann.id }).length).toBe(1);
   });
 });

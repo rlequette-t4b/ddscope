@@ -205,9 +205,14 @@ DDS_MAP_UI.bindEvents = function() {
   if (directionBtn)    directionBtn.addEventListener('click', function() { DDS_MAP_UI.toggleDirection(); });
   // Undo / Redo button state — click handlers are owned by DDS_UI_NAV.bindUndoRedo()
 
+  // T-036 part 4: search/create dedicated modal (was DDS_CONFIGURATION_UI's
+  // CRUD modal directly — always-create-only, plus an untransacted direct
+  // DDS_STORE.insert('map_swim_lanes', ...) for placement, never undoable).
+  // The Configuration tab's own "+ Add" button still opens the CRUD modal
+  // directly — unaffected, no map dimension there.
   if (addSwimLaneBtn)  addSwimLaneBtn.addEventListener('click', function() {
     if (!DDS_STORE.getProject()) return;
-    DDS_CONFIGURATION_UI.openModal('lane', null);
+    DDS_LANE_UI.openModal();
   });
 
   var addAnnotationBtn = document.getElementById('dds-btn-add-annotation');
