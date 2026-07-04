@@ -260,9 +260,7 @@ DDS_MAP.initCy = function() {
     var mapAnnotationId = ghost.data('mapAnnotationId');
     var pos             = ghost.position();
     if (!mapAnnotationId) return;
-    DDS_TX_HELPER.run(TX.MAP_MOVE_ANNOTATION, function(ctx) {
-      DDS_STORE.update('map_annotations', { id: mapAnnotationId }, { x: pos.x, y: pos.y });
-    });
+    DDS_CMD.execute(TX.MAP_MOVE_ANNOTATION, { map_annotation_id: mapAnnotationId, x: pos.x, y: pos.y }, null);
   });
 
   // Ghost note drag — persist relative offset (node notes)
@@ -292,9 +290,7 @@ DDS_MAP.initCy = function() {
     var gPos  = ghost.position();
     var dx    = Math.round(gPos.x - mid.x);
     var dy    = Math.round(gPos.y - mid.y);
-    DDS_TX_HELPER.run(TX.MAP_MOVE_FLOW_NOTE_GHOST, function(ctx) {
-      DDS_STORE.update('map_flows', { id: mapFlowId }, { notes_annotation_dx: dx, notes_annotation_dy: dy });
-    });
+    DDS_CMD.execute(TX.MAP_MOVE_FLOW_NOTE_GHOST, { map_flow_id: mapFlowId, notes_annotation_dx: dx, notes_annotation_dy: dy }, null);
   });
 
   DDS_MAP.state.cytoscapeReady = true;

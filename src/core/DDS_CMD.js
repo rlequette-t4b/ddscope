@@ -1039,10 +1039,29 @@ var DDS_CMD = (function () {
     return { ok: true };
   });
 
+  // TX.MAP_MOVE_FLOW_NOTE_GHOST
+  // params: { map_flow_id: integer, notes_annotation_dx: number, notes_annotation_dy: number }
+  _register(TX.MAP_MOVE_FLOW_NOTE_GHOST, function (params) {
+    DDS_STORE.update('map_flows', { id: params.map_flow_id }, { notes_annotation_dx: params.notes_annotation_dx, notes_annotation_dy: params.notes_annotation_dy });
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
   // TX.MAP_MOVE_ANNOTATION
   // params: { map_annotation_id: integer, x: number, y: number }
   _register(TX.MAP_MOVE_ANNOTATION, function (params) {
     DDS_STORE.update('map_annotations', { id: params.map_annotation_id }, { x: params.x, y: params.y });
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
+  // TX.MAP_RESIZE_ANNOTATION_FONT
+  // params: { map_annotation_id: integer, font_size: integer }
+  // map_annotations.font_size is map-scoped (same annotation can have a
+  // different size per map) — must not be folded into ANNOTATION_UPDATE,
+  // which targets the project-scoped annotations table.
+  _register(TX.MAP_RESIZE_ANNOTATION_FONT, function (params) {
+    DDS_STORE.update('map_annotations', { id: params.map_annotation_id }, { font_size: params.font_size });
     DDS_STORE.markDirty();
     return { ok: true };
   });

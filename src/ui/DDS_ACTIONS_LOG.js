@@ -1,20 +1,17 @@
 // AUDITOR:LARGE_BLOCK_JUSTIFIED - single cohesive module: panel DOM, listener, view toggle, clear, export, collapse.
 // ============================================================
 // DDS_ACTIONS_LOG - live actions log panel (push layout, right side)
-// Listens to BOTH DDS_ACTIONS (legacy) and DDS_CMD (migrated domains) in
-// parallel during the DDS_CMD migration. Each entry is tagged with its
-// source so the correct describe() function is used at render time.
-// Once migration is complete, the DDS_ACTIONS branch will be decommissioned
-// (see DDScope_Commands.md §0 and TODO T-015).
+// Listens to DDS_CMD only. The legacy DDS_ACTIONS branch was decommissioned
+// as part of DDS_CMD_Migration.md Step 6 item (7) — see DDScope_Commands.md
+// §0.7 for the observability contract.
 // ============================================================
 
 var DDS_ACTIONS_LOG = (function () {
 
-  var _entries   = [];   // { ts, actions, source: 'actions'|'cmd' }[]
+  var _entries   = [];   // { ts, actions, source: 'cmd' }[]
   var _jsonMode  = false;
   var _collapsed = false;
   var _panel     = null;
-  var _listenerActions = null;
   var _listenerCmd     = null;
 
   // --- Helpers ---
@@ -26,7 +23,7 @@ var DDS_ACTIONS_LOG = (function () {
     return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
   }
   function _describe(entry) {
-    return entry.source === 'cmd' ? DDS_CMD.describe(entry.actions) : DDS_ACTIONS.describe(entry.actions);
+    return DDS_CMD.describe(entry.actions);
   }
 
   // --- Panel creation (injected into .dds-workspace as last flex child) ---
@@ -117,14 +114,10 @@ var DDS_ACTIONS_LOG = (function () {
           '<span class="dds-log-action-num">' + (item.index + 1) + '.</span>' +
           '<span>' + _esc(item.label) + '</span></div>';
       }).join('');
-      var sourceTag = e.source === 'cmd'
-        ? '<span class="dds-log-entry-source dds-log-entry-source-cmd">CMD</span>'
-        : '<span class="dds-log-entry-source dds-log-entry-source-actions">ACTIONS</span>';
       html +=
         '<div class="dds-log-entry">' +
           '<div class="dds-log-entry-meta">' +
             '<span class="dds-log-entry-time">' + _esc(e.ts) + '</span>' +
-            sourceTag +
             '<span class="dds-log-entry-count">' + e.actions.length +
               (e.actions.length > 1 ? ' actions' : ' action') + '</span>' +
           '</div>' +
@@ -140,12 +133,6 @@ var DDS_ACTIONS_LOG = (function () {
   }
 
   // --- Listeners ---
-  function _onExecuteActions(actions) {
-    if (!actions || actions.length === 0) return;
-    _entries.push({ ts: _ts(), actions: actions.map(function(a) { return Object.assign({}, a); }), source: 'actions' });
-    _renderEntries();
-  }
-
   function _onExecuteCmd(commands) {
     if (!commands || commands.length === 0) return;
     _entries.push({ ts: _ts(), actions: commands.map(function(c) { return Object.assign({}, c); }), source: 'cmd' });
@@ -159,20 +146,12 @@ var DDS_ACTIONS_LOG = (function () {
     if (active) {
       _panel.classList.add('dds-log-open');
       _panel.classList.toggle('dds-log-collapsed', _collapsed);
-      if (!_listenerActions) {
-        _listenerActions = _onExecuteActions;
-        DDS_ACTIONS.addExecuteListener(_listenerActions);
-      }
       if (!_listenerCmd && window.DDS_CMD && typeof DDS_CMD.addExecuteListener === 'function') {
         _listenerCmd = _onExecuteCmd;
         DDS_CMD.addExecuteListener(_listenerCmd);
       }
     } else {
       _panel.classList.remove('dds-log-open', 'dds-log-collapsed');
-      if (_listenerActions) {
-        DDS_ACTIONS.removeExecuteListener(_listenerActions);
-        _listenerActions = null;
-      }
       if (_listenerCmd && window.DDS_CMD) {
         DDS_CMD.removeExecuteListener(_listenerCmd);
         _listenerCmd = null;

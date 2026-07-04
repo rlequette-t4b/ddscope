@@ -1,6 +1,5 @@
 /* STYLE 910 — Actions log panel: push-layout right panel for DDS_ACTIONS_LOG.
-   Mirrors AI panel flex pattern. Collapsed state = 32px slim sidebar.
-   Source badge (ACTIONS/CMD) for the dual-listener period. */
+   Mirrors AI panel flex pattern. Collapsed state = 32px slim sidebar. */
 
 /* Panel itself — in-flow flex child on the RIGHT of .dds-workspace */
 #dds-actions-log-panel {
@@ -122,25 +121,6 @@
   font-size: var(--dds-text-xs, 12px);
   color: var(--dds-accent);
   font-weight: 600;
-}
-
-/* Source badge — ACTIONS (legacy) vs CMD (DDS_CMD), dual-listener period */
-.dds-log-entry-source {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 1px 5px;
-  border-radius: 3px;
-  line-height: 1.4;
-  flex-shrink: 0;
-}
-.dds-log-entry-source-actions {
-  color: var(--dds-text-muted);
-  background: var(--dds-border);
-}
-.dds-log-entry-source-cmd {
-  color: #fff;
-  background: var(--dds-accent);
 }
 
 /* Labels view */

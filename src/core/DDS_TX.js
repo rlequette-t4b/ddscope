@@ -87,6 +87,7 @@ var TX = {
   MAP_MOVE_FLOW_NOTE_GHOST: 'map.move_flow_note_ghost',
   MAP_MOVE_ANNOTATION:      'map.move_annotation',
   MAP_RESIZE_LANE:          'map.resize_lane',
+  MAP_RESIZE_ANNOTATION_FONT: 'map.resize_annotation_font', // map_annotations.font_size is map-scoped (DDScope_UI.md §6) — must not reuse ANNOTATION_UPDATE (annotations table, project-scoped)
 
   // Map presentation — demand visibility
   MAP_SHOW_DEMAND:          'map.show_demand',

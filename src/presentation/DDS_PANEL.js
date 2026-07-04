@@ -774,15 +774,12 @@ DDS_PANEL.openAnnotation = function(annotationId) {
   function _applyFont(size) {
     _currentFont = size;
     if (fontDisplay) fontDisplay.textContent = size + 'px';
-    DDS_TX_HELPER.run(TX.ANNOTATION_UPDATE, function() {
-      if (maRec) {
-        DDS_STORE.update('map_annotations', { id: maRec.id }, { font_size: size });
-        maRec.font_size = size;
-      }
-    }, function() {
+    // map_annotations.font_size is map-scoped — TX.MAP_RESIZE_ANNOTATION_FONT,
+    // not TX.ANNOTATION_UPDATE (which targets the project-scoped annotations table).
+    DDS_CMD.execute(TX.MAP_RESIZE_ANNOTATION_FONT, { map_annotation_id: maRec ? maRec.id : null, font_size: size }, null, function() {
+      if (maRec) maRec.font_size = size;
       var ghost = DDS_CY && DDS_CY.$('#ann-' + annotationId);
       if (ghost && ghost.length) ghost.style('font-size', size + 'px');
-      DDS_STORE.markDirty();
     });
   }
 

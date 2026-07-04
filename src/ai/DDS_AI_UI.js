@@ -1,8 +1,8 @@
 // AUDITOR:LARGE_BLOCK_JUSTIFIED - single cohesive AI panel UI controller
 // ============================================================
 // DDS_AI_UI — panel rendering + interaction
-// Depends on: DDS_STORE SCRIPT 150, DDS_AI SCRIPT 2400, DDS_ACTIONS SCRIPT 1850
-// Depends on: DDS_TRANSACTIONS SCRIPT 1860, TX SCRIPT 1865
+// Depends on: DDS_STORE SCRIPT 150, DDS_AI SCRIPT 2400
+// Depends on: DDS_TRANSACTIONS SCRIPT 1860, TX SCRIPT 1865, DDS_CMD SCRIPT 1875
 // _replayParse lives in SCRIPT 2505
 // ============================================================
 
@@ -323,7 +323,9 @@ DDS_AI_UI._renderExecResultsRolledBack = function(msgEl, execResult) {
   var actionsDiv = msgEl.querySelector('.dds-ai-plan-actions'); if (!actionsDiv) return;
   actionsDiv.innerHTML = '';
   (execResult.applied || []).forEach(function(action) {
-    var label = DDS_ACTIONS.describe([action])[0].label;
+    // T-fix (DDS_CMD_Migration.md Step 6 item 6): action came from DDS_CMD.executeList(),
+    // not the legacy DDS_ACTIONS shape — must be described by DDS_CMD, not DDS_ACTIONS.
+    var label = DDS_CMD.describe([action])[0].label;
     actionsDiv.innerHTML += '<div class="dds-ai-action-row">' +
       '<span class="dds-ai-action-num" style="color:var(--dds-text-muted)">↩</span>' +
       '<span style="color:var(--dds-text-muted);text-decoration:line-through">' + DDS_AI_UI._esc(label) + '</span></div>';
