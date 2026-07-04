@@ -192,7 +192,31 @@ DDS_FLOW_UI._startDrag = function(e, cyNode) {
 };
 
 // ---- Flow creation -----------------------------------------
+// T-036 part 3: entry point for the D&D drop. Detects flows already
+// existing between the exact same source→target node pair (exact direction
+// match, per DDScope_ElementsLifecycle.md §2) that are not yet on the active
+// map, and offers a choice instead of always creating a new flow.
 DDS_FLOW_UI.createFlow = function(sourceCyNode, targetCyNode) {
+  var mapId     = DDS_MAP.state.currentMapId;
+  var srcNodeId = sourceCyNode.data('nodeId');
+  var tgtNodeId = targetCyNode.data('nodeId');
+
+  var onMapFlowIds = DDS_STORE.query('map_flows', { map_id: mapId }).map(function(r) { return r.flow_id; });
+  var candidates = DDS_STORE.query('flows', { source_node_id: srcNodeId, target_node_id: tgtNodeId })
+    .filter(function(f) { return onMapFlowIds.indexOf(f.id) === -1; });
+
+  if (candidates.length === 0) {
+    DDS_FLOW_UI._createFlowRecord(sourceCyNode, targetCyNode);
+    return;
+  }
+
+  DDS_FLOW_UI._openExistingFlowDialog(sourceCyNode, targetCyNode, candidates);
+};
+
+// Actual TX.FLOW_CREATE call — creates a brand new, distinct flow record.
+// Used both for the direct (no-candidate) path and the dialog's "Create new
+// flow" option.
+DDS_FLOW_UI._createFlowRecord = function(sourceCyNode, targetCyNode) {
   var mapId     = DDS_MAP.state.currentMapId;
   var srcNodeId = sourceCyNode.data('nodeId');
   var tgtNodeId = targetCyNode.data('nodeId');
@@ -208,6 +232,116 @@ DDS_FLOW_UI.createFlow = function(sourceCyNode, targetCyNode) {
     if (typeof DDS_PANEL !== 'undefined') DDS_PANEL.openFlow(edge);
     DDS_MAP.triggerAutoLayout();
   });
+};
+
+// Places an existing flow record on the active map via TX.MAP_ADD_FLOW.
+DDS_FLOW_UI._placeExistingFlow = function(sourceCyNode, targetCyNode, flow) {
+  var mapId = DDS_MAP.state.currentMapId;
+
+  DDS_CMD.execute(TX.MAP_ADD_FLOW, { flow_id: flow.id }, mapId, function(cmdResult) {
+    var edge = DDS_CY.add({ group: 'edges', data: {
+      id: 'e' + flow.id, flowId: flow.id, mapFlowId: cmdResult.mapFlowId,
+      source: sourceCyNode.id(), target: targetCyNode.id(),
+      label: ''
+    }});
+    if (typeof DDS_PANEL !== 'undefined') DDS_PANEL.openFlow(edge);
+    DDS_MAP.triggerAutoLayout();
+  });
+};
+
+// ---- Existing-flow-detection dialog -------------------------
+// Shown when a D&D flow creation targets a node pair that already has one
+// or more flows on other maps (exact source→target direction match), per
+// DDScope_ElementsLifecycle.md §2. Lists the candidates with a short label
+// and offers "place existing" or "create new".
+
+DDS_FLOW_UI._existingFlowDialogState = null; // { sourceCyNode, targetCyNode, candidates }
+
+DDS_FLOW_UI._flowCandidateLabel = function(flow) {
+  var parts = [];
+  var productCount = Array.isArray(flow.product_ids) ? flow.product_ids.length : 0;
+  parts.push(productCount === 1 ? '1 product' : productCount + ' products');
+  if (flow.lead_time_value !== null && flow.lead_time_value !== undefined) {
+    parts.push(flow.lead_time_value + ' ' + (flow.lead_time_unit || ''));
+  }
+  if (flow.notes) {
+    var n = flow.notes.trim();
+    parts.push(n.length > 30 ? n.substring(0, 30) + '…' : n);
+  }
+  return parts.join(' · ');
+};
+
+DDS_FLOW_UI._injectExistingFlowDialog = function() {
+  var existing = document.getElementById('dds-existing-flow-overlay');
+  if (existing) existing.parentNode.removeChild(existing);
+  var html = [
+    '<div class="dds-overlay dds-hidden" id="dds-existing-flow-overlay">',
+    '  <div class="dds-modal" style="max-width:420px">',
+    '    <div class="dds-modal-header">',
+    '      <span class="dds-modal-title">Existing flow(s) found</span>',
+    '      <button class="dds-btn dds-modal-close" id="dds-existing-flow-close">&times;</button>',
+    '    </div>',
+    '    <div class="dds-modal-body">',
+    '      <p class="dds-text-sm">This node pair already has flow(s) on another map. Place one of them, or create a new distinct flow.</p>',
+    '      <div id="dds-existing-flow-list"></div>',
+    '    </div>',
+    '    <div class="dds-modal-footer">',
+    '      <button class="dds-btn dds-btn-secondary" id="dds-existing-flow-cancel">Cancel</button>',
+    '      <button class="dds-btn dds-btn-primary" id="dds-existing-flow-create-new">+ Create new flow</button>',
+    '    </div>',
+    '  </div>',
+    '</div>'
+  ].join('');
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  document.body.appendChild(tmp.firstElementChild);
+
+  document.getElementById('dds-existing-flow-close').addEventListener('click', DDS_FLOW_UI._closeExistingFlowDialog);
+  document.getElementById('dds-existing-flow-cancel').addEventListener('click', DDS_FLOW_UI._closeExistingFlowDialog);
+  document.getElementById('dds-existing-flow-overlay').addEventListener('click', function(e) {
+    if (e.target === this) DDS_FLOW_UI._closeExistingFlowDialog();
+  });
+  document.getElementById('dds-existing-flow-create-new').addEventListener('click', function() {
+    var state = DDS_FLOW_UI._existingFlowDialogState;
+    DDS_FLOW_UI._closeExistingFlowDialog();
+    if (state) DDS_FLOW_UI._createFlowRecord(state.sourceCyNode, state.targetCyNode);
+  });
+};
+
+DDS_FLOW_UI._openExistingFlowDialog = function(sourceCyNode, targetCyNode, candidates) {
+  DDS_FLOW_UI._injectExistingFlowDialog();
+  DDS_FLOW_UI._existingFlowDialogState = { sourceCyNode: sourceCyNode, targetCyNode: targetCyNode, candidates: candidates };
+
+  var list = document.getElementById('dds-existing-flow-list');
+  list.innerHTML = '';
+  candidates.forEach(function(flow) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid var(--dds-border-light,#f1f5f9)';
+    var label = document.createElement('span');
+    label.className = 'dds-text-sm';
+    label.textContent = DDS_FLOW_UI._flowCandidateLabel(flow);
+    var btn = document.createElement('button');
+    btn.className = 'dds-btn dds-btn-secondary';
+    btn.textContent = 'Place this flow';
+    btn.onclick = function() {
+      DDS_FLOW_UI._closeExistingFlowDialog();
+      DDS_FLOW_UI._placeExistingFlow(sourceCyNode, targetCyNode, flow);
+    };
+    row.appendChild(label);
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+
+  var overlay = document.getElementById('dds-existing-flow-overlay');
+  overlay.classList.remove('dds-hidden');
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
+};
+
+DDS_FLOW_UI._closeExistingFlowDialog = function() {
+  var overlay = document.getElementById('dds-existing-flow-overlay');
+  if (overlay) overlay.classList.remove('visible');
+  DDS_FLOW_UI._existingFlowDialogState = null;
 };
 
 // ---- Rerouting — draggable endpoint handles ----------------

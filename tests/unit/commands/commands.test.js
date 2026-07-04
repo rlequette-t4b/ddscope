@@ -1190,3 +1190,89 @@ describe('DDS_TX.MAP_ADD_NODE', () => {
     expect(labels[0].label).toBe('Add node "Plant Lyon" to map');
   });
 });
+
+// ------------------------------------------------------------------ //
+// MAP_ADD_FLOW — place an existing flow on the map (T-036 part 3)
+// ------------------------------------------------------------------ //
+
+describe('DDS_TX.MAP_ADD_FLOW', () => {
+  beforeEach(setup);
+
+  function makeFlowOffMap() {
+    // FLOW_CREATE always places on the map it's given (map_flows insert) —
+    // to get a flow that exists but is NOT on the active map, create it on
+    // a second map, mirroring the D&D scenario this command targets.
+    const activeMapId = getMapId();
+    const otherMap = DDS_STORE.insert('maps', { name: 'Other map', position: 2 })[0];
+    const n1 = DDS_STORE.insert('nodes', { name: 'N1' })[0];
+    const n2 = DDS_STORE.insert('nodes', { name: 'N2' })[0];
+    const { id: flowId } = DDS_CMD.execute(DDS_TX.FLOW_CREATE, { source_id: n1.id, target_id: n2.id }, otherMap.id);
+    return { activeMapId, flowId, n1, n2 };
+  }
+
+  it('exposes the TX key', () => {
+    expect(DDS_TX.MAP_ADD_FLOW).toBe('map.add_flow');
+  });
+
+  it('inserts a map_flows row on the target map', () => {
+    const { activeMapId, flowId } = makeFlowOffMap();
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_FLOW, { flow_id: flowId }, activeMapId);
+    expect(result.ok).toBe(true);
+    const rows = DDS_STORE.query('map_flows', { map_id: activeMapId, flow_id: flowId });
+    expect(rows.length).toBe(1);
+    expect(result.mapFlowId).toBe(rows[0].id);
+  });
+
+  it('fails without a mapId', () => {
+    const { flowId } = makeFlowOffMap();
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_FLOW, { flow_id: flowId }, null);
+    expect(result.ok).toBe(false);
+  });
+
+  it('fails for an unknown flow', () => {
+    const { activeMapId } = makeFlowOffMap();
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_FLOW, { flow_id: 99999 }, activeMapId);
+    expect(result.ok).toBe(false);
+  });
+
+  it('is idempotent — no duplicate map_flows row, alreadyOnMap flagged', () => {
+    const { activeMapId, flowId } = makeFlowOffMap();
+    DDS_CMD.execute(DDS_TX.MAP_ADD_FLOW, { flow_id: flowId }, activeMapId);
+    const second = DDS_CMD.execute(DDS_TX.MAP_ADD_FLOW, { flow_id: flowId }, activeMapId);
+    expect(second.ok).toBe(true);
+    expect(second.alreadyOnMap).toBe(true);
+    expect(DDS_STORE.query('map_flows', { map_id: activeMapId, flow_id: flowId }).length).toBe(1);
+  });
+
+  it('coerces a string flow_id (AI-string-id pattern)', () => {
+    const { activeMapId, flowId } = makeFlowOffMap();
+    const result = DDS_CMD.execute(DDS_TX.MAP_ADD_FLOW, { flow_id: String(flowId) }, activeMapId);
+    expect(result.ok).toBe(true);
+    expect(DDS_STORE.query('map_flows', { map_id: activeMapId, flow_id: flowId }).length).toBe(1);
+  });
+
+  it('is undoable — undo removes the map_flows row, flow record untouched', () => {
+    const { activeMapId, flowId } = makeFlowOffMap();
+    DDS_TRANSACTIONS.clear();
+    DDS_CMD.execute(DDS_TX.MAP_ADD_FLOW, { flow_id: flowId }, activeMapId);
+    expect(DDS_STORE.query('map_flows', { map_id: activeMapId, flow_id: flowId }).length).toBe(1);
+    DDS_TRANSACTIONS.undo();
+    expect(DDS_STORE.query('map_flows', { map_id: activeMapId, flow_id: flowId }).length).toBe(0);
+    expect(DDS_STORE.query('flows', { id: flowId }).length).toBe(1);
+  });
+
+  it('is redoable', () => {
+    const { activeMapId, flowId } = makeFlowOffMap();
+    DDS_TRANSACTIONS.clear();
+    DDS_CMD.execute(DDS_TX.MAP_ADD_FLOW, { flow_id: flowId }, activeMapId);
+    DDS_TRANSACTIONS.undo();
+    DDS_TRANSACTIONS.redo();
+    expect(DDS_STORE.query('map_flows', { map_id: activeMapId, flow_id: flowId }).length).toBe(1);
+  });
+
+  it('describe() labels it with both endpoint names', () => {
+    const { flowId } = makeFlowOffMap();
+    const labels = DDS_CMD.describe([{ type: DDS_TX.MAP_ADD_FLOW, params: { flow_id: flowId } }]);
+    expect(labels[0].label).toBe('Add flow N1 → N2 to map');
+  });
+});

@@ -813,6 +813,35 @@ var DDS_CMD = (function () {
     };
   });
 
+  // TX.MAP_ADD_FLOW (T-036 part 3 — flow D&D existing-flow-detection dialogue)
+  // params: { flow_id: integer }
+  // mapId (2nd arg to execute) is required — places an EXISTING flow on the
+  // map: insert map_flows only (no waypoint override — default taxi-turn).
+  // Mirrors TX.MAP_ADD_NODE. Call site: DDS_FLOW_UI.createFlow, when the D&D
+  // detects one or more flows already existing between the same two nodes
+  // (exact source→target direction match) on another map, and the user
+  // chooses to place an existing one instead of creating a new flow.
+  // Idempotent: if the flow is already on the map, no-ops and returns the
+  // existing map_flows row (alreadyOnMap: true) — mirrors TX.MAP_ADD_NODE.
+  _register(TX.MAP_ADD_FLOW, function (params, mapId) {
+    if (!mapId) throw new Error('[DDS_CMD] MAP_ADD_FLOW requires a mapId');
+    var flowId = parseInt(params.flow_id, 10);
+    var flow = _rec('flows', flowId);
+    if (!flow) throw new Error('[DDS_CMD] Flow not found');
+
+    var existing = DDS_STORE.query('map_flows', { map_id: mapId, flow_id: flowId });
+    if (existing.length > 0) {
+      return {
+        ok: true, id: flowId, flowId: flowId, mapFlowId: existing[0].id,
+        alreadyOnMap: true
+      };
+    }
+
+    var mfRows = DDS_STORE.insert('map_flows', [{ map_id: mapId, flow_id: flowId }]);
+    DDS_STORE.markDirty();
+    return { ok: true, id: flowId, flowId: flowId, mapFlowId: mfRows[0].id };
+  });
+
   // ---------------------------------------------------------------------------
   // Nodes domain (Phase 5 — DDS_CMD_Migration.md)
   // ---------------------------------------------------------------------------
@@ -1447,6 +1476,11 @@ var DDS_CMD = (function () {
 
           case TX.MAP_ADD_NODE:
             label = 'Add node "' + _entityLabel('nodes', params.node_id, newLabelMap) + '" to map';
+            break;
+
+          case TX.MAP_ADD_FLOW:
+            var _mafEp = _flowEndpointNames(params.flow_id, newLabelMap);
+            label = 'Add flow ' + _mafEp.src + ' → ' + _mafEp.tgt + ' to map';
             break;
 
           case TX.MAP_CREATE:
