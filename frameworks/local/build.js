@@ -5,18 +5,21 @@
  * Regenerates frameworks/local/index.html from frameworks/local/template.html.
  *
  * Single source of truth for module/fragment/style order:
- *   frameworks/commwise/sync-tracker.md
- * — the same file that tracks CommWise sync state, so the runner's assembly order
- * can never drift from it silently. Files removed from the tracker (dead facades,
- * not-yet-extracted modules like DDS_AI_SERVICE / T-005) are automatically absent here.
+ *   assembly.json (repo root)
+ * — a framework-agnostic manifest, not a CommWise artifact. Files removed from
+ * assembly.json (dead facades, not-yet-extracted modules like DDS_AI_SERVICE /
+ * T-005) are automatically absent here. `order` values happen to equal CommWise's
+ * historical SCRIPT/DIV/STYLE numbers (carried over for continuity, not sourced
+ * from CommWise going forward) — see docs/DDScope_Modular_Architecture.md §8
+ * Decoupling Log, Step 4 (T-033).
  *
  * The two CDN loader positions (SCRIPT 350, 1784) and the local-only header
  * (fragment + style, see fixtures/header-local.*) are not src/ files and have
- * no CommWise-block equivalent tracked in sync-tracker.md — they are injected
- * from frameworks/local/fixtures/ at hardcoded positions. The CDN loaders are
- * verbatim copies of the live CommWise blocks; the header is local-only (see
- * docs/DDScope_Framework_Local.md §Local-only additions — CommWise's own
- * DIV 100/STYLE 100 header is platform chrome with no local equivalent).
+ * no entry in assembly.json — they are injected from frameworks/local/fixtures/
+ * at hardcoded positions. The CDN loaders are verbatim copies of the live
+ * CommWise blocks; the header is local-only (see docs/DDScope_Framework_Local.md
+ * §Local-only additions — CommWise's own DIV 100/STYLE 100 header is platform
+ * chrome with no local equivalent).
  *
  * Usage:
  *   node frameworks/local/build.js
@@ -30,18 +33,18 @@ import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const SYNC_TRACKER = path.join(REPO_ROOT, 'frameworks', 'commwise', 'sync-tracker.md');
+const ASSEMBLY = path.join(REPO_ROOT, 'assembly.json');
 const TEMPLATE = path.join(__dirname, 'template.html');
 const OUTPUT = path.join(__dirname, 'index.html');
 
-// CDN loader positions — not tracked in sync-tracker.md (not src/ files).
+// CDN loader positions — not tracked in assembly.json (not src/ files).
 // See docs/DDScope_Modular_Architecture.md §8 Decoupling Log, Step 2.
 const CDN_INJECTIONS = [
   { position: 350, fixture: 'fixtures/script-350-cdn-cytoscape.js', comment: 'SCRIPT 350 — CDN: Cytoscape + Dagre (verbatim, see fixtures/)' },
   { position: 1784, fixture: 'fixtures/script-1784-cdn-sortablejs.js', comment: 'SCRIPT 1784 — CDN: SortableJS (verbatim, see fixtures/). Must precede SCRIPT 1785.' }
 ];
 
-// Local-only fragment — not tracked in sync-tracker.md (no CommWise block:
+// Local-only fragment — not tracked in assembly.json (no CommWise block:
 // DIV 100/STYLE 100 are CommWise platform chrome, skipped/non-portable).
 // Position 150 places it just before DIV 200 (app shell), where CommWise's
 // own header sits in the assembly order.
@@ -55,33 +58,28 @@ const LOCAL_STYLES = [
 ];
 
 /**
- * Extracts { file, position } rows from any Markdown table whose first two columns
- * are `` `path` `` and `TYPE NNN` (TYPE = SCRIPT | DIV | STYLE). Matches sync-tracker.md's
- * three tables (Tracking Table, Fragments, Styles) with a single pass.
+ * Reads a [{ path, order }] array from assembly.json and returns it sorted by
+ * order, with fields renamed to { file, position } to match the shape the
+ * rest of this script already works with.
  */
-function extractRows(markdown, type) {
-  const re = new RegExp('^\\|\\s*`([^`]+)`\\s*\\|\\s*' + type + '\\s+(\\d+)\\s*\\|', 'gm');
-  const rows = [];
-  let m;
-  while ((m = re.exec(markdown)) !== null) {
-    rows.push({ file: m[1], position: parseInt(m[2], 10) });
-  }
-  rows.sort((a, b) => a.position - b.position);
-  return rows;
+function toRows(items) {
+  return items
+    .map(({ path: file, order: position }) => ({ file, position }))
+    .sort((a, b) => a.position - b.position);
 }
 
 async function main() {
-  const tracker = await readFile(SYNC_TRACKER, 'utf8');
+  const assembly = JSON.parse(await readFile(ASSEMBLY, 'utf8'));
 
-  const scripts = extractRows(tracker, 'SCRIPT');
-  const divs = extractRows(tracker, 'DIV');
-  const styles = extractRows(tracker, 'STYLE');
+  const scripts = toRows(assembly.modules);
+  const divs = toRows(assembly.fragments.items);
+  const styles = toRows(assembly.styles.items);
 
-  if (scripts.length === 0) throw new Error('No SCRIPT rows found in sync-tracker.md — check the table format.');
-  if (divs.length === 0) throw new Error('No DIV rows found in sync-tracker.md — check the table format.');
-  if (styles.length === 0) throw new Error('No STYLE rows found in sync-tracker.md — check the table format.');
+  if (scripts.length === 0) throw new Error('No modules found in assembly.json — check the file.');
+  if (divs.length === 0) throw new Error('No fragments found in assembly.json — check the file.');
+  if (styles.length === 0) throw new Error('No styles found in assembly.json — check the file.');
 
-  // --- Styles: <link> tags (tracker order) + inline local-only styles ---
+  // --- Styles: <link> tags (assembly order) + inline local-only styles ---
   const trackerStylesHtml = styles
     .map(({ file }) => `<link rel="stylesheet" href="../../${file}">`)
     .join('\n');

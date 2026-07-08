@@ -1,0 +1,84 @@
+{
+  "_readme": "Framework-agnostic assembly description for DDScope Core. Declares which src/, fragments/, and styles/ files exist and the order each group loads in to reconstruct the page. This is the single source of truth for assembly order across all frameworks (see docs/DDScope_Modular_Architecture.md). 'order' values are historical CommWise SCRIPT/DIV/STYLE numbers, kept as-is for continuity and because their gaps already leave room for future insertions without renumbering — they no longer come FROM CommWise, they just happen to match it. frameworks/local/build.js reads this file directly. frameworks/commwise/sync-tracker.md keeps only CommWise-specific bookkeeping (block address, push date) and is not a source of order for any framework.",
+
+  "modules": [
+    { "path": "core/DDS_TOOLS.js", "order": 40 },
+    { "path": "core/DDS_SETTINGS.js", "order": 50 },
+    { "path": "core/DDS_COLORS.js", "order": 105 },
+    { "path": "core/DDS_ICONS.js", "order": 110 },
+    { "path": "core/DDS_STORE.js", "order": 150 },
+    { "path": "presentation/DDS.js", "order": 400 },
+    { "path": "domain/DDS_PROJECTS.js", "order": 500 },
+    { "path": "core/DDS_JSON.js", "order": 600 },
+    { "path": "ui/DDS_UI_NAV.js", "order": 700 },
+    { "path": "ui/DDS_INIT.js", "order": 800 },
+    { "path": "presentation/DDS_MAP_state.js", "order": 900 },
+    { "path": "ai/DDS_AI_UI_FONT.js", "order": 905 },
+    { "path": "presentation/DDS_MAP_load.js", "order": 1000 },
+    { "path": "presentation/DDS_MAP_tagstyles.js", "order": 1050 },
+    { "path": "presentation/DDS_MAP_ctt.js", "order": 1055 },
+    { "path": "presentation/DDS_SWIMLANES.js", "order": 1100 },
+    { "path": "presentation/DDS_SWIMLANE_GROUP.js", "order": 1150 },
+    { "path": "ui/DDS_MAP_UI.js", "order": 1200 },
+    { "path": "presentation/DDS_LAYOUT.js", "order": 1250 },
+    { "path": "ui/DDS_NODE_UI.js", "order": 1300 },
+    { "path": "ui/DDS_LANE_UI.js", "order": 1350 },
+    { "path": "presentation/DDS_FLOW_UI.js", "order": 1400 },
+    { "path": "presentation/DDS_PANEL.js", "order": 1500 },
+    { "path": "presentation/DDS_PANEL_demand.js", "order": 1505 },
+    { "path": "core/DDS_MODEL.js", "order": 1550 },
+    { "path": "core/DDS_DURATION.js", "order": 1650 },
+    { "path": "domain/DDS_ANNOTATIONS.js", "order": 1670 },
+    { "path": "ui/DDS_PRODUCTS_UI.js", "order": 1700 },
+    { "path": "ui/DDS_NODES_UI.js", "order": 1750 },
+    { "path": "ui/DDS_FLOWS_UI.js", "order": 1760 },
+    { "path": "ui/DDS_DEMANDS_UI.js", "order": 1770 },
+    { "path": "ui/DDS_ANNOTATIONS_UI.js", "order": 1780 },
+    { "path": "ui/DDS_NOTES_UI.js", "order": 1785 },
+    { "path": "core/DDS_TRANSACTIONS.js", "order": 1860 },
+    { "path": "core/DDS_TX.js", "order": 1865 },
+    { "path": "core/DDS_CMD.js", "order": 1875 },
+    { "path": "ui/DDS_BOMS_UI.js", "order": 1900 },
+    { "path": "presentation/DDS_ELEMENTS.js", "order": 2000 },
+    { "path": "presentation/DDS_REMOVE.js", "order": 2050 },
+    { "path": "ai/DDS_AI_CONTEXT.js", "order": 2200 },
+    { "path": "ai/DDS_AI.js", "order": 2400 },
+    { "path": "ai/DDS_AI_UI.js", "order": 2500 },
+    { "path": "ai/DDS_AI_UI_DEBUG.js", "order": 2505 },
+    { "path": "ai/DDS_AI_UI_REPLAY.js", "order": 2506 },
+    { "path": "ui/DDS_ACTIONS_LOG.js", "order": 2515 },
+    { "path": "ui/DDS_CONFIGURATION_UI.js", "order": 2600 }
+  ],
+
+  "fragments": {
+    "page": "dds-main",
+    "items": [
+      { "path": "fragments/modal-debug-settings.html", "order": 110 },
+      { "path": "fragments/app-shell.html", "order": 200 },
+      { "path": "fragments/modal-product.html", "order": 400 },
+      { "path": "fragments/modal-bom.html", "order": 500 },
+      { "path": "fragments/modal-configuration-crud.html", "order": 800 }
+    ]
+  },
+
+  "styles": {
+    "stylesheet": "dds-main",
+    "items": [
+      { "path": "styles/variables-reset.css", "order": 200 },
+      { "path": "styles/layout-nav-cards.css", "order": 300 },
+      { "path": "styles/buttons-modal-forms.css", "order": 400 },
+      { "path": "styles/map-view.css", "order": 500 },
+      { "path": "styles/side-panel.css", "order": 600 },
+      { "path": "styles/demand-section.css", "order": 650 },
+      { "path": "styles/ctt-overlay.css", "order": 660 },
+      { "path": "styles/tables.css", "order": 700 },
+      { "path": "styles/elements-panel.css", "order": 800 },
+      { "path": "styles/ai-panel.css", "order": 900 },
+      { "path": "styles/ai-debug-panel.css", "order": 905 },
+      { "path": "styles/actions-log-panel.css", "order": 910 },
+      { "path": "styles/settings-content.css", "order": 950 },
+      { "path": "styles/configuration-tab.css", "order": 1000 },
+      { "path": "styles/notes-panel.css", "order": 1020 }
+    ]
+  }
+}

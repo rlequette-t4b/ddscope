@@ -16,6 +16,9 @@ tests/*.sqlite
 # Generated HTML viewer (regenerate with: node tests/generate_viewer.js)
 tests/DDScope_TestUI_viewer.html
 
+# Generated local-framework runner (regenerate with: node frameworks/local/build.js)
+frameworks/local/index.html
+
 # Backup directory contents (keep the directory itself via .gitkeep)
 tests/backup/*.db
 tests/backup/*.sqlite
