@@ -21,6 +21,12 @@
  * §Local-only additions — CommWise's own DIV 100/STYLE 100 header is platform
  * chrome with no local equivalent).
  *
+ * Real src/ files that only apply to this framework (e.g. an IAITransport
+ * implementation) do NOT need this fixture treatment — scope them in
+ * assembly.json with a per-entry 'frameworks' array instead (see
+ * docs/DDScope_Assemblies.md §1 - Module block model). toRows() below drops
+ * any entry not scoped to FRAMEWORK_ID.
+ *
  * Usage:
  *   node frameworks/local/build.js
  *
@@ -57,13 +63,21 @@ const LOCAL_STYLES = [
   { fixture: 'fixtures/header-local.css', comment: 'Local-only header styling (see fixtures/header-local.css)' }
 ];
 
+// This framework's id, matching assembly.json's optional per-entry
+// 'frameworks' scoping array (see docs/DDScope_Assemblies.md §1 - Module
+// block model, and assembly.json's own _readme).
+const FRAMEWORK_ID = 'framework-2';
+
 /**
- * Reads a [{ path, order }] array from assembly.json and returns it sorted by
- * order, with fields renamed to { file, position } to match the shape the
- * rest of this script already works with.
+ * Reads a [{ path, order, frameworks? }] array from assembly.json, drops
+ * entries scoped to other frameworks (an entry with no 'frameworks' field
+ * applies to every framework — backward compatible default), and returns
+ * the rest sorted by order, with fields renamed to { file, position } to
+ * match the shape the rest of this script already works with.
  */
 function toRows(items) {
   return items
+    .filter(({ frameworks }) => !frameworks || frameworks.includes(FRAMEWORK_ID))
     .map(({ path: file, order: position }) => ({ file, position }))
     .sort((a, b) => a.position - b.position);
 }

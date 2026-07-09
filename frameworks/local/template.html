@@ -31,19 +31,18 @@
 <!-- Styles, in STYLE block order (chrome/token blocks excluded — see sync-tracker.md) -->
 {{STYLES}}
 
-<!-- Platform stubs: commwiseConfigClient, APP_CONTEXT (not real IService implementations,
-     Step C — see docs/DDScope_Framework_Local.md §Stub status), plus a real
-     window.DDS_SETTINGS_BACKEND (settings-impl-2, LocalStorageSettings) — this one is not a
-     stub, it's the local framework's actual ISettingsService implementation. -->
+<!-- Platform stub: APP_CONTEXT (not a real IService implementation, Step C — see
+     docs/DDScope_Framework_Local.md §Stub status), plus two real, non-stub injections:
+     window.DDS_SETTINGS_BACKEND (settings-impl-2, LocalStorageSettings) and
+     window.DDS_FRAMEWORK / window.DDS_AI_TRANSPORT (ai-impl-2, DirectAnthropicTransport,
+     src/ai/DDS_AI_TRANSPORT_LOCAL.js, wired below after the module script tags — TODO T-038). There is
+     no commwiseConfigClient stub anymore: DDS_AI.js no longer calls it directly, it goes
+     through window.DDS_AI_TRANSPORT (see docs/DDScope_Service_AITransport.md §1). -->
 <script>
-  window.commwiseConfigClient = {
-    secureRequest: function() {
-      return Promise.reject(new Error(
-        '[local runner] commwiseConfigClient.secureRequest is stubbed — no AI proxy locally. ' +
-        'See docs/DDScope_Framework_Local.md.'
-      ));
-    }
-  };
+  // General-purpose signal, not settings- or AI-specific — lets any portable module
+  // detect it is running under the local framework. CommWise never sets this.
+  // See docs/DDScope_Service_Settings.md §5.
+  window.DDS_FRAMEWORK = 'local';
 
   window.APP_CONTEXT = {
     ready: function() {
@@ -86,6 +85,15 @@
 <!-- Modules, in SCRIPT block order (see frameworks/commwise/sync-tracker.md).
      CDN loader positions (350, 1784) injected verbatim from frameworks/local/fixtures/. -->
 {{SCRIPTS}}
+
+<!-- IAITransport backend (ai-impl-2, DirectAnthropicTransport) — injected after
+     src/ai/DDS_AI_TRANSPORT_LOCAL.js has loaded, same convention as
+     window.DDS_SETTINGS_BACKEND above. Must be set before DDS_AI.call() is first
+     invoked (user-triggered, never at load time), see
+     docs/DDScope_Service_AITransport.md §1/§3. -->
+<script>
+  window.DDS_AI_TRANSPORT = DDS_AI_TRANSPORT_LOCAL;
+</script>
 
 </body>
 </html>

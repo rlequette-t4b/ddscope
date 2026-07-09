@@ -46,21 +46,32 @@ function sha256(content) {
   return 'sha256:' + createHash('sha256').update(content, 'utf8').digest('hex');
 }
 
+// This framework's id, matching assembly.json's optional per-entry
+// 'frameworks' scoping array (see docs/DDScope_Assemblies.md §1 - Module
+// block model). An entry scoped away from framework-1 (e.g. framework-2-only
+// IAITransport implementations) is never a CommWise push candidate.
+const FRAMEWORK_ID = 'framework-1';
+function inScope({ frameworks }) {
+  return !frameworks || frameworks.includes(FRAMEWORK_ID);
+}
+
 /**
  * Flattens assembly.json's three groups into one list, each entry carrying
  * enough to both address it in CommWise (codeType, position) and read its
- * current content (absFile).
+ * current content (absFile). Entries scoped away from framework-1 via
+ * assembly.json's 'frameworks' field are dropped — they never live in
+ * CommWise.
  */
 async function loadDesired() {
   const assembly = JSON.parse(await readFile(ASSEMBLY, 'utf8'));
   const desired = [];
-  for (const m of assembly.modules) {
+  for (const m of assembly.modules.filter(inScope)) {
     desired.push({ path: m.path, codeType: 'script', position: m.order, absFile: path.join(REPO_ROOT, 'src', m.path) });
   }
-  for (const f of assembly.fragments.items) {
+  for (const f of assembly.fragments.items.filter(inScope)) {
     desired.push({ path: f.path, codeType: 'div', position: f.order, absFile: path.join(REPO_ROOT, f.path) });
   }
-  for (const s of assembly.styles.items) {
+  for (const s of assembly.styles.items.filter(inScope)) {
     desired.push({ path: s.path, codeType: 'style', position: s.order, absFile: path.join(REPO_ROOT, s.path) });
   }
   return desired;

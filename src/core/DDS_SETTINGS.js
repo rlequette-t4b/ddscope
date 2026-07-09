@@ -17,6 +17,13 @@ var SETTINGS = (function() {
         $overlay = jQuery('#dds-header-settings-overlay');
         $modal = $overlay.find('.dds-modal');
 
+        // Local-only section (Anthropic API key, see docs/DDScope_Service_Settings.md
+        // §5) — window.DDS_FRAMEWORK is set only by frameworks/local/template.html,
+        // never by CommWise, so this section stays hidden there.
+        if (window.DDS_FRAMEWORK === 'local') {
+            jQuery('#dds-settings-section-local').removeClass('dds-hidden');
+        }
+
         jQuery('#dds-header-settings-btn').on('click', function(e) {
             e.preventDefault();
             open();
@@ -50,6 +57,14 @@ var SETTINGS = (function() {
         var selectLogLevel = document.getElementById('dds-log-level-select');
         if (selectLogLevel && window.DDS_SETTINGS) {
             selectLogLevel.value = DDS_SETTINGS.get('log_level') || 'warn';
+        }
+        var anthropicKeyInput = document.getElementById('dds-anthropic-key-input');
+        if (anthropicKeyInput && window.DDS_SETTINGS) {
+            anthropicKeyInput.value = DDS_SETTINGS.getAnthropicApiKey() || '';
+        }
+        var selectAiModel = document.getElementById('dds-ai-model-select');
+        if (selectAiModel && window.DDS_SETTINGS) {
+            selectAiModel.value = DDS_SETTINGS.getAiModel();
         }
         if (!$overlay || !$overlay.length) return;
         $overlay.addClass('visible');
@@ -142,8 +157,8 @@ var NAV_MENU = (function() {
  *   A backend is a plain object { load(): Promise<Array<{key,value}>>,
  *   upsert(key, value): Promise<void> }. A framework may inject one
  *   explicitly via window.DDS_SETTINGS_BACKEND, set *before* DDS_SETTINGS.
- *   ready() is first called — same convention as the commwiseConfigClient /
- *   APP_CONTEXT stubs (see frameworks/local/template.html).
+ *   ready() is first called — same convention as the APP_CONTEXT stub and the
+ *   window.DDS_AI_TRANSPORT injection (see frameworks/local/template.html).
  *
  *   - settings-impl-1 CommWiseDataStoreSettings (framework-1/CommWise):
  *     no wiring required — if no backend was injected, DDS_SETTINGS falls
@@ -267,10 +282,12 @@ var DDS_SETTINGS = (function() {
     function _syncState() {
         if (!window.DDS || !window.DDS.state) return;
         window.DDS.state.settings = {
-            debug_ai:       _cache.debug_ai       === 'true',
-            log_actions:    _cache.log_actions    === 'true',
-            show_bfs_ranks: _cache.show_bfs_ranks === 'true',
-            log_level:      _cache.log_level      || 'warn'
+            debug_ai:          _cache.debug_ai          === 'true',
+            log_actions:       _cache.log_actions       === 'true',
+            show_bfs_ranks:    _cache.show_bfs_ranks    === 'true',
+            log_level:         _cache.log_level         || 'warn',
+            ai_model:          _cache.ai_model          || 'claude-sonnet-4-6',
+            anthropic_api_key: _cache.anthropic_api_key || null
         };
     }
 
@@ -306,5 +323,20 @@ var DDS_SETTINGS = (function() {
         return _cache.log_level || 'warn';
     }
 
-    return { ready: ready, get: get, set: set, isDebugAI: isDebugAI, isLogActions: isLogActions, isShowBfsRanks: isShowBfsRanks, getLogLevel: getLogLevel };
+    // Local-only setting (framework-2, window.DDS_FRAMEWORK === 'local') —
+    // Anthropic API key for ai-impl-2 DirectAnthropicTransport, read by
+    // src/ai/DDS_AI_TRANSPORT_LOCAL.js. CommWise's ai-impl-1 never reads it.
+    // See docs/DDScope_Service_Settings.md §5, docs/DDScope_Service_AITransport.md §3.
+    function getAnthropicApiKey() {
+        return _cache.anthropic_api_key || null;
+    }
+
+    // Framework-agnostic setting (Both) — AI Assistant model, read by
+    // src/ai/DDS_AI.js and passed as options.model to window.DDS_AI_TRANSPORT.send().
+    // See docs/DDScope_AI_Assistant.md §6b, docs/DDScope_Service_Settings.md §5. TODO T-039.
+    function getAiModel() {
+        return _cache.ai_model || 'claude-sonnet-4-6';
+    }
+
+    return { ready: ready, get: get, set: set, isDebugAI: isDebugAI, isLogActions: isLogActions, isShowBfsRanks: isShowBfsRanks, getLogLevel: getLogLevel, getAnthropicApiKey: getAnthropicApiKey, getAiModel: getAiModel };
 })();

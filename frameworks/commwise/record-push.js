@@ -56,16 +56,28 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// This framework's id, matching assembly.json's optional per-entry
+// 'frameworks' scoping array (see docs/DDScope_Assemblies.md §1 - Module
+// block model). An entry scoped away from framework-1 (e.g. framework-2-only
+// IAITransport implementations) is never a CommWise push candidate.
+const FRAMEWORK_ID = 'framework-1';
+function inScope({ frameworks }) {
+  return !frameworks || frameworks.includes(FRAMEWORK_ID);
+}
+
+// Entries scoped away from framework-1 via assembly.json's 'frameworks'
+// field are dropped here too — --push would otherwise happily record a
+// CommWise push for a file that was never actually pushed there.
 async function loadDesiredByPath() {
   const assembly = JSON.parse(await readFile(ASSEMBLY, 'utf8'));
   const byPath = new Map();
-  for (const m of assembly.modules) {
+  for (const m of assembly.modules.filter(inScope)) {
     byPath.set(m.path, { codeType: 'script', position: m.order, absFile: path.join(REPO_ROOT, 'src', m.path) });
   }
-  for (const f of assembly.fragments.items) {
+  for (const f of assembly.fragments.items.filter(inScope)) {
     byPath.set(f.path, { codeType: 'div', position: f.order, absFile: path.join(REPO_ROOT, f.path) });
   }
-  for (const s of assembly.styles.items) {
+  for (const s of assembly.styles.items.filter(inScope)) {
     byPath.set(s.path, { codeType: 'style', position: s.order, absFile: path.join(REPO_ROOT, s.path) });
   }
   return byPath;

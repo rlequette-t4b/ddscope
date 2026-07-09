@@ -4,6 +4,13 @@
 // Rewired onto DDS_CMD.getVocabularyText() / DDS_CMD.executeList() contract
 // (DDScope_AI_Assistant.md v1.9-2.1; DDS_CMD_Migration.md Phase 6 Step 4).
 // Full session history (not last-turn only) per §5.2 — closes TODO T-013.
+//
+// AI call routing goes through the injected window.DDS_AI_TRANSPORT
+// (IAITransport, see docs/DDScope_Service_AITransport.md §1) — a framework
+// injects the implementation (ai-impl-1 CommWiseTransport for CommWise,
+// ai-impl-2 DirectAnthropicTransport for the local framework) before this
+// file's call() is first invoked. No CommWise-specific code lives here
+// anymore (closes TODO T-005, done as part of TODO T-038).
 // ============================================================
 
 var DDS_AI = {
@@ -50,7 +57,7 @@ var DDS_AI = {
   ].join('\n')
 };
 
-// Call the AI Assistant (LLM) via CommWise secure proxy
+// Call the AI Assistant (LLM) via the injected IAITransport (window.DDS_AI_TRANSPORT)
 DDS_AI.call = async function(instruction) {
   var context = DDS_AI_CONTEXT.build();
   var systemPrompt = DDS_AI.SYSTEM_PROMPT.replace('{{COMMAND_VOCABULARY}}', DDS_CMD.getVocabularyText());
@@ -94,50 +101,43 @@ DDS_AI.call = async function(instruction) {
     validationErrors: []
   };
 
-  var response;
+  if (!window.DDS_AI_TRANSPORT) {
+    var errCfg = new Error(
+      'DDS_AI_TRANSPORT is not configured — a framework must inject window.DDS_AI_TRANSPORT ' +
+      'before DDS_AI.call() runs (see docs/DDScope_Service_AITransport.md §1).'
+    );
+    errCfg._debug = _debugInfo;
+    throw errCfg;
+  }
+
+  var model = (window.DDS_SETTINGS && DDS_SETTINGS.getAiModel()) || 'claude-sonnet-4-6';
+
+  var result;
   try {
-    response = await commwiseConfigClient.secureRequest('C3', 'CLAUDE', {
-      method: 'POST',
-      endpointSuffix: 'v1/messages',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01'
-      },
-      body: {
-        model:      'claude-sonnet-4-6',
-        max_tokens: 4096,
-        system:     systemPrompt,
-        messages:   messages
-      }
-    });
+    result = await window.DDS_AI_TRANSPORT.send(systemPrompt, messages, { model: model });
   } catch(reqErr) {
     _debugInfo.timingMs = Date.now() - _debugInfo.t0;
-    _debugInfo.parseError = 'secureRequest failed: ' + (reqErr.message || String(reqErr));
-    console.log('[DDS_AI] secureRequest error:', reqErr);
-    var err = new Error('secureRequest failed: ' + (reqErr.message || String(reqErr)));
+    _debugInfo.parseError = 'DDS_AI_TRANSPORT.send failed: ' + (reqErr.message || String(reqErr));
+    console.log('[DDS_AI] DDS_AI_TRANSPORT.send error:', reqErr);
+    var err = new Error('DDS_AI_TRANSPORT.send failed: ' + (reqErr.message || String(reqErr)));
     err._debug = _debugInfo;
     throw err;
   }
 
   _debugInfo.timingMs = Date.now() - _debugInfo.t0;
+  _debugInfo.rawResponse = result;
+  if (result && result.usage) _debugInfo.usage = result.usage;
 
-  // Extract body — proxy may return envelope {status,body} or direct object
-  var data = (response && response.body !== undefined) ? response.body : response;
-  if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) {} }
-
-  _debugInfo.rawResponse = data;
-  if (data && data.usage) _debugInfo.usage = data.usage;
-
-  if (!data || !data.content) {
+  if (!result || !result.content) {
     _debugInfo.parseError = 'Unexpected response structure';
-    var err2 = new Error('Unexpected response structure: ' + JSON.stringify(response).substring(0, 300));
+    var err2 = new Error('Unexpected response structure: ' + JSON.stringify(result).substring(0, 300));
     err2._debug = _debugInfo;
     throw err2;
   }
 
   // Extract text from response
   var text = '';
-  data.content.forEach(function(block) {
+  result.content.forEach(function(block) {
     if (block.type === 'text') text += block.text;
   });
 
