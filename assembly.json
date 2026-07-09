@@ -28,7 +28,6 @@
     { "path": "presentation/DDS_PANEL_demand.js", "order": 1505 },
     { "path": "core/DDS_MODEL.js", "order": 1550 },
     { "path": "core/DDS_DURATION.js", "order": 1650 },
-    { "path": "domain/DDS_ANNOTATIONS.js", "order": 1670 },
     { "path": "ui/DDS_PRODUCTS_UI.js", "order": 1700 },
     { "path": "ui/DDS_NODES_UI.js", "order": 1750 },
     { "path": "ui/DDS_FLOWS_UI.js", "order": 1760 },

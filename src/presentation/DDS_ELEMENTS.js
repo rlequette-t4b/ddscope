@@ -152,7 +152,11 @@ DDS_ELEMENTS.addAnnotation = function(annotationId) {
     }
   }
 
-  DDS_ANNOTATIONS.showOnMap(annotationId, mapId, px, py);
+  // Place annotation on a map at (px, py) — inlined from DDS_ANNOTATIONS.showOnMap (removed, see T-023 follow-up)
+  var existingOnMap = DDS_STORE.query('map_annotations', { annotation_id: annotationId, map_id: mapId });
+  if (existingOnMap.length === 0) {
+    DDS_STORE.insert('map_annotations', { map_id: mapId, annotation_id: annotationId, x: px || 0, y: py || 0 });
+  }
   // Render ghost on canvas
   if (typeof DDS_MAP !== 'undefined' && DDS_MAP.renderAnnotationGhosts) {
     DDS_MAP.renderAnnotationGhosts(mapId);
@@ -161,7 +165,8 @@ DDS_ELEMENTS.addAnnotation = function(annotationId) {
 
 DDS_ELEMENTS.removeAnnotation = function(annotationId) {
   var mapId = DDS_ELEMENTS._mapId();
-  DDS_ANNOTATIONS.hideFromMap(annotationId, mapId);
+  // Remove annotation from map — inlined from DDS_ANNOTATIONS.hideFromMap (removed, see T-023 follow-up)
+  DDS_STORE.remove('map_annotations', { annotation_id: annotationId, map_id: mapId });
   if (DDS_CY) {
     var ghost = DDS_CY.$('#ann-' + annotationId);
     if (ghost && ghost.length) ghost.remove();
