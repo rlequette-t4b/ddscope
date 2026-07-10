@@ -1332,8 +1332,25 @@ var DDS_CMD = (function () {
     return { ok: true };
   });
 
+  // TX.MAP_ADD_ANNOTATION (T-045, 2026-07-10 — reactivated: was dead code from
+  // the deprecated Elements panel, see DDScope_Commands.md §3.5)
+  // params: { id: integer } — mapId required.
+  // "Visible on this map" checkbox (on) in the swim-lane panel's note list —
+  // delegates to DDS_ELEMENTS.addAnnotation, which computes the initial
+  // canvas position and is idempotent (no-ops if already visible on this map).
+  _register(TX.MAP_ADD_ANNOTATION, function (params, mapId) {
+    if (!mapId) throw new Error('[DDS_CMD] MAP_ADD_ANNOTATION requires a mapId');
+    DDS_ELEMENTS.addAnnotation(params.id);
+    DDS_STORE.markDirty();
+    return { ok: true };
+  });
+
   // TX.MAP_REMOVE_ANNOTATION
   // params: { id: integer } — mapId required.
+  // "Visible on this map" checkbox (off) in the swim-lane panel's note list,
+  // and the canvas `Del` key (T-045, 2026-07-10) — removes the map_annotations
+  // row for this map only. Does NOT delete the annotation itself (unlike the
+  // pre-T-045 canvas Remove-modal flow, which always fully deleted).
   _register(TX.MAP_REMOVE_ANNOTATION, function (params, mapId) {
     if (!mapId) throw new Error('[DDS_CMD] MAP_REMOVE_ANNOTATION requires a mapId');
     DDS_ELEMENTS.removeAnnotation(params.id);

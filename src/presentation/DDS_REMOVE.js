@@ -122,23 +122,11 @@ DDS_REMOVE.open = function(type, entityId) {
     if (cl.skus.length        > 0) bodyHtml += '&#8226; ' + cl.skus.length        + ' SKU(s) will be deleted<br>';
     if (cl.boms.length        > 0) bodyHtml += '&#8226; ' + cl.boms.length        + ' BOM(s) will be deleted<br>';
     bodyHtml += '</div>';
-  } else if (type === 'annotation') {
-    var ann = DDS_STORE.query('annotations', { id: entityId })[0];
-    if (!ann) return;
-    title = 'Remove Annotation';
-    var annPreview = (ann.notes || '(empty)').replace(String.fromCharCode(10), ' ').substring(0, 40);
-    bodyHtml = '<p>Delete annotation <span class="dds-remove-entity-name">' + _escRm(annPreview) + '</span>?</p>';
-    bodyHtml += '<div class="dds-remove-consequences" id="dds-remove-consequences">';
-    bodyHtml += '&#8226; Removed from all maps<br>';
-    bodyHtml += '</div>';
-    // Annotations: always full delete, no map-only option
-    DDS_REMOVE._pending = { multi: false, type: type, id: entityId };
-    document.getElementById('dds-remove-modal-title').textContent = title;
-    document.getElementById('dds-remove-modal-body').innerHTML = bodyHtml;
-    var overlay = document.getElementById('dds-remove-modal-overlay');
-    if (overlay) { overlay.classList.remove('dds-hidden'); overlay.classList.add('visible'); }
-    return;
   } else {
+    // T-045 (2026-07-10): annotations no longer go through this modal at all
+    // — see DDScope_UI.md §5 (Remove modal). Full delete happens from the
+    // swim-lane panel's note list; map-only removal happens via the
+    // "visible on this map" checkbox there, or the canvas Del key.
     return;
   }
 
@@ -148,15 +136,16 @@ DDS_REMOVE.open = function(type, entityId) {
 // ---- Multi-element modal -----------------------------------
 
 DDS_REMOVE.openMulti = function(cyElements) {
-  // Collect typed items from the Cytoscape selection
+  // Collect typed items from the Cytoscape selection.
+  // T-045 (2026-07-10): annotation ghosts are excluded entirely — a note is
+  // never Remove-button-eligible, single or mixed selection (see
+  // DDScope_UI.md §5 — Remove modal). Callers already filter them out before
+  // reaching here (DDS_MAP_UI's Remove button, the canvas Del key), but the
+  // guard is kept here too as a defensive default.
   var items = [];
   cyElements.forEach(function(el) {
     if (el.isNode()) {
-      var annotationId = el.data('annotationId');
-      if (annotationId != null) {
-        items.push({ type: 'annotation', id: annotationId });
-        return;
-      }
+      if (el.hasClass('dds-annotation-ghost')) return;
       var nodeId = el.data('nodeId');
       if (nodeId != null) items.push({ type: 'node', id: nodeId });
     } else if (el.isEdge()) {
@@ -167,7 +156,7 @@ DDS_REMOVE.openMulti = function(cyElements) {
   if (items.length === 0) return;
 
   // Aggregate consequences (deduplicated)
-  var nodeCount = 0, edgeCount = 0, annotationCount = 0;
+  var nodeCount = 0, edgeCount = 0;
   var allFlowIds = {}, allSkuKeys = {}, allBomIds = {};
   var seenFlowDeletes = {}; // flow IDs already targeted for deletion
 
@@ -177,8 +166,6 @@ DDS_REMOVE.openMulti = function(cyElements) {
       seenFlowDeletes[item.id] = true; // mark node as deleted — its flows will cascade
     } else if (item.type === 'edge') {
       edgeCount++;
-    } else if (item.type === 'annotation') {
-      annotationCount++;
     }
   });
 
@@ -213,7 +200,6 @@ DDS_REMOVE.openMulti = function(cyElements) {
   var parts = [];
   if (nodeCount > 0) parts.push(nodeCount + ' node' + (nodeCount > 1 ? 's' : ''));
   if (edgeCount > 0) parts.push(edgeCount + ' flow' + (edgeCount > 1 ? 's' : ''));
-  if (annotationCount > 0) parts.push(annotationCount + ' annotation' + (annotationCount > 1 ? 's' : ''));
   var title = 'Remove ' + parts.join(' and ');
 
   var bodyHtml = '<p>Remove <span class="dds-remove-entity-name">' + parts.join(' and ') + '</span>?</p>';
@@ -222,11 +208,6 @@ DDS_REMOVE.openMulti = function(cyElements) {
   if (cascadeSkus  > 0) bodyHtml += '&#8226; ' + cascadeSkus  + ' SKU(s) will be deleted<br>';
   if (cascadeBoms  > 0) bodyHtml += '&#8226; ' + cascadeBoms  + ' BOM(s) will be deleted<br>';
   bodyHtml += '</div>';
-  if (annotationCount > 0) {
-    bodyHtml += '<p class="dds-text-sm" style="color:var(--dds-text-muted)">' +
-      annotationCount + ' annotation' + (annotationCount > 1 ? 's are' : ' is') +
-      ' always fully deleted regardless of "Remove only from map" — annotations are mono-map.</p>';
-  }
 
   DDS_REMOVE._openModal(title, bodyHtml, { multi: true, items: items });
 };
@@ -265,11 +246,10 @@ DDS_REMOVE.execute = function() {
     else if (p.type === 'lane') { txKey = TX.MAP_REMOVE_LANE; params = { id: p.id }; }
     else { txKey = TX.MAP_REMOVE_NODE; params = { items: [{ type: 'node', id: p.id }] }; }
   } else {
-    if (p.type === 'node')            { txKey = TX.NODE_DELETE;       params = { id: p.id }; }
-    else if (p.type === 'edge')       { txKey = TX.FLOW_DELETE;       params = { id: p.id }; }
-    else if (p.type === 'lane')       { txKey = TX.LANE_DELETE;       params = { id: p.id }; }
-    else if (p.type === 'annotation') { txKey = TX.ANNOTATION_DELETE; params = { id: p.id }; }
-    else                               { txKey = TX.NODE_DELETE;       params = { id: p.id }; }
+    if (p.type === 'node')      { txKey = TX.NODE_DELETE; params = { id: p.id }; }
+    else if (p.type === 'edge') { txKey = TX.FLOW_DELETE; params = { id: p.id }; }
+    else if (p.type === 'lane') { txKey = TX.LANE_DELETE; params = { id: p.id }; }
+    else                         { txKey = TX.NODE_DELETE; params = { id: p.id }; }
   }
 
   // Full lane delete needs presentation cleanup (DOM overlay + map reload)
@@ -321,6 +301,25 @@ DDS_REMOVE.bindEvents = function() {
     // Ignore if no project
     if (!DDS_STORE.getProject()) return;
 
+    // Annotation ghost (T-045): removes it from the active map only, no modal
+    // — takes priority over DDS_PANEL.mode, since the swim-lane panel may be
+    // open only because this note's ghost was clicked to reach it (see
+    // DDS_PANEL.openAnnotation). Never a full delete from the canvas.
+    if (DDS_CY) {
+      var selectedAnn = DDS_CY.elements(':selected').not('.dds-note-ghost').filter('.dds-annotation-ghost');
+      if (selectedAnn.length === 1) {
+        e.preventDefault();
+        var annotationId = selectedAnn[0].data('annotationId');
+        var annMapId = DDS_MAP.state.currentMapId;
+        DDS_CMD.execute(TX.MAP_REMOVE_ANNOTATION, { id: annotationId }, annMapId, function() {
+          if (typeof DDS_PANEL !== 'undefined' && DDS_PANEL.mode === 'lane' && DDS_PANEL.entityId) {
+            DDS_PANEL._renderLaneNotes(DDS_PANEL.entityId);
+          }
+        });
+        return;
+      }
+    }
+
     // Lane: not a Cytoscape element — detect via panel state
     if (typeof DDS_PANEL !== 'undefined' && DDS_PANEL.mode === 'lane' && DDS_PANEL.entityId) {
       e.preventDefault();
@@ -329,7 +328,7 @@ DDS_REMOVE.bindEvents = function() {
     }
 
     if (!DDS_CY) return;
-    var selected = DDS_CY.elements(':selected').not('.dds-note-ghost');
+    var selected = DDS_CY.elements(':selected').not('.dds-note-ghost').not('.dds-annotation-ghost');
     if (selected.length === 0) return;
 
     e.preventDefault();

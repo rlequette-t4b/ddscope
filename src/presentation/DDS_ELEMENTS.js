@@ -98,7 +98,13 @@ DDS_ELEMENTS.annotationIdsOnMap = function() {
 DDS_ELEMENTS.addAnnotation = function(annotationId) {
   var mapId = DDS_ELEMENTS._mapId();
 
-  // Place using DDS_LAYOUT-like logic (mirrors placeNode algorithm)
+  // Place using DDS_LAYOUT-like logic (mirrors placeNode algorithm).
+  // T-045 (2026-07-10): annotations are now always lane-attached, so Case 1
+  // below (lane present on this map) is the only path the current UI ever
+  // exercises — the swim-lane panel's visibility checkbox only appears when
+  // the lane is on the active map (DDS_PANEL._renderLaneNotes). Cases 2/3
+  // are kept as defensive fallbacks for pre-T-045 data not yet migrated by
+  // DDS_MAP_UI._migrateOrphanAnnotations (e.g. a project with zero swim-lanes).
   var ann      = DDS_STORE.query('annotations', { id: annotationId })[0];
   var mapLanes = DDS_STORE.query('map_swim_lanes', { map_id: mapId });
   var mapNodes = DDS_STORE.query('map_nodes', { map_id: mapId });

@@ -36,7 +36,7 @@ DDS_PANEL.open = function(mode) {
   var wasOpen = !!DDS_PANEL.mode;
   DDS_PANEL.mode = mode;
   DDS_PANEL._setRemoveBtn(true);
-  ['node','flow','lane','annotation'].forEach(function(s) {
+  ['node','flow','lane'].forEach(function(s) {
     var el = document.getElementById('dds-panel-' + s);
     if (el) el.classList.toggle('dds-hidden', s !== mode);
   });
@@ -663,7 +663,7 @@ DDS_PANEL._renderFlowProducts = function(flowId, flow, productById) {
 
 // ---- SWIM-LANE panel ---------------------------------------
 
-DDS_PANEL.openLane = function(swimLaneId) {
+DDS_PANEL.openLane = function(swimLaneId, highlightAnnotationId) {
   DDS_PANEL.entityId = swimLaneId; DDS_PANEL.cyElement = null;
   var lane = DDS_STORE.query('swim_lanes', { id: swimLaneId })[0];
   if (!lane) return;
@@ -706,108 +706,154 @@ DDS_PANEL.openLane = function(swimLaneId) {
     swatchWrap.appendChild(sw);
   });
 
+  // Notes (annotations attached to this lane) — T-045
+  DDS_PANEL._renderLaneNotes(swimLaneId, highlightAnnotationId);
+
   DDS_PANEL.open('lane');
 };
 
-// ---- ANNOTATION panel --------------------------------------
+// ---- Notes sub-section (swim-lane panel) — T-045 ------------
+// Annotations are always lane-attached (see DDScope_ElementsLifecycle §7).
+// Editing, per-map visibility, and deletion all happen from this list —
+// there is no dedicated Annotation panel any more.
 
-DDS_PANEL.openAnnotation = function(annotationId) {
-  DDS_PANEL.entityId = annotationId;
-  DDS_PANEL.cyElement = DDS_CY ? DDS_CY.$('#ann-' + annotationId) : null;
-  var ann = DDS_STORE.query('annotations', { id: annotationId })[0];
-  if (!ann) return;
+DDS_PANEL._laneNoteFontSizes = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32];
+DDS_PANEL._laneNoteDefaultFont = 11;
 
-  document.getElementById('dds-panel-title').textContent = 'Annotation';
+DDS_PANEL._renderLaneNotes = function(swimLaneId, highlightAnnotationId) {
+  var list = document.getElementById('dds-pl-notes-list');
+  if (!list) return;
+  var mapId = DDS_MAP.state.currentMapId;
+  var laneOnMap = mapId ? DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: swimLaneId }).length > 0 : false;
+  var notes = DDS_STORE.query('annotations', { swim_lane_id: swimLaneId });
 
-  // Notes
-  var notesEl = document.getElementById('dds-pa-notes');
-  if (notesEl) {
-    notesEl.value = ann.notes || '';
-    notesEl.onblur = function() {
+  list.innerHTML = '';
+  notes.forEach(function(ann) {
+    var row = document.createElement('div');
+    row.className = 'dds-lane-note-row';
+    row.dataset.annotationId = ann.id;
+
+    var textEl = document.createElement('textarea');
+    textEl.className = 'dds-textarea';
+    textEl.rows = 2;
+    textEl.value = ann.notes || '';
+    textEl.placeholder = 'Note text…';
+    textEl.onblur = function() {
       var val = this.value;
-      // T-023: routed via DDS_CMD (was DDS_TX_HELPER + DDS_ANNOTATIONS.update)
-      DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: annotationId, notes: val }, null, function() {
-        var ghost = DDS_CY && DDS_CY.$('#ann-' + annotationId);
+      DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: ann.id, notes: val }, null, function() {
+        ann.notes = val;
+        var ghost = DDS_CY && DDS_CY.$('#ann-' + ann.id);
         if (ghost && ghost.length) ghost.data('label', val);
+      });
+    };
+    row.appendChild(textEl);
+
+    var controls = document.createElement('div');
+    controls.className = 'dds-lane-note-controls';
+
+    if (laneOnMap) {
+      var maRec = mapId ? DDS_STORE.query('map_annotations', { map_id: mapId, annotation_id: ann.id })[0] : null;
+      var visLabel = document.createElement('label');
+      visLabel.className = 'dds-field-inline';
+      var visChk = document.createElement('input');
+      visChk.type = 'checkbox';
+      visChk.checked = !!maRec;
+      visChk.addEventListener('change', function() {
+        var checked = this.checked;
+        var txKey = checked ? TX.MAP_ADD_ANNOTATION : TX.MAP_REMOVE_ANNOTATION;
+        DDS_CMD.execute(txKey, { id: ann.id }, mapId, function() {
+          DDS_PANEL._renderLaneNotes(swimLaneId);
+        });
+      });
+      visLabel.appendChild(visChk);
+      visLabel.appendChild(document.createTextNode(' Visible on this map'));
+      controls.appendChild(visLabel);
+
+      if (maRec) {
+        var fontWrap = document.createElement('div');
+        fontWrap.className = 'dds-lane-note-font';
+        var curFont = maRec.font_size || DDS_PANEL._laneNoteDefaultFont;
+        var decBtn = document.createElement('button');
+        decBtn.className = 'dds-btn dds-btn-secondary dds-btn-sm'; decBtn.textContent = 'A−';
+        var display = document.createElement('span');
+        display.className = 'dds-lane-note-font-display';
+        display.textContent = curFont + 'px';
+        var incBtn = document.createElement('button');
+        incBtn.className = 'dds-btn dds-btn-secondary dds-btn-sm'; incBtn.textContent = 'A+';
+
+        function applyFont(size) {
+          DDS_CMD.execute(TX.MAP_RESIZE_ANNOTATION_FONT, { map_annotation_id: maRec.id, font_size: size }, null, function() {
+            maRec.font_size = size;
+            display.textContent = size + 'px';
+            var ghost = DDS_CY && DDS_CY.$('#ann-' + ann.id);
+            if (ghost && ghost.length) ghost.style('font-size', size + 'px');
+          });
+        }
+        decBtn.onclick = function() {
+          var idx = DDS_PANEL._laneNoteFontSizes.indexOf(curFont);
+          if (idx > 0) { curFont = DDS_PANEL._laneNoteFontSizes[idx - 1]; applyFont(curFont); }
+        };
+        incBtn.onclick = function() {
+          var idx = DDS_PANEL._laneNoteFontSizes.indexOf(curFont);
+          if (idx !== -1 && idx < DDS_PANEL._laneNoteFontSizes.length - 1) { curFont = DDS_PANEL._laneNoteFontSizes[idx + 1]; applyFont(curFont); }
+        };
+        fontWrap.appendChild(decBtn); fontWrap.appendChild(display); fontWrap.appendChild(incBtn);
+        controls.appendChild(fontWrap);
+      }
+    } else {
+      var hint = document.createElement('span');
+      hint.className = 'dds-text-sm dds-lane-note-hint';
+      hint.textContent = 'Lane not on this map';
+      controls.appendChild(hint);
+    }
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'dds-btn dds-btn-ghost dds-btn-sm';
+    delBtn.textContent = '×';
+    delBtn.title = 'Delete note';
+    delBtn.onclick = function() {
+      DDS_CMD.execute(TX.ANNOTATION_DELETE, { id: ann.id }, null, function() {
+        DDS_PANEL._renderLaneNotes(swimLaneId);
+      });
+    };
+    controls.appendChild(delBtn);
+
+    row.appendChild(controls);
+    if (highlightAnnotationId != null && parseInt(highlightAnnotationId, 10) === ann.id) {
+      row.classList.add('dds-lane-note-highlight');
+    }
+    list.appendChild(row);
+  });
+
+  var addBtn = document.getElementById('dds-pl-add-note');
+  if (addBtn) {
+    addBtn.disabled = !laneOnMap;
+    addBtn.title = laneOnMap ? '' : 'Place this lane on the active map first';
+    addBtn.onclick = function() {
+      DDS_CMD.execute(TX.ANNOTATION_CREATE, { notes: '', swim_lane_id: swimLaneId }, null, function(result) {
+        if (result && result.id) {
+          DDS_ELEMENTS.addAnnotation(result.id);
+          DDS_PANEL._renderLaneNotes(swimLaneId, result.id);
+        }
       });
     };
   }
 
-  // Swim-lane
-  var laneEl = document.getElementById('dds-pa-lane');
-  if (laneEl) {
-    laneEl.innerHTML = '<option value="">(none)</option>';
-    DDS_STORE.query('swim_lanes').forEach(function(l) {
-      var opt = document.createElement('option');
-      opt.value = l.id;
-      opt.textContent = l.name;
-      if (l.id === ann.swim_lane_id) opt.selected = true;
-      laneEl.appendChild(opt);
-    });
-    laneEl.onchange = function() {
-      var laneId = this.value ? parseInt(this.value, 10) : null;
-      // T-023: routed via DDS_CMD (was DDS_TX_HELPER + DDS_ANNOTATIONS.update)
-      DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: annotationId, swim_lane_id: laneId }, null);
-    };
+  if (highlightAnnotationId != null) {
+    setTimeout(function() {
+      var row = list.querySelector('[data-annotation-id="' + highlightAnnotationId + '"]');
+      if (row) row.scrollIntoView({ block: 'nearest' });
+    }, 0);
   }
+};
 
-  // Tags
-  var tags = Array.isArray(ann.tags) ? ann.tags.slice() : [];
-  var _onAnnTagUpdate = function(updated) {
-    // T-023: routed via DDS_CMD (was DDS_TX_HELPER + DDS_ANNOTATIONS.update)
-    DDS_CMD.execute(TX.ANNOTATION_UPDATE, { id: annotationId, tags: updated.slice() }, null);
-  };
-  DDS_PANEL.renderTags('dds-pa-tags-wrap', 'dds-pa-tag-input', tags, _onAnnTagUpdate);
-  DDS_PANEL.bindTagInput('dds-pa-tag-input', tags, 'dds-pa-tags-wrap', _onAnnTagUpdate);
-
-  // Font size (map_annotations.font_size — presentation layer)
-  var FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32];
-  var DEFAULT_FONT = 11;
-  var mapId = DDS_MAP.state.currentMapId;
-  var maRec = mapId ? DDS_STORE.query('map_annotations', { map_id: mapId, annotation_id: annotationId })[0] : null;
-  var _currentFont = (maRec && maRec.font_size) ? maRec.font_size : DEFAULT_FONT;
-
-  var fontDisplay = document.getElementById('dds-pa-font-display');
-  var fontDecBtn  = document.getElementById('dds-pa-font-dec');
-  var fontIncBtn  = document.getElementById('dds-pa-font-inc');
-
-  function _applyFont(size) {
-    _currentFont = size;
-    if (fontDisplay) fontDisplay.textContent = size + 'px';
-    // map_annotations.font_size is map-scoped — TX.MAP_RESIZE_ANNOTATION_FONT,
-    // not TX.ANNOTATION_UPDATE (which targets the project-scoped annotations table).
-    DDS_CMD.execute(TX.MAP_RESIZE_ANNOTATION_FONT, { map_annotation_id: maRec ? maRec.id : null, font_size: size }, null, function() {
-      if (maRec) maRec.font_size = size;
-      var ghost = DDS_CY && DDS_CY.$('#ann-' + annotationId);
-      if (ghost && ghost.length) ghost.style('font-size', size + 'px');
-    });
-  }
-
-  if (fontDisplay) fontDisplay.textContent = _currentFont + 'px';
-  if (fontDecBtn) {
-    fontDecBtn.onclick = function() {
-      var idx = FONT_SIZES.indexOf(_currentFont);
-      if (idx > 0) _applyFont(FONT_SIZES[idx - 1]);
-      else if (idx === -1) _applyFont(FONT_SIZES[Math.max(0, FONT_SIZES.indexOf(DEFAULT_FONT) - 1)]);
-    };
-  }
-  if (fontIncBtn) {
-    fontIncBtn.onclick = function() {
-      var idx = FONT_SIZES.indexOf(_currentFont);
-      if (idx !== -1 && idx < FONT_SIZES.length - 1) _applyFont(FONT_SIZES[idx + 1]);
-      else if (idx === -1) _applyFont(FONT_SIZES[Math.min(FONT_SIZES.length - 1, FONT_SIZES.indexOf(DEFAULT_FONT) + 1)]);
-    };
-  }
-
-  // Delete button
-  var delBtn = document.getElementById('dds-pa-delete');
-  if (delBtn) {
-    delBtn.onclick = function() {
-      DDS_REMOVE.open('annotation', annotationId);
-    };
-  }
-
-  DDS_PANEL.open('annotation');
+// Opened by clicking a note's ghost on the canvas (T-045) — there is no
+// dedicated Annotation panel any more; this resolves the parent swim-lane
+// and opens its panel, scrolled to and highlighting the corresponding row.
+DDS_PANEL.openAnnotation = function(annotationId) {
+  var ann = DDS_STORE.query('annotations', { id: annotationId })[0];
+  if (!ann || ann.swim_lane_id == null) return;
+  DDS_PANEL.openLane(ann.swim_lane_id, annotationId);
 };
 
 // ---- Cytoscape wiring (called from DDS_MAP.initCy) ---------
@@ -819,7 +865,19 @@ DDS_PANEL._wireCy = function() {
     // Defer to let Cytoscape finish accumulating the selection
     setTimeout(function() {
       if (!DDS_CY) return;
-      var selected = DDS_CY.elements(':selected').not('.dds-note-ghost');
+
+      // Annotation ghost (T-045): opens the parent swim-lane panel, scrolled
+      // to the note — handled separately from the node/edge selection below
+      // (excluded from it via .not('.dds-annotation-ghost')) since it is never
+      // a Remove-button-eligible selection on its own.
+      var annSelected = DDS_CY.elements(':selected').not('.dds-note-ghost').filter('.dds-annotation-ghost');
+      var selected = DDS_CY.elements(':selected').not('.dds-note-ghost').not('.dds-annotation-ghost');
+
+      if (annSelected.length === 1 && selected.length === 0) {
+        DDS_PANEL.openAnnotation(annSelected[0].data('annotationId'));
+        return;
+      }
+
       if (selected.length > 1) {
         // Multi-selection: close panel, clear all handles, activate Remove button only
         document.getElementById('dds-panel').classList.remove('open');
@@ -837,9 +895,7 @@ DDS_PANEL._wireCy = function() {
       // Single selection
       var el = selected[0];
       if (!el) return;
-      if (el.isNode() && el.hasClass('dds-annotation-ghost')) {
-        DDS_PANEL.openAnnotation(el.data('annotationId'));
-      } else if (el.isNode()) {
+      if (el.isNode()) {
         DDS_PANEL.openNode(el);
       } else if (el.isEdge()) {
         DDS_PANEL.openFlow(el);

@@ -40,7 +40,7 @@
     DDS_PRODUCTS_UI.bindEvents();
     DDS_BOMS_UI.bindEvents();
     DDS_DEMANDS_UI.bindEvents();
-    DDS_ANNOTATIONS_UI.bindEvents();
+    // DDS_ANNOTATIONS_UI removed (T-045, 2026-07-10) — see DDScope_UI.md §2
     DDS_REMOVE.bindEvents();
     DDS_AI_UI.bindEvents();
     DDS_NODES_UI.bindEvents();

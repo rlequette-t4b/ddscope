@@ -45,10 +45,10 @@ var TX = {
   DEMAND_UPDATE:            'demand.update',
   DEMAND_DELETE:            'demand.delete',
 
-  // Annotations
-  ANNOTATION_CREATE:        'annotation.create',
-  ANNOTATION_UPDATE:        'annotation.update',
-  ANNOTATION_DELETE:        'annotation.delete',
+  // Annotations — always lane-attached since 2026-07-10 (T-045), see DDScope_ElementsLifecycle.md §7
+  ANNOTATION_CREATE:        'annotation.create', // always receives a swim_lane_id
+  ANNOTATION_UPDATE:        'annotation.update', // text field only — swim_lane_id fixed at creation, tags no longer exposed in UI
+  ANNOTATION_DELETE:        'annotation.delete', // full delete, only reachable from the swim-lane panel's note list
 
   // Multi-selection
   MULTI_DELETE:             'multi.delete',
@@ -72,10 +72,10 @@ var TX = {
   MAP_ADD_NODE:             'map.add_node',
   MAP_ADD_FLOW:             'map.add_flow',
   MAP_ADD_LANE:             'map.add_lane', // T-036 part 4 — swim-lane search/create dedicated modal
-  MAP_ADD_ANNOTATION:       'map.add_annotation',
+  MAP_ADD_ANNOTATION:       'map.add_annotation', // T-045 (2026-07-10) — reactivated: per-map visibility checkbox (on) in the swim-lane panel's note list
   MAP_REMOVE_NODE:          'map.remove_node',
   MAP_REMOVE_FLOW:          'map.remove_flow',
-  MAP_REMOVE_ANNOTATION:    'map.remove_annotation',
+  MAP_REMOVE_ANNOTATION:    'map.remove_annotation', // T-045 (2026-07-10) — real map-only removal now (annotations no longer mono-map); visibility checkbox (off) + canvas Del key
   MAP_REMOVE_LANE:          'map.remove_lane', // gap found during Phase 5 §3.4 migration — DDS_REMOVE lane modal supports "map only" removal, was never in the TX catalogue before
 
   // Map presentation — canvas geometry

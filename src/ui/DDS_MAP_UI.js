@@ -174,13 +174,19 @@ DDS_MAP_UI.bindEvents = function() {
   var removeFromMapBtn = document.getElementById('dds-btn-remove-from-map');
   if (removeFromMapBtn) {
     removeFromMapBtn.addEventListener('click', function() {
+      // Annotation ghost (T-045): no-op — a note never participates in the
+      // Remove button / Remove modal flow (see DDScope_UI.md §5). It is
+      // removed/hidden only via the swim-lane panel's note list, or the
+      // canvas Del key (map-only, handled directly in DDS_REMOVE.bindEvents).
+      if (DDS_CY && DDS_CY.elements(':selected').filter('.dds-annotation-ghost').length > 0) return;
+
       // Lane: not a Cytoscape element — detect via panel state
       if (DDS_PANEL.mode === 'lane' && DDS_PANEL.entityId) {
         DDS_REMOVE.open('lane', DDS_PANEL.entityId);
         return;
       }
       if (!DDS_CY) return;
-      var selected = DDS_CY.elements(':selected').not('.dds-note-ghost');
+      var selected = DDS_CY.elements(':selected').not('.dds-note-ghost').not('.dds-annotation-ghost');
       if (selected.length === 0) return;
 
       if (selected.length === 1) {
@@ -190,10 +196,7 @@ DDS_MAP_UI.bindEvents = function() {
           type = DDS_PANEL.mode === 'flow' ? 'edge' : DDS_PANEL.mode;
           DDS_REMOVE.open(type, DDS_PANEL.entityId);
         } else {
-          var id = el.isNode()
-            ? (el.data('annotationId') != null ? el.data('annotationId') : el.data('nodeId'))
-            : el.data('flowId');
-          type = el.isNode() && el.data('annotationId') != null ? 'annotation' : type;
+          var id = el.isNode() ? el.data('nodeId') : el.data('flowId');
           DDS_REMOVE.open(type, id);
         }
       } else {
@@ -215,13 +218,6 @@ DDS_MAP_UI.bindEvents = function() {
     DDS_LANE_UI.openModal();
   });
 
-  var addAnnotationBtn = document.getElementById('dds-btn-add-annotation');
-  if (addAnnotationBtn) {
-    addAnnotationBtn.addEventListener('click', function() {
-      if (!DDS_STORE.getProject()) return;
-      DDS_MAP_UI.openAnnotationModal();
-    });
-  }
 };
 
 // Open modal to rename the active map
@@ -294,83 +290,33 @@ DDS_MAP_UI.openRenameModal = function() {
   setTimeout(function() { input.select(); }, 50);
 };
 
-// Open modal to create a new annotation on the active map
-DDS_MAP_UI.openAnnotationModal = function() {
-  var mapId = DDS_MAP.state.currentMapId;
-  if (!mapId) return;
+// Removed (T-045, 2026-07-10): DDS_MAP_UI.openAnnotationModal, the toolbar
+// "+ Annotation" modal. Annotation (note) creation now happens exclusively
+// from the swim-lane panel's "+ Note" button (DDS_PANEL._renderLaneNotes),
+// which always supplies the parent lane's swim_lane_id — see
+// DDScope_ElementsLifecycle.md §7 and DDScope_UI.md §6.
 
-  // Build modal HTML inline (reuse dds-modal pattern)
-  var modal = document.getElementById('dds-annotation-create-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'dds-annotation-create-modal';
-    modal.className = 'dds-overlay';
-    modal.innerHTML = [
-      '<div class="dds-modal">',
-      '  <div class="dds-modal-header"><span class="dds-modal-title">New Annotation</span>',
-      '  <button class="dds-modal-close" id="dds-ann-modal-close">×</button></div>',
-      '  <div class="dds-modal-body">',
-      '    <label class="dds-form-label">Notes</label>',
-      '    <textarea id="dds-ann-modal-notes" class="dds-input" rows="4" style="width:100%;resize:vertical" placeholder="Annotation text…"></textarea>',
-      '    <label class="dds-form-label" style="margin-top:10px">Swim-lane (optional)</label>',
-      '    <select id="dds-ann-modal-lane" class="dds-input" style="width:100%"><option value="">(none)</option></select>',
-      '    <label class="dds-form-label" style="margin-top:10px">Tags</label>',
-      '    <input id="dds-ann-modal-tags" type="text" class="dds-input" style="width:100%" placeholder="tag1, tag2">',
-      '  </div>',
-      '  <div class="dds-modal-footer">',
-      '    <button class="dds-btn dds-btn-secondary" id="dds-ann-modal-cancel">Cancel</button>',
-      '    <button class="dds-btn dds-btn-primary" id="dds-ann-modal-confirm">Add Annotation</button>',
-      '  </div>',
-      '</div>'
-    ].join('');
-    document.body.appendChild(modal);
-
-    document.getElementById('dds-ann-modal-close').addEventListener('click', function() {
-      modal.classList.remove('visible');
-    });
-    document.getElementById('dds-ann-modal-cancel').addEventListener('click', function() {
-      modal.classList.remove('visible');
-    });
-    document.getElementById('dds-ann-modal-confirm').addEventListener('click', function() {
-      var notes   = document.getElementById('dds-ann-modal-notes').value;
-      var laneVal = document.getElementById('dds-ann-modal-lane').value;
-      var tagsRaw = document.getElementById('dds-ann-modal-tags').value;
-      var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
-      // T-023: routed via DDS_CMD (was DDS_ANNOTATIONS.create(), untransacted)
-      DDS_CMD.execute(TX.ANNOTATION_CREATE, {
-        notes: notes,
-        swim_lane_id: laneVal ? parseInt(laneVal, 10) : null,
-        tags: tags
-      }, null, function(result) {
-        if (result && result.id) {
-          DDS_ELEMENTS.addAnnotation(result.id);
-        }
-      });
-      modal.classList.remove('visible');
-    });
-  }
-
-  // Populate swim-lane options
-  var laneSelect = document.getElementById('dds-ann-modal-lane');
-  laneSelect.innerHTML = '<option value="">(none)</option>';
-  DDS_STORE.query('swim_lanes').forEach(function(l) {
-    var opt = document.createElement('option');
-    opt.value = l.id;
-    opt.textContent = l.name;
-    laneSelect.appendChild(opt);
+// Migration (T-045, 2026-07-10): annotations created before this change may
+// have swim_lane_id: null (the field used to be optional). Every annotation
+// is now always lane-attached, so on project open, any orphan annotation is
+// assigned to the project's first swim-lane (insertion order). If the
+// project has zero swim-lanes, it is left unmigrated — a residual edge case,
+// not expected in practice (see DDScope_DataModel.md §9 — Migration).
+DDS_MAP_UI._migrateOrphanAnnotations = function() {
+  var orphans = DDS_STORE.query('annotations').filter(function(a) { return a.swim_lane_id == null; });
+  if (orphans.length === 0) return;
+  var firstLane = DDS_STORE.query('swim_lanes')[0];
+  if (!firstLane) return; // no lane to migrate to — left unmigrated
+  orphans.forEach(function(a) {
+    DDS_STORE.update('annotations', { id: a.id }, { swim_lane_id: firstLane.id });
   });
-
-  // Reset fields
-  document.getElementById('dds-ann-modal-notes').value = '';
-  document.getElementById('dds-ann-modal-tags').value = '';
-  laneSelect.value = '';
-
-  modal.classList.add('visible');
 };
 
 // Called by DDS.openProject — load maps and open first one
 DDS_MAP_UI.openProject = async function() {
   if (typeof DDS_AI !== 'undefined') DDS_AI.clearHistory();
+
+  DDS_MAP_UI._migrateOrphanAnnotations();
 
   DDS_MAP.state.maps = DDS_STORE.query('maps', null, { order: 'position.asc' });
 

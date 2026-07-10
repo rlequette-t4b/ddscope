@@ -208,6 +208,44 @@
 }
 .dds-product-row-name { flex: 1 !important; }
 
+/* ===== Swim-lane notes list (T-045) ===== */
+.dds-lane-note-row {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 10px !important;
+  border: 1px solid var(--dds-border) !important;
+  border-radius: var(--dds-radius) !important;
+  background: var(--dds-bg) !important;
+  margin-bottom: 8px !important;
+}
+.dds-lane-note-row.dds-lane-note-highlight {
+  border-color: var(--dds-primary, #6b7280) !important;
+  box-shadow: 0 0 0 2px var(--dds-primary, #6b7280) !important;
+}
+.dds-lane-note-controls {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  font-size: var(--dds-text-sm) !important;
+}
+.dds-lane-note-font {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.dds-lane-note-font-display {
+  font-size: var(--dds-text-sm) !important;
+  color: var(--dds-text-muted) !important;
+  min-width: 32px !important;
+  text-align: center !important;
+}
+.dds-lane-note-hint {
+  color: var(--dds-text-muted) !important;
+  font-style: italic !important;
+}
+
 /* ===== Lead time row ===== */
 .dds-lead-time-row {
   display: flex !important;

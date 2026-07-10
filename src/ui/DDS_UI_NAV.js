@@ -404,7 +404,7 @@ DDS_UI_NAV.bindUndoRedo = function() {
       if (view === 'products'    && window.DDS_PRODUCTS_UI)     DDS_PRODUCTS_UI.render();
       if (view === 'boms'        && window.DDS_BOMS_UI)         DDS_BOMS_UI.render();
       if (view === 'demand'      && window.DDS_DEMANDS_UI)      DDS_DEMANDS_UI.render();
-      if (view === 'annotations' && window.DDS_ANNOTATIONS_UI)  DDS_ANNOTATIONS_UI.render();
+      // 'annotations' view removed (T-045, 2026-07-10) — see DDScope_UI.md §2
     }
     DDS_STORE.markDirty();
     _refresh();

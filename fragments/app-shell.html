@@ -12,7 +12,6 @@
       <button class="dds-nav-tab dds-hidden" id="dds-tab-products" data-view="products">Products</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-boms"     data-view="boms">BOMs</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-demand"      data-view="demand">Demand</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-annotations" data-view="annotations">Annotations</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-configuration"    data-view="configuration">Configuration</button>
     </div>
 
@@ -165,7 +164,6 @@
           <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-swimlane">+ Swim-lane</button>
           <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-node">+ Node</button>
           <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-product-on-map">+ Product</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-annotation">+ Annotation</button>
           <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-remove-from-map" disabled title="Remove selected element">&#10005; Remove</button>
           <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-fit" style="margin-left:auto">&#9635; Fit</button>
           <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-layout">&#9638; Layout</button>
@@ -283,16 +281,6 @@
             <span class="dds-table-title">Demand</span>
           </div>
           <div id="dds-demand-table-wrap"></div>
-        </div>
-      </div>
-
-      <!-- View: Annotations -->
-      <div class="dds-view" id="dds-view-annotations">
-        <div class="dds-table-view">
-          <div class="dds-table-toolbar">
-            <span class="dds-table-title">Annotations</span>
-          </div>
-          <div id="dds-annotations-view"></div>
         </div>
       </div>
 
@@ -456,37 +444,11 @@
             </div>
           </div>
 
-        </div>
-
-        <!-- ===== ANNOTATION SECTION ===== -->
-        <div id="dds-panel-annotation" class="dds-hidden">
-
-          <div class="dds-panel-section">
-            <div class="dds-field">
-              <label class="dds-label" for="dds-pa-notes">Notes</label>
-              <textarea class="dds-textarea" id="dds-pa-notes" rows="5"></textarea>
-            </div>
-            <div class="dds-field">
-              <label class="dds-label" for="dds-pa-lane">Swim-lane</label>
-              <select class="dds-select" id="dds-pa-lane"></select>
-            </div>
-            <div class="dds-field">
-              <label class="dds-label">Tags</label>
-              <div class="dds-tags-wrap" id="dds-pa-tags-wrap">
-                <input class="dds-tag-input" id="dds-pa-tag-input" placeholder="Add tag…" />
-              </div>
-            </div>
-            <div class="dds-field">
-              <label class="dds-label">Font size</label>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-pa-font-dec">A&minus;</button>
-                <span id="dds-pa-font-display" style="font-size:var(--dds-text-sm);color:var(--dds-text-muted);min-width:32px;text-align:center;">11px</span>
-                <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-pa-font-inc">A+</button>
-              </div>
-            </div>
-            <div class="dds-field" style="margin-top:16px">
-              <button class="dds-btn dds-btn-danger dds-btn-sm" id="dds-pa-delete">Delete annotation</button>
-            </div>
+          <!-- Notes section (T-045) — annotations always attached to this lane -->
+          <div class="dds-panel-section" id="dds-pl-notes-section">
+            <div class="dds-panel-section-title">Notes</div>
+            <div id="dds-pl-notes-list"></div>
+            <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-pl-add-note" style="margin-top:8px">+ Note</button>
           </div>
 
         </div>

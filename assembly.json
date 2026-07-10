@@ -32,7 +32,6 @@
     { "path": "ui/DDS_NODES_UI.js", "order": 1750 },
     { "path": "ui/DDS_FLOWS_UI.js", "order": 1760 },
     { "path": "ui/DDS_DEMANDS_UI.js", "order": 1770 },
-    { "path": "ui/DDS_ANNOTATIONS_UI.js", "order": 1780 },
     { "path": "ui/DDS_NOTES_UI.js", "order": 1785 },
     { "path": "core/DDS_TRANSACTIONS.js", "order": 1860 },
     { "path": "core/DDS_TX.js", "order": 1865 },
