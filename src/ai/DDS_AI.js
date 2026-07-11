@@ -8,7 +8,7 @@
 // AI call routing goes through the injected window.DDS_AI_TRANSPORT
 // (IAITransport, see docs/DDScope_Service_AITransport.md §1) — a framework
 // injects the implementation (ai-impl-1 CommWiseTransport for CommWise,
-// ai-impl-2 DirectAnthropicTransport for the local framework) before this
+// ai-impl-2 DirectLLMTransport for the local framework) before this
 // file's call() is first invoked. No CommWise-specific code lives here
 // anymore (closes TODO T-005, done as part of TODO T-038).
 // ============================================================
@@ -128,18 +128,14 @@ DDS_AI.call = async function(instruction) {
   _debugInfo.rawResponse = result;
   if (result && result.usage) _debugInfo.usage = result.usage;
 
-  if (!result || !result.content) {
+  if (!result || typeof result.text !== 'string') {
     _debugInfo.parseError = 'Unexpected response structure';
     var err2 = new Error('Unexpected response structure: ' + JSON.stringify(result).substring(0, 300));
     err2._debug = _debugInfo;
     throw err2;
   }
 
-  // Extract text from response
-  var text = '';
-  result.content.forEach(function(block) {
-    if (block.type === 'text') text += block.text;
-  });
+  var text = result.text;
 
   // Parse JSON
   var clean = text.replace(/```json|```/g, '').trim();

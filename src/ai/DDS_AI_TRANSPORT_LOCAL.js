@@ -1,8 +1,9 @@
 // ============================================================
 // DDS_AI_TRANSPORT_LOCAL — IAITransport implementation ai-impl-2
-// (DirectAnthropicTransport, framework-2 / local runner only).
-// See docs/DDScope_Service_AITransport.md §1 (interface contract) and §3
-// (this implementation). TODO T-038.
+// (DirectLLMTransport, framework-2 / local runner only).
+// See docs/DDScope_Service_AITransport.md §1 (interface contract), §3 (this
+// implementation), and §4 (provider adapters it dispatches to). TODO T-038,
+// extended for multiple LLM vendors by TODO T-043.
 //
 // Not wired to window.DDS_AI_TRANSPORT by this file — that assignment is
 // done by frameworks/local/template.html, same convention as
@@ -13,44 +14,57 @@
 // (see docs/DDScope_Assemblies.md §1 - Module block model) — never a
 // CommWise push candidate, never loaded there.
 //
-// Security trade-off — demo/dev scope only: the API key is read from
-// DDS_SETTINGS (settings-impl-2, browser localStorage, clear text) and sent
-// directly from the browser via `anthropic-dangerous-direct-browser-access`.
-// Acceptable only because framework-2 is a single-user, dev/debug/demo host,
-// never a production deployment target. See TODO T-041 for the durable,
-// multi-user-safe replacement.
+// This dispatcher performs the actual fetch() — request construction and
+// response parsing are delegated to a provider adapter (src/ai/providers/),
+// picked from options.model via MODEL_PROVIDERS below.
+//
+// Security trade-off — demo/dev scope only: every provider's API key is read
+// from DDS_SETTINGS (settings-impl-2, browser localStorage, clear text) and
+// sent directly from the browser. Acceptable only because framework-2 is a
+// single-user, dev/debug/demo host, never a production deployment target.
+// See TODO T-041 for the durable, multi-user-safe replacement.
 // ============================================================
 
 var DDS_AI_TRANSPORT_LOCAL = {
-  // IAITransport contract: send(systemPrompt, messages, options) -> Promise<{ content, usage }>
+  // model -> { provider, apiKeyGetter } — see docs/DDScope_Service_AITransport.md §4.
+  MODEL_PROVIDERS: {
+    'claude-sonnet-4-6':         { provider: 'DDS_AI_PROVIDER_ANTHROPIC', apiKeyGetter: 'getAnthropicApiKey', settingsHint: 'Settings > Local framework > Anthropic API key' },
+    'claude-haiku-4-5-20251001': { provider: 'DDS_AI_PROVIDER_ANTHROPIC', apiKeyGetter: 'getAnthropicApiKey', settingsHint: 'Settings > Local framework > Anthropic API key' },
+    'gemini-3.5-flash':          { provider: 'DDS_AI_PROVIDER_GEMINI',    apiKeyGetter: 'getGeminiApiKey',    settingsHint: 'Settings > Local framework > Gemini API key' }
+  },
+
+  // IAITransport contract: send(systemPrompt, messages, options) -> Promise<{ text, usage }>
   // See docs/DDScope_Service_AITransport.md §1 - Interface IAITransport.
   send: async function(systemPrompt, messages, options) {
     options = options || {};
+    var model = options.model || 'claude-sonnet-4-6';
 
-    var apiKey = window.DDS_SETTINGS && DDS_SETTINGS.getAnthropicApiKey();
+    var route = DDS_AI_TRANSPORT_LOCAL.MODEL_PROVIDERS[model];
+    if (!route) {
+      throw new Error('[DDS_AI_TRANSPORT_LOCAL] No provider configured for model "' + model + '" (see docs/DDScope_Service_AITransport.md §4).');
+    }
+
+    var provider = window[route.provider];
+    if (!provider) {
+      throw new Error('[DDS_AI_TRANSPORT_LOCAL] Provider adapter ' + route.provider + ' is not loaded.');
+    }
+
+    var apiKey = window.DDS_SETTINGS && DDS_SETTINGS[route.apiKeyGetter] && DDS_SETTINGS[route.apiKeyGetter]();
     if (!apiKey) {
       throw new Error(
-        '[DDS_AI_TRANSPORT_LOCAL] No Anthropic API key configured — ' +
-        'set it in Settings > Local framework.'
+        '[DDS_AI_TRANSPORT_LOCAL] No API key configured for model "' + model + '" — ' +
+        'set it in ' + route.settingsHint + '.'
       );
     }
 
+    var request = provider.buildRequest(systemPrompt, messages, options, apiKey);
+
     var response;
     try {
-      response = await fetch('https://api.anthropic.com/v1/messages', {
+      response = await fetch(request.url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-          'x-api-key': apiKey
-        },
-        body: JSON.stringify({
-          model:      options.model || 'claude-sonnet-4-6',
-          max_tokens: options.max_tokens || 4096,
-          system:     systemPrompt,
-          messages:   messages
-        })
+        headers: request.headers,
+        body: JSON.stringify(request.body)
       });
     } catch (networkErr) {
       throw new Error('[DDS_AI_TRANSPORT_LOCAL] fetch failed: ' + (networkErr.message || String(networkErr)));
@@ -65,13 +79,9 @@ var DDS_AI_TRANSPORT_LOCAL = {
 
     if (!response.ok) {
       var apiMsg = (data && data.error && data.error.message) || JSON.stringify(data).substring(0, 300);
-      throw new Error('[DDS_AI_TRANSPORT_LOCAL] Anthropic API error (' + response.status + '): ' + apiMsg);
+      throw new Error('[DDS_AI_TRANSPORT_LOCAL] ' + route.provider + ' API error (' + response.status + '): ' + apiMsg);
     }
 
-    if (!data || !data.content) {
-      throw new Error('[DDS_AI_TRANSPORT_LOCAL] Unexpected response structure: ' + JSON.stringify(data).substring(0, 300));
-    }
-
-    return { content: data.content, usage: data.usage || null };
+    return provider.parseResponse(data);
   }
 };

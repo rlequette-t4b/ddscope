@@ -62,6 +62,10 @@ var SETTINGS = (function() {
         if (anthropicKeyInput && window.DDS_SETTINGS) {
             anthropicKeyInput.value = DDS_SETTINGS.getAnthropicApiKey() || '';
         }
+        var geminiKeyInput = document.getElementById('dds-gemini-key-input');
+        if (geminiKeyInput && window.DDS_SETTINGS) {
+            geminiKeyInput.value = DDS_SETTINGS.getGeminiApiKey() || '';
+        }
         var selectAiModel = document.getElementById('dds-ai-model-select');
         if (selectAiModel && window.DDS_SETTINGS) {
             selectAiModel.value = DDS_SETTINGS.getAiModel();
@@ -287,7 +291,8 @@ var DDS_SETTINGS = (function() {
             show_bfs_ranks:    _cache.show_bfs_ranks    === 'true',
             log_level:         _cache.log_level         || 'warn',
             ai_model:          _cache.ai_model          || 'claude-sonnet-4-6',
-            anthropic_api_key: _cache.anthropic_api_key || null
+            anthropic_api_key: _cache.anthropic_api_key || null,
+            gemini_api_key:    _cache.gemini_api_key     || null
         };
     }
 
@@ -324,11 +329,21 @@ var DDS_SETTINGS = (function() {
     }
 
     // Local-only setting (framework-2, window.DDS_FRAMEWORK === 'local') —
-    // Anthropic API key for ai-impl-2 DirectAnthropicTransport, read by
-    // src/ai/DDS_AI_TRANSPORT_LOCAL.js. CommWise's ai-impl-1 never reads it.
-    // See docs/DDScope_Service_Settings.md §5, docs/DDScope_Service_AITransport.md §3.
+    // Anthropic API key for ai-impl-2 DirectLLMTransport's Anthropic provider
+    // adapter, read by src/ai/providers/DDS_AI_PROVIDER_ANTHROPIC.js.
+    // CommWise's ai-impl-1 never reads it.
+    // See docs/DDScope_Service_Settings.md §5, docs/DDScope_Service_AITransport.md §3-4.
     function getAnthropicApiKey() {
         return _cache.anthropic_api_key || null;
+    }
+
+    // Local-only setting (framework-2, window.DDS_FRAMEWORK === 'local') —
+    // Gemini API key for ai-impl-2 DirectLLMTransport's Gemini provider
+    // adapter, read by src/ai/providers/DDS_AI_PROVIDER_GEMINI.js.
+    // CommWise's ai-impl-1 never reads it.
+    // See docs/DDScope_Service_Settings.md §5, docs/DDScope_Service_AITransport.md §3-4.
+    function getGeminiApiKey() {
+        return _cache.gemini_api_key || null;
     }
 
     // Framework-agnostic setting (Both) — AI Assistant model, read by
@@ -338,5 +353,5 @@ var DDS_SETTINGS = (function() {
         return _cache.ai_model || 'claude-sonnet-4-6';
     }
 
-    return { ready: ready, get: get, set: set, isDebugAI: isDebugAI, isLogActions: isLogActions, isShowBfsRanks: isShowBfsRanks, getLogLevel: getLogLevel, getAnthropicApiKey: getAnthropicApiKey, getAiModel: getAiModel };
+    return { ready: ready, get: get, set: set, isDebugAI: isDebugAI, isLogActions: isLogActions, isShowBfsRanks: isShowBfsRanks, getLogLevel: getLogLevel, getAnthropicApiKey: getAnthropicApiKey, getGeminiApiKey: getGeminiApiKey, getAiModel: getAiModel };
 })();
