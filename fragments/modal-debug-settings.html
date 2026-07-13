@@ -80,7 +80,7 @@
                         <span class="dds-settings-label-hint">Used by the AI Assistant outside CommWise. Dev/demo only — stored in clear text in this browser's localStorage.</span>
                     </span>
                     <input type="password" id="dds-anthropic-key-input" class="dds-input" autocomplete="off"
-                        onchange="DDS_SETTINGS.set('anthropic_api_key', this.value)">
+                        onchange="DDS_SETTINGS.set('anthropic_api_key', this.value.trim())">
                 </label>
                 <label class="dds-settings-row" for="dds-gemini-key-input">
                     <span class="dds-settings-label">
@@ -88,7 +88,7 @@
                         <span class="dds-settings-label-hint">Used when the AI model is set to Gemini. Dev/demo only — stored in clear text in this browser's localStorage.</span>
                     </span>
                     <input type="password" id="dds-gemini-key-input" class="dds-input" autocomplete="off"
-                        onchange="DDS_SETTINGS.set('gemini_api_key', this.value)">
+                        onchange="DDS_SETTINGS.set('gemini_api_key', this.value.trim())">
                 </label>
             </div>
         </div>

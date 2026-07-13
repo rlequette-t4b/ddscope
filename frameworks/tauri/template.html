@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DDScope — Desktop</title>
+
+<!--
+  GENERATED FILE — DO NOT EDIT src/index.html BY HAND.
+  Run: node frameworks/tauri/build.js
+  Edit this file (template.html) or build.js instead.
+
+  DDScope — Tauri framework runner (framework-3, prototype phase, see
+  docs/DDScope_Assemblies.md §2 and docs/DDScope_Framework_Tauri.md).
+
+  Unlike frameworks/local/template.html, everything here is INLINED rather
+  than referenced live (<script src="../../src/...">): Tauri's frontendDist
+  (this file's own folder, src-tauri/tauri.conf.json -> build.frontendDist =
+  "../src") is read recursively and embedded into the app binary at bundle
+  time, and its asset protocol blocks '../' path traversal even in dev — a
+  live reference escaping frontendDist the way framework-2 does does not
+  work here. See docs/DDScope_Framework_Tauri.md §Content assembly.
+
+  Module/fragment/style order is read from assembly.json (repo root) by
+  build.js, filtered to entries with no 'frameworks' scope or scoped to
+  framework-3 — same mechanism as frameworks/local/build.js.
+-->
+
+<!-- Platform stub: jQuery — required by src/core/DDS_SETTINGS.js (SETTINGS/
+     NAV_MENU sub-modules), same as framework-2. External CDN reference, not
+     a local file — no frontendDist boundary issue, but does mean this build
+     requires network access; see docs/DDScope_Framework_Tauri.md §Deferred -
+     bundling CDN dependencies for the offline case. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+<!-- Styles, inlined (assembly.json order) -->
+{{STYLES}}
+
+<!-- Platform stub: APP_CONTEXT, plus real injections reused from framework-2's
+     baseline (settings-impl-2 LocalStorageSettings, ai-impl-2 DirectLLMTransport)
+     — see docs/DDScope_Framework_Tauri.md §Status. -->
+<script>
+  // KNOWN SHORTCUT, not a permanent identity: set to 'local' (not 'tauri')
+  // so that src/core/DDS_SETTINGS.js's `window.DDS_FRAMEWORK === 'local'`
+  // check (gating the Anthropic/Gemini API key fields) also fires here.
+  // That check is framework-2-specific by name, not by a broader "needs its
+  // own API key" concept — reusing 'local' is the fastest path to the same
+  // baseline behavior for the minimal shell, but conflates framework-2 and
+  // framework-3 identity. Revisit once framework-3 has anything that needs
+  // to tell the two apart (e.g. a Tauri-native IFileStorage/ISettingsService).
+  // See docs/DDScope_Framework_Tauri.md §Content assembly.
+  window.DDS_FRAMEWORK = 'local';
+
+  window.APP_CONTEXT = {
+    ready: function() {
+      return Promise.resolve({ user: { email: 'desktop@ddscope.local' } });
+    }
+  };
+
+  // ISettingsService backend (settings-impl-2 — LocalStorageSettings, reused
+  // as-is from framework-2). Untested inside a Tauri webview as of this
+  // phase — see docs/DDScope_Framework_Tauri.md §Explicitly out of scope.
+  (function() {
+    var PREFIX = 'ddscope.settings.';
+    window.DDS_SETTINGS_BACKEND = {
+      load: function() {
+        var records = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(PREFIX) === 0) {
+            records.push({ key: k.slice(PREFIX.length), value: localStorage.getItem(k) });
+          }
+        }
+        return Promise.resolve(records);
+      },
+      upsert: function(key, value) {
+        try { localStorage.setItem(PREFIX + key, value); }
+        catch (e) { console.warn('[tauri shell] localStorage write failed', e); }
+        return Promise.resolve();
+      }
+    };
+  })();
+</script>
+</head>
+<body>
+
+<!-- Fragments, inlined (assembly.json order) -->
+{{FRAGMENTS}}
+
+<!-- Modules, inlined (assembly.json order, framework-3 entries included) -->
+{{SCRIPTS}}
+
+<!-- IAITransport backend (ai-impl-2, DirectLLMTransport) — reused from
+     framework-2's baseline, see docs/DDScope_Framework_Tauri.md §Status. -->
+<script>
+  window.DDS_AI_TRANSPORT = DDS_AI_TRANSPORT_LOCAL;
+</script>
+
+<!-- IFileStorage backend (storage-impl-3, TauriFsStorage) — Tauri-native,
+     see docs/DDScope_Service_FileStorage.md §3. Requires the "dialog" and
+     "fs" plugins (npm run tauri add dialog / npm run tauri add fs) and an
+     fs capability scope permissive enough for arbitrary user-selected
+     paths — see docs/DDScope_Framework_Tauri.md §Deferred - native
+     IFileStorage. Looked up lazily by src/ui/DDS_UI_NAV.js, so this
+     injection can safely happen after {{SCRIPTS}} (DDS_FILE_STORAGE_TAURI
+     itself, order 155, is already defined by then). -->
+<script>
+  window.DDS_FILE_STORAGE_BACKEND = DDS_FILE_STORAGE_TAURI;
+</script>
+
+</body>
+</html>

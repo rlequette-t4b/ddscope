@@ -1,0 +1,45 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <title>DDScope logo</title>
+  <defs>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .dot { fill: #8fb3a0; }
+        .text-main { fill: #f5f5f5; }
+      }
+      @media (prefers-color-scheme: light) {
+        .dot { fill: #2d7a5e; }
+        .text-main { fill: #1a1a1a; }
+      }
+    </style>
+  </defs>
+
+  <!-- Outer ring (12 dots) -->
+  <circle class="dot" cx="512" cy="180" r="24"/>
+  <circle class="dot" cx="585" cy="207" r="24"/>
+  <circle class="dot" cx="627" cy="273" r="24"/>
+  <circle class="dot" cx="636" cy="360" r="24"/>
+  <circle class="dot" cx="612" cy="447" r="24"/>
+  <circle class="dot" cx="540" cy="510" r="24"/>
+  <circle class="dot" cx="420" cy="522" r="24"/>
+  <circle class="dot" cx="315" cy="465" r="24"/>
+  <circle class="dot" cx="258" cy="375" r="24"/>
+  <circle class="dot" cx="249" cy="270" r="24"/>
+  <circle class="dot" cx="291" cy="195" r="24"/>
+  <circle class="dot" cx="400" cy="150" r="24"/>
+
+  <!-- Inner ring (8 dots) -->
+  <circle class="dot" cx="512" cy="255" r="18"/>
+  <circle class="dot" cx="585" cy="300" r="18"/>
+  <circle class="dot" cx="615" cy="360" r="18"/>
+  <circle class="dot" cx="562" cy="435" r="18"/>
+  <circle class="dot" cx="457" cy="442" r="18"/>
+  <circle class="dot" cx="345" cy="405" r="18"/>
+  <circle class="dot" cx="315" cy="300" r="18"/>
+  <circle class="dot" cx="375" cy="240" r="18"/>
+
+  <!-- Center dot -->
+  <circle class="dot" cx="512" cy="352" r="15"/>
+
+  <!-- Text: DDScope -->
+  <text class="text-main" x="512" y="750" font-size="120" font-weight="500" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">DDScope</text>
+</svg>

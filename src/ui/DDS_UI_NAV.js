@@ -14,6 +14,22 @@ var DDS_UI_PROJECTS = DDS_UI_NAV; // backward-compat alias
 var _hasFileAPI = typeof window.showOpenFilePicker === 'function';
 var _fileHandle = null; // current FileSystemFileHandle
 
+// IFileStorage backend injection point — optional, additive only. A
+// framework may inject one via window.DDS_FILE_STORAGE_BACKEND. Looked up
+// lazily (function, not a captured var) so injection timing relative to
+// this file's own <script> position doesn't matter — same pattern as
+// window.DDS_AI_TRANSPORT in src/ai/DDS_AI.js, and unlike
+// window.DDS_SETTINGS_BACKEND (which IS captured at module-eval time in
+// DDS_SETTINGS.js's _resolveBackend(), but only ever called lazily inside
+// ready(), so timing never mattered there either). Absent for framework-1
+// (CommWise) and framework-2 (local runner) — both keep using the File
+// System Access API / <input> fallback below unchanged. Set by
+// frameworks/tauri/template.html to storage-impl-3 (DDS_FILE_STORAGE_TAURI,
+// see docs/DDScope_Service_FileStorage.md §3).
+function _fileStorageBackend() {
+  return window.DDS_FILE_STORAGE_BACKEND || null;
+}
+
 function _openHandleDB() {
   return new Promise(function(resolve, reject) {
     var req = indexedDB.open('dds_store', 1);
@@ -44,8 +60,11 @@ async function _loadHandle() {
   } catch(e) { return null; }
 }
 
-// Read text from file — File System Access API or <input> fallback.
+// Read text from file — injected IFileStorage backend, or File System
+// Access API, or <input> fallback.
 async function _pickAndReadFile() {
+  var backend = _fileStorageBackend();
+  if (backend) return backend.pickAndReadFile();
   if (_hasFileAPI) {
     var handles = await window.showOpenFilePicker({
       types: [{ description: 'DDScope project', accept: { 'application/json': ['.json'] } }]
@@ -72,8 +91,11 @@ async function _pickAndReadFile() {
   });
 }
 
-// Write JSON string to file — File System Access API or download fallback.
+// Write JSON string to file — injected IFileStorage backend, or File
+// System Access API, or download fallback.
 async function _writeFile(json, suggestedName, pickNew) {
+  var backend = _fileStorageBackend();
+  if (backend) return backend.writeFile(json, suggestedName, pickNew);
   if (_hasFileAPI && _fileHandle && !pickNew) {
     var perm = await _fileHandle.queryPermission({ mode: 'readwrite' });
     if (perm !== 'granted') perm = await _fileHandle.requestPermission({ mode: 'readwrite' });
@@ -107,6 +129,8 @@ async function _writeFile(json, suggestedName, pickNew) {
 // Try to reopen last file at boot (Chrome/Edge only, no user gesture needed if already granted).
 // Returns 'opened' | 'prompt' | false
 DDS_UI_NAV.tryReopenLast = async function() {
+  var backend = _fileStorageBackend();
+  if (backend) return backend.tryReopenLast();
   if (!_hasFileAPI) return false;
   try {
     var handle = await _loadHandle();
@@ -129,6 +153,8 @@ DDS_UI_NAV.tryReopenLast = async function() {
 
 // Request permission and open — must be called from a user gesture.
 DDS_UI_NAV.reopenWithPermission = async function() {
+  var backend = _fileStorageBackend();
+  if (backend) return backend.reopenWithPermission ? backend.reopenWithPermission() : false;
   if (!_fileHandle) return false;
   try {
     var perm = await _fileHandle.requestPermission({ mode: 'readwrite' });
