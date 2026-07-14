@@ -50,18 +50,15 @@ const CDN_INJECTIONS = [
   { position: 1784, fixture: 'fixtures/script-1784-cdn-sortablejs.js', comment: 'SCRIPT 1784 — CDN: SortableJS (verbatim, see fixtures/). Must precede SCRIPT 1785.' }
 ];
 
-// Local-only fragment — not tracked in assembly.json (no CommWise block:
-// DIV 100/STYLE 100 are CommWise platform chrome, skipped/non-portable).
-// Position 150 places it just before DIV 200 (app shell), where CommWise's
-// own header sits in the assembly order.
-const LOCAL_FRAGMENTS = [
-  { position: 150, fixture: 'fixtures/header-local.html', comment: 'Local-only header — DDScope brand + settings gear (see docs/DDScope_Framework_Local.md)' }
-];
-
-// Local-only style — same rationale as LOCAL_FRAGMENTS above.
-const LOCAL_STYLES = [
-  { fixture: 'fixtures/header-local.css', comment: 'Local-only header styling (see fixtures/header-local.css)' }
-];
+// Local-only header (DDScope brand + settings gear) — retired 2026-07-14:
+// superseded by the Identity row (fragments/app-shell.html, RFC §4 Header
+// Layout) which already carries the DDScope brand, and by the Extras >
+// Settings menu item (src/ui/DDS_UI_MENU.js, calls SETTINGS.open()
+// directly) which replaces the gear button as the settings entry point.
+// Kept as unused fixtures (fixtures/header-local.html/.css) rather than
+// deleted, in case framework-1 (CommWise) still wants an equivalent later.
+const LOCAL_FRAGMENTS = [];
+const LOCAL_STYLES = [];
 
 // This framework's id, matching assembly.json's optional per-entry
 // 'frameworks' scoping array (see docs/DDScope_Assemblies.md §1 - Module

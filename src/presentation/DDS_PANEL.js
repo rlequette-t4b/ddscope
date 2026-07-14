@@ -2,11 +2,20 @@
 // DDS_PANEL — side panel controller (auto-save)
 // ============================================================
 // AUDITOR:LARGE_BLOCK_JUSTIFIED - single cohesive panel controller
+//
+// RFC step 4 (Fixed-Width Side Panel, docs/DDScope_Plugin_UI_RFC.md §4):
+// the panel reserves its column width at all times it is toggled on
+// (show()/hide()/toggleVisibility() — bound to the Toolbar row's Panel
+// button, see DDS_UI_MENU.js view.toggleSidePanel) — selection only
+// swaps *content* via showContext(), never width or presence. Node,
+// Flow, and Lane are registered as contexts through the same
+// registerContext() mechanism a future plugin editor would use.
 
 var DDS_PANEL = { mode: null, entityId: null, cyElement: null };
 // Color palette — use DDS_COLORS (SCRIPT 105)
 
-// ---- Open / close ------------------------------------------
+// ---- Pan animation (used by show()/hide() only — content swaps do not
+// move the canvas, see RFC §4 Fixed-Width Side Panel) ---------
 
 DDS_PANEL._setRemoveBtn = function(enabled) {
   var btn = document.getElementById('dds-btn-remove-from-map');
@@ -32,29 +41,149 @@ DDS_PANEL._animatePan = function(deltaX) {
   requestAnimationFrame(tick);
 };
 
-DDS_PANEL.open = function(mode) {
-  var wasOpen = !!DDS_PANEL.mode;
-  DDS_PANEL.mode = mode;
-  DDS_PANEL._setRemoveBtn(true);
-  ['node','flow','lane'].forEach(function(s) {
-    var el = document.getElementById('dds-panel-' + s);
-    if (el) el.classList.toggle('dds-hidden', s !== mode);
-  });
-  var panelEl = document.getElementById('dds-panel');
-  panelEl.classList.add('open');
-  panelEl.style.width = '360px';
-  if (!wasOpen) DDS_PANEL._animatePan(-360);
+// ---- Context registry (RFC step 4) --------------------------
+// registerContext(key, { mount(data), unmount() }) — mount populates the
+// fixed DOM (or, for a future plugin with no static section, a generic
+// container) and is called by showContext(). unmount is optional,
+// called on the previously-active context before the next mount.
+
+DDS_PANEL._contexts = {};
+DDS_PANEL._sections = ['node', 'flow', 'lane', 'empty', 'multi'];
+
+DDS_PANEL.registerContext = function(key, def) {
+  DDS_PANEL._contexts[key] = def || {};
 };
 
+DDS_PANEL._showSection = function(key) {
+  var show = key || 'empty';
+  DDS_PANEL._sections.forEach(function(s) {
+    var el = document.getElementById('dds-panel-' + s);
+    if (el) el.classList.toggle('dds-hidden', s !== show);
+  });
+};
+
+// Remove-button enablement no longer follows panel visibility (the panel
+// is reserved/visible independently of selection now) — it follows the
+// actual Cytoscape selection, plus the swim-lane special case (a lane is
+// not a Cytoscape element, so DDS_REMOVE/DDS_MAP_UI detect it via
+// DDS_PANEL.mode/entityId — see DDScope_Commands.md §3.3).
+DDS_PANEL._refreshRemoveBtn = function() {
+  var hasLane = (DDS_PANEL.mode === 'lane' && DDS_PANEL.entityId != null);
+  var sel = window.DDS_CY ? DDS_CY.elements(':selected').not('.dds-note-ghost').not('.dds-annotation-ghost') : null;
+  DDS_PANEL._setRemoveBtn(hasLane || !!(sel && sel.length));
+};
+
+// Content swap only — never touches width/presence. key === 'empty'
+// clears the current selection/edit context (nothing-selected state).
+DDS_PANEL.showContext = function(key, data) {
+  var prev = DDS_PANEL._contexts[DDS_PANEL.mode];
+  if (prev && typeof prev.unmount === 'function') prev.unmount();
+  DDS_PANEL.mode = (key === 'empty') ? null : key;
+  DDS_PANEL.entityId = null;
+  DDS_PANEL.cyElement = null;
+  var ctx = DDS_PANEL._contexts[key];
+  if (ctx && typeof ctx.mount === 'function') ctx.mount(data);
+  DDS_PANEL._showSection(key);
+  DDS_PANEL._refreshRemoveBtn();
+};
+
+// close(): clears the current selection/edit context back to 'empty'.
+// Does NOT affect panel visibility (see show()/hide() below) — kept as
+// the stable name every pre-step-4 call site already uses (DDS.js
+// showView, DDS_UI_NAV undo/redo, this file's own cy handlers), so none
+// of them needed to change for this migration.
 DDS_PANEL.close = function() {
-  var wasOpen = !!DDS_PANEL.mode;
+  if (DDS_CY) DDS_CY.elements().unselect();
+  DDS_PANEL.showContext('empty');
+};
+
+// ---- Visibility (reserved column, toggled independently of selection —
+// symmetric to DDS_WORKBENCH_SHELL's toolbox panel width mechanism, but
+// its own persisted key since the side panel is a separate mechanism,
+// not part of IWorkbenchShell — see RFC §4 Migration Path) -----------
+
+DDS_PANEL._MIN_WIDTH = 280;
+DDS_PANEL._MAX_WIDTH = 600;
+DDS_PANEL._DEFAULT_WIDTH = 360;
+DDS_PANEL._panelWidth = null;
+DDS_PANEL._visible = false;
+
+DDS_PANEL._getPanelWidth = function() {
+  if (DDS_PANEL._panelWidth !== null) return DDS_PANEL._panelWidth;
+  var stored = window.DDS_SETTINGS ? DDS_SETTINGS.get('side_panel_width') : null;
+  var n = stored ? parseInt(stored, 10) : NaN;
+  DDS_PANEL._panelWidth = (n && n >= DDS_PANEL._MIN_WIDTH && n <= DDS_PANEL._MAX_WIDTH)
+    ? n : DDS_PANEL._DEFAULT_WIDTH;
+  return DDS_PANEL._panelWidth;
+};
+
+DDS_PANEL._setPanelWidth = function(px) {
+  px = Math.max(DDS_PANEL._MIN_WIDTH, Math.min(DDS_PANEL._MAX_WIDTH, Math.round(px)));
+  DDS_PANEL._panelWidth = px;
+  if (DDS_PANEL._visible) {
+    var panelEl = document.getElementById('dds-panel');
+    if (panelEl) panelEl.style.width = px + 'px';
+  }
+  if (window.DDS_SETTINGS) DDS_SETTINGS.set('side_panel_width', String(px));
+};
+
+DDS_PANEL.show = function() {
+  if (DDS_PANEL._visible) return;
+  DDS_PANEL._visible = true;
   var panelEl = document.getElementById('dds-panel');
+  var w = DDS_PANEL._getPanelWidth();
+  panelEl.classList.add('open');
+  panelEl.style.width = w + 'px';
+  DDS_PANEL._animatePan(-w);
+};
+
+DDS_PANEL.hide = function() {
+  if (!DDS_PANEL._visible) return;
+  DDS_PANEL._visible = false;
+  var panelEl = document.getElementById('dds-panel');
+  var w = DDS_PANEL._getPanelWidth();
   panelEl.classList.remove('open');
   panelEl.style.width = '0';
-  if (DDS_CY) DDS_CY.elements().unselect();
-  DDS_PANEL.mode = null; DDS_PANEL.entityId = null; DDS_PANEL.cyElement = null;
-  DDS_PANEL._setRemoveBtn(false);
-  if (wasOpen) DDS_PANEL._animatePan(360);
+  DDS_PANEL._animatePan(w);
+};
+
+DDS_PANEL.toggleVisibility = function() {
+  if (DDS_PANEL._visible) DDS_PANEL.hide(); else DDS_PANEL.show();
+};
+
+// Drag handle on the panel's left edge (it is the rightmost workspace
+// column, so growing it moves its left edge — mirror of
+// DDS_WORKBENCH_SHELL.initResizeHandle, whose toolbox panels grow from
+// their right edge instead).
+DDS_PANEL._initResizeHandle = function() {
+  var handle = document.getElementById('dds-panel-resize-handle');
+  var panel  = document.getElementById('dds-panel');
+  if (!handle || !panel) return;
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    if (!DDS_PANEL._visible) return;
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    panel.style.transition = 'none';
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var newW = Math.max(DDS_PANEL._MIN_WIDTH, Math.min(DDS_PANEL._MAX_WIDTH, startW - (e.clientX - startX)));
+    panel.style.width = newW + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    DDS_PANEL._setPanelWidth(panel.offsetWidth);
+    panel.style.transition = '';
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (window.DDS_CY && typeof DDS_CY.resize === 'function') DDS_CY.resize();
+  });
 };
 
 DDS_PANEL._esc = function(str) {
@@ -205,9 +334,10 @@ DDS_PANEL.bindTagInput = function(inputId, tags, wrapId, onUpdate) {
   });
 };
 
-// ---- NODE panel --------------------------------------------
+// ---- NODE context --------------------------------------------
+// Registered like a plugin editor would be (see registerContext above).
 
-DDS_PANEL.openNode = function(cyNode) {
+DDS_PANEL.registerContext('node', { mount: function(cyNode) {
   DDS_PANEL.cyElement = cyNode;
   var nodeId = cyNode.data('nodeId');
   DDS_PANEL.entityId = nodeId;
@@ -387,13 +517,13 @@ DDS_PANEL.openNode = function(cyNode) {
 
     skuList.appendChild(row);
   });
+}});
 
-  DDS_PANEL.open('node');
-};
+DDS_PANEL.openNode = function(cyNode) { DDS_PANEL.showContext('node', cyNode); };
 
-// ---- FLOW panel --------------------------------------------
+// ---- FLOW context --------------------------------------------
 
-DDS_PANEL.openFlow = function(cyEdge) {
+DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
   DDS_PANEL.cyElement = cyEdge;
   var flowId = cyEdge.data('flowId');
   DDS_PANEL.entityId = flowId;
@@ -637,9 +767,9 @@ DDS_PANEL.openFlow = function(cyEdge) {
     });
     this.value = '';
   };
+}});
 
-  DDS_PANEL.open('flow');
-};
+DDS_PANEL.openFlow = function(cyEdge) { DDS_PANEL.showContext('flow', cyEdge); };
 
 DDS_PANEL._renderFlowProducts = function(flowId, flow, productById) {
   var list = document.getElementById('dds-pf-products-list'); if (!list) return;
@@ -661,9 +791,10 @@ DDS_PANEL._renderFlowProducts = function(flowId, flow, productById) {
   });
 };
 
-// ---- SWIM-LANE panel ---------------------------------------
+// ---- SWIM-LANE context ---------------------------------------
 
-DDS_PANEL.openLane = function(swimLaneId, highlightAnnotationId) {
+DDS_PANEL.registerContext('lane', { mount: function(data) {
+  var swimLaneId = data.swimLaneId, highlightAnnotationId = data.highlightAnnotationId;
   DDS_PANEL.entityId = swimLaneId; DDS_PANEL.cyElement = null;
   var lane = DDS_STORE.query('swim_lanes', { id: swimLaneId })[0];
   if (!lane) return;
@@ -708,8 +839,10 @@ DDS_PANEL.openLane = function(swimLaneId, highlightAnnotationId) {
 
   // Notes (annotations attached to this lane) — T-045
   DDS_PANEL._renderLaneNotes(swimLaneId, highlightAnnotationId);
+}});
 
-  DDS_PANEL.open('lane');
+DDS_PANEL.openLane = function(swimLaneId, highlightAnnotationId) {
+  DDS_PANEL.showContext('lane', { swimLaneId: swimLaneId, highlightAnnotationId: highlightAnnotationId });
 };
 
 // ---- Notes sub-section (swim-lane panel) — T-045 ------------
@@ -856,6 +989,21 @@ DDS_PANEL.openAnnotation = function(annotationId) {
   DDS_PANEL.openLane(ann.swim_lane_id, annotationId);
 };
 
+// ---- EMPTY / MULTI contexts (RFC step 4 — v1 nothing-selected state is
+// empty; multi-selection shows a simple count for now, see RFC §4 Fixed-
+// Width Side Panel and the T-052 step 4 design discussion — commonality
+// across a multi-selection, e.g. bulk tag edit, is left for later) -----
+
+DDS_PANEL.registerContext('empty', { mount: function() {
+  document.getElementById('dds-panel-title').textContent = '';
+}});
+
+DDS_PANEL.registerContext('multi', { mount: function(count) {
+  document.getElementById('dds-panel-title').textContent = 'Selection';
+  var el = document.getElementById('dds-panel-multi-count');
+  if (el) el.textContent = count + ' elements selected';
+}});
+
 // ---- Cytoscape wiring (called from DDS_MAP.initCy) ---------
 
 DDS_PANEL._wireCy = function() {
@@ -879,12 +1027,10 @@ DDS_PANEL._wireCy = function() {
       }
 
       if (selected.length > 1) {
-        // Multi-selection: close panel, clear all handles, activate Remove button only
-        document.getElementById('dds-panel').classList.remove('open');
-        DDS_PANEL.mode = null;
-        DDS_PANEL.entityId = null;
-        DDS_PANEL.cyElement = null;
-        DDS_PANEL._setRemoveBtn(true);
+        // Multi-selection: swap content to the 'multi' context, clear all
+        // flow handles. Remove button enablement is refreshed by
+        // showContext() itself (based on the actual cy selection).
+        DDS_PANEL.showContext('multi', selected.length);
         if (typeof DDS_FLOW_UI !== 'undefined') {
           DDS_FLOW_UI.removeHandle();
           DDS_FLOW_UI._removeRerouteHandles();
@@ -917,5 +1063,13 @@ DDS_PANEL._wireCy = function() {
 // ---- bindEvents --------------------------------------------
 
 DDS_PANEL.bindEvents = function() {
-  document.getElementById('dds-panel-close').addEventListener('click', function() { DDS_PANEL.close(); });
+  // No in-panel close button (RFC step 4) — same reasoning as the AI
+  // Toolbox's removed #dds-ai-close: redundant with the Toolbar row's
+  // "Panel" toggle (DDS_UI_MENU.js view.toggleSidePanel).
+  DDS_PANEL._initResizeHandle();
+  // Reserved by default (RFC §4 Fixed-Width Side Panel — open at all
+  // times unless explicitly toggled off via the Toolbar row), nothing
+  // selected yet.
+  DDS_PANEL.show();
+  DDS_PANEL.showContext('empty');
 };

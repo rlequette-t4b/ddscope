@@ -26,13 +26,24 @@
     // Wire DDS_STORE dirty-state callback to DOM (isolated from the store for testability)
     DDS_STORE.onDirtyChange = function(dirty, name) {
       var label = document.getElementById('dds-nav-project-label');
-      if (label) label.textContent = name + (dirty ? ' •' : '');
-      var btn = document.getElementById('dds-btn-save');
-      if (btn) btn.disabled = !dirty;
+      // CommWise (framework-1) legacy compat: the old fragment has no
+      // separate dirty badge (fragments/app-shell.html is scoped to
+      // framework-2/3 only, see assembly.json) — keep appending the "•"
+      // marker to the label there. The new fragment shows dirty state via
+      // #dds-menu-dirty-badge instead (RFC §4 Header Layout, "folds the
+      // project name's • dirty marker and the Save button into a single
+      // control").
+      var hasNewChrome = !!document.getElementById('dds-menu-dirty-badge');
+      if (label) label.textContent = name + (!hasNewChrome && dirty ? ' •' : '');
+      if (window.DDS_UI_MENU) DDS_UI_MENU.refreshDirtyBadge(dirty);
+      var legacySaveBtn = document.getElementById('dds-btn-save');
+      if (legacySaveBtn) legacySaveBtn.disabled = !dirty;
+      if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
     };
 
     // Bind all UI event listeners
     DDS_UI_NAV.bindEvents();
+    if (window.DDS_UI_MENU) DDS_UI_MENU.bindEvents();
     DDS_MAP_UI.bindEvents();
     DDS_NODE_UI.bindEvents();
     DDS_LANE_UI.bindEvents();
@@ -43,6 +54,7 @@
     // DDS_ANNOTATIONS_UI removed (T-045, 2026-07-10) — see DDScope_UI.md §2
     DDS_REMOVE.bindEvents();
     DDS_AI_UI.bindEvents();
+    if (window.DDS_TYPES_UI) DDS_TYPES_UI.bindEvents();
     DDS_NODES_UI.bindEvents();
     DDS_CONFIGURATION_UI.bindEvents();
     DDS_NOTES_UI.init();

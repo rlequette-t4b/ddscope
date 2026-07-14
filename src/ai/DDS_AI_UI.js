@@ -147,8 +147,16 @@ DDS_AI_UI._applyOpen = function() {
   DDS_AI_UI._open = true;
   var panel = document.getElementById('dds-ai-panel');
   if (panel) {
-    panel.classList.add('open');
-    panel.style.width = DDS_AI_UI._lastWidth + 'px';
+    // Width + .open class: shell-owned when present (DDS_WORKBENCH_SHELL
+    // ._showToolbox, panelId 'dds-ai-panel') — shared across every toolbox
+    // panel, VSCode Activity-Bar style, resize persisted via DDS_SETTINGS
+    // (2026-07-14 feedback, RFC §5 Decisions). CommWise (framework-1) has no
+    // shell yet — fall back to the pre-shell behavior there (own width,
+    // no sharing/persistence).
+    if (typeof DDS_WORKBENCH_SHELL === 'undefined') {
+      panel.classList.add('open');
+      panel.style.width = (DDS_AI_UI._lastWidth || 420) + 'px';
+    }
     var top = panel.getBoundingClientRect().top;
     panel.style.height = (window.innerHeight - top) + 'px';
   }
@@ -165,7 +173,9 @@ DDS_AI_UI._applyClose = function() {
   if (!DDS_AI_UI._open) return;
   DDS_AI_UI._open = false;
   var panel = document.getElementById('dds-ai-panel');
-  if (panel) { panel.classList.remove('open'); panel.style.width = '0'; }
+  if (panel && typeof DDS_WORKBENCH_SHELL === 'undefined') {
+    panel.classList.remove('open'); panel.style.width = '0';
+  }
   var legacyBtn = document.getElementById('dds-btn-ai');
   if (legacyBtn) legacyBtn.classList.remove('active');
   DDS_AI_UI._notifyCytoscape();
@@ -180,6 +190,7 @@ DDS_AI_UI._registerWorkbench = function() {
     id: 'ai',
     icon: '&#129302;',
     title: 'AI Assistant',
+    panelId: 'dds-ai-panel',
     onShow: DDS_AI_UI._applyOpen,
     onHide: DDS_AI_UI._applyClose
   });
@@ -208,7 +219,14 @@ DDS_AI_UI.toggle = function() {
 };
 
 // ===== Drag-resize =====
+// Shell-owned when present (DDS_WORKBENCH_SHELL.initResizeHandle) — the
+// shared, persisted width (2026-07-14 feedback, RFC §5 Decisions). CommWise
+// (framework-1) fallback below keeps the original own-width drag logic.
 DDS_AI_UI._initResize = function() {
+  if (typeof DDS_WORKBENCH_SHELL !== 'undefined' && typeof DDS_WORKBENCH_SHELL.initResizeHandle === 'function') {
+    DDS_WORKBENCH_SHELL.initResizeHandle('dds-ai-resize-handle', 'dds-ai-panel');
+    return;
+  }
   var handle = document.getElementById('dds-ai-resize-handle');
   var panel  = document.getElementById('dds-ai-panel');
   if (!handle || !panel) return;
@@ -516,9 +534,10 @@ DDS_AI_UI.bindEvents = function() {
   var headerToggle = document.getElementById('dds-ai-header-toggle');
   if (headerToggle) headerToggle.addEventListener('click', function() { DDS_AI_UI.toggle(); });
 
-  var closeBtn = document.getElementById('dds-ai-close');
-  if (closeBtn) closeBtn.addEventListener('click', function() { DDS_AI_UI.close(); });
-
+  // No dedicated close button in the panel header — the rail icon owns
+  // open/close (click again to close, RFC toolbox convention: a toolbox's
+  // own panel content should not duplicate that control). See
+  // docs/DDScope_Plugin_UI_RFC.md §2 Toolbox and View.
   var exportBtn = document.getElementById('dds-ai-export');
   if (exportBtn) exportBtn.addEventListener('click', function() { DDS_AI_UI.exportConversation(); });
 

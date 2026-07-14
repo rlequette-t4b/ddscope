@@ -1,10 +1,99 @@
 <div class="dds-app" id="dds-app">
 
-  <!-- Nav bar -->
-  <nav class="dds-nav">
-    <span class="dds-nav-logo"><span>DD</span>Scope</span>
+  <!-- Header rows — Identity / Menu bar / Toolbar, replacing the old
+       single nav bar (see docs/DDScope_Plugin_UI_RFC.md §4 Header Layout,
+       Migration Path step 2). Menu items and toolbar toggles are wired
+       through src/core/DDS_UI_COMMANDS.js + src/ui/DDS_UI_MENU.js. -->
 
-    <!-- Project tabs (hidden until project open) -->
+  <!-- 1. Identity row -->
+  <div class="dds-identity-row" id="dds-identity-row">
+    <span class="dds-identity-logo"><span class="dds-identity-logo-mark">DD</span>Scope</span>
+    <span class="dds-identity-project dds-hidden" id="dds-nav-project-center">
+      <span id="dds-nav-project-label" class="dds-identity-project-label" title="Double-click to rename"></span>
+      <button class="dds-menu-dirty-badge dds-hidden" id="dds-menu-dirty-badge" title="Unsaved changes — click to save">Unsaved changes — Save</button>
+    </span>
+  </div>
+
+  <!-- 2. Menu bar row -->
+  <div class="dds-menu-bar" id="dds-menu-bar">
+    <div class="dds-menu">
+      <button class="dds-menu-label" type="button">File</button>
+      <div class="dds-menu-dropdown">
+        <button class="dds-menu-item" data-cmd="file.new">New</button>
+        <button class="dds-menu-item" data-cmd="file.open">Open</button>
+        <button class="dds-menu-item" data-cmd="file.save">Save</button>
+        <button class="dds-menu-item" data-cmd="file.saveAs">Save As</button>
+        <button class="dds-menu-item" data-cmd="file.close">Close</button>
+      </div>
+    </div>
+    <div class="dds-menu">
+      <button class="dds-menu-label" type="button">Edit</button>
+      <div class="dds-menu-dropdown">
+        <button class="dds-menu-item" data-cmd="edit.undo">Undo</button>
+        <button class="dds-menu-item" data-cmd="edit.redo">Redo</button>
+        <button class="dds-menu-item" data-cmd="edit.remove">Remove</button>
+        <div class="dds-menu-sep"></div>
+        <button class="dds-menu-item" disabled title="Not yet implemented (TODO/T-003)">Cut</button>
+        <button class="dds-menu-item" disabled title="Not yet implemented (TODO/T-003)">Copy</button>
+        <button class="dds-menu-item" disabled title="Not yet implemented (TODO/T-003)">Paste</button>
+      </div>
+    </div>
+    <div class="dds-menu">
+      <button class="dds-menu-label" type="button">View</button>
+      <div class="dds-menu-dropdown">
+        <button class="dds-menu-item" data-cmd="view.toggleRail">Toggle Rail</button>
+        <button class="dds-menu-item" data-cmd="view.toggleSidePanel">Toggle Side Panel</button>
+        <button class="dds-menu-item" data-cmd="view.toggleIdentityRow">Toggle Identity Row</button>
+        <button class="dds-menu-item" disabled title="Depends on the Page Strip (RFC step 5)">Fullscreen</button>
+      </div>
+    </div>
+    <div class="dds-menu">
+      <button class="dds-menu-label" type="button">Arrange</button>
+      <div class="dds-menu-dropdown">
+        <button class="dds-menu-item" data-cmd="arrange.layout">Layout</button>
+        <button class="dds-menu-item" data-cmd="arrange.direction">Direction</button>
+      </div>
+    </div>
+    <div class="dds-menu">
+      <button class="dds-menu-label" type="button">Extras</button>
+      <div class="dds-menu-dropdown">
+        <button class="dds-menu-item" data-cmd="extras.legend">Legend</button>
+        <button class="dds-menu-item" data-cmd="extras.notes">Notes</button>
+        <button class="dds-menu-item" data-cmd="extras.settings">Settings</button>
+      </div>
+    </div>
+    <div class="dds-menu">
+      <button class="dds-menu-label" type="button">Help</button>
+      <div class="dds-menu-dropdown">
+        <button class="dds-menu-item" disabled title="Not yet implemented">About</button>
+        <button class="dds-menu-item" disabled title="Not yet implemented">Documentation</button>
+        <button class="dds-menu-item" disabled title="Not yet implemented">Keyboard Shortcuts</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 3. Toolbar row -->
+  <div class="dds-toolbar-row" id="dds-toolbar-row">
+    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-fit">&#9635; Fit</button>
+    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-layout">&#9638; Layout</button>
+    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-auto-layout" title="Auto-layout after each edit">&#8635; Auto-Layout</button>
+    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-direction" title="Flow direction">&#8594; &#8594;</button>
+    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-legend" title="Toggle legend">&#128065; Legend</button>
+    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-notes" title="Toggle notes panel">&#128203; Notes</button>
+    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-remove-from-map" disabled title="Remove selected element">&#128465; Remove</button>
+    <div class="dds-toolbar-sep"></div>
+    <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-undo" disabled title="Undo">↩</button>
+    <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-redo" disabled title="Redo">↪</button>
+    <div class="dds-toolbar-spacer"></div>
+    <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-toggle-rail" title="Toggle rail">Rail</button>
+    <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-toggle-panel" title="Toggle side panel">Panel</button>
+    <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-toggle-identity" title="Toggle identity row">Header</button>
+  </div>
+
+  <!-- Temporary view tab strip — migrates to the Page Strip, RFC step 5.
+       Left as-is (not restyled) until then. -->
+  <div class="dds-view-tabs-row dds-hidden" id="dds-view-tabs-row">
     <div class="dds-nav-tabs">
       <button class="dds-nav-tab dds-hidden" id="dds-tab-map"      data-view="map">Map</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-nodes"    data-view="nodes">Nodes</button>
@@ -14,23 +103,7 @@
       <button class="dds-nav-tab dds-hidden" id="dds-tab-demand"      data-view="demand">Demand</button>
       <button class="dds-nav-tab dds-hidden" id="dds-tab-configuration"    data-view="configuration">Configuration</button>
     </div>
-
-    <!-- Project name (centered) -->
-    <div class="dds-nav-project-center dds-hidden" id="dds-nav-project-center">
-      <span id="dds-nav-project-label" class="dds-nav-project-label"></span>
-      <button class="dds-nav-project-edit-btn" id="dds-btn-edit-project" title="Edit project name &amp; description">&#9998;</button>
-      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-save" disabled>Save</button>
-      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-undo" disabled title="Undo">↩</button>
-      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-redo" disabled title="Redo">↪</button>
-    </div>
-
-    <!-- Nav actions -->
-    <div class="dds-nav-actions">
-      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-new">New</button>
-      <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-load">Open</button>
-      <button class="dds-btn dds-btn-ghost dds-btn-sm dds-hidden" id="dds-btn-save-as">Save As</button>
-    </div>
-  </nav>
+  </div>
 
   <!-- Main workspace: rail + AI panel (push) + content -->
   <div class="dds-workspace" id="dds-workspace">
@@ -55,8 +128,7 @@
           </select>
           <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-instructions" title="Project-specific instructions">&#9881;</button>
           <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-export" title="Save conversation to file">&#8595;</button>
-          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-replay" title="Replay from file">&#9654;</button>
-          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-close" style="margin-left:auto">&times;</button>
+          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-ai-replay" title="Replay from file" style="margin-left:auto">&#9654;</button>
         </div>
         <div class="dds-ai-player-bar dds-hidden" id="dds-ai-player-bar">
           <span class="dds-ai-player-file" id="dds-ai-player-file"></span>
@@ -150,6 +222,39 @@
       </div>
     </div>
 
+    <!-- Types Toolbox panel (in-flow, pushes canvas) — RFC §4 Types Toolbox,
+         Migration Path step 3. Rail icon injected by
+         DDS_WORKBENCH_SHELL.registerToolbox() (src/ui/DDS_TYPES_UI.js). -->
+    <div class="dds-types-panel" id="dds-types-panel">
+      <!-- Drag-resize handle — shared width across toolbox panels, see
+           src/core/DDS_WORKBENCH_SHELL.js initResizeHandle. -->
+      <div class="dds-types-resize-handle" id="dds-types-resize-handle"></div>
+
+      <div class="dds-types-header">
+        <span class="dds-types-header-title">&#127912; Types</span>
+      </div>
+      <div class="dds-types-body">
+        <div class="dds-types-section">
+          <div class="dds-types-section-title">Node types</div>
+          <div class="dds-types-palette" id="dds-types-palette-nodetype"></div>
+        </div>
+        <div class="dds-types-section">
+          <div class="dds-types-section-title">Product types</div>
+          <div class="dds-types-palette" id="dds-types-palette-prodtype"></div>
+        </div>
+        <div class="dds-types-section">
+          <div class="dds-types-section-title">Swim-lanes</div>
+          <div class="dds-types-palette" id="dds-types-palette-lane"></div>
+        </div>
+        <div class="dds-types-section dds-types-search-section">
+          <div class="dds-types-section-title">Search &amp; create</div>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm dds-types-search-btn" id="dds-types-search-node">Search or create a node&hellip;</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm dds-types-search-btn" id="dds-types-search-product">Search or create a product&hellip;</button>
+          <button class="dds-btn dds-btn-secondary dds-btn-sm dds-types-search-btn" id="dds-types-search-lane">Search or create a swim-lane&hellip;</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Main content -->
     <main class="dds-main">
 
@@ -163,17 +268,8 @@
           <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-new" title="New map">+ Map</button>
           <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-duplicate" title="Duplicate map">&#11001;</button>
           <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-delete" title="Delete map" disabled>&#10005;</button>
-          <div class="dds-map-toolbar-sep"></div>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-direction" title="Flow direction">&#8594; &#8594;</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-swimlane">+ Swim-lane</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-node">+ Node</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-add-product-on-map">+ Product</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-remove-from-map" disabled title="Remove selected element">&#10005; Remove</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-fit" style="margin-left:auto">&#9635; Fit</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-layout">&#9638; Layout</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-auto-layout" title="Auto-layout after each edit">&#8635; Auto-Layout</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-legend" title="Toggle legend">&#128065; Legend</button>
-          <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-notes" title="Toggle notes panel">&#128203; Notes</button>
+          <!-- + Swim-lane / + Node / + Product moved to the Types Toolbox
+               (rail icon) — RFC §4 Current Toolbar Remapping, T-052 step 3. -->
         </div>
 
         <!-- Canvas -->
@@ -298,12 +394,24 @@
     <!-- Side panel (in-flow, pushes canvas+notes) -->
     <div class="dds-panel" id="dds-panel">
 
+      <!-- Drag-resize handle — own persisted width, see
+           src/presentation/DDS_PANEL.js _initResizeHandle. -->
+      <div class="dds-panel-resize-handle" id="dds-panel-resize-handle"></div>
+
       <div class="dds-panel-header">
         <span class="dds-panel-title" id="dds-panel-title">Node</span>
-        <button class="dds-btn dds-panel-close" id="dds-panel-close">&times;</button>
       </div>
 
       <div class="dds-panel-body" id="dds-panel-body">
+
+        <!-- ===== EMPTY / MULTI-SELECTION SECTIONS (RFC step 4) ===== -->
+        <div id="dds-panel-empty" class="dds-hidden">
+          <div class="dds-panel-empty-hint">Select an element on the map to edit it.</div>
+        </div>
+
+        <div id="dds-panel-multi" class="dds-hidden">
+          <div class="dds-panel-multi-count" id="dds-panel-multi-count"></div>
+        </div>
 
         <!-- ===== NODE SECTION ===== -->
         <div id="dds-panel-node" class="dds-hidden">

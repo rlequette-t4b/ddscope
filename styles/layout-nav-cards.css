@@ -166,6 +166,164 @@
 }
 .dds-nav-actions .dds-btn.dds-hidden { display: none !important; }
 
+/* ===== Header rows — Identity / Menu bar / Toolbar (RFC §4 Header
+   Layout, Migration Path step 2). .dds-nav / .dds-nav-project-center /
+   .dds-nav-actions above stay in place — CommWise's old fragment (not
+   yet updated, see assembly.json scoping) still uses them. ===== */
+
+/* Compact, flat chrome inspired by draw.io's header (title bar / menu
+   bar / toolbar) rather than the heavier tab-like styling used elsewhere
+   in this file — see feedback session 2026-07-14. */
+
+.dds-identity-row {
+  background: var(--dds-surface);
+  border-bottom: 1px solid var(--dds-border);
+  padding: 0 16px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.dds-identity-row.dds-hidden { display: none !important; }
+.dds-identity-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  font-size: var(--dds-text-md);
+  color: var(--dds-text);
+}
+.dds-identity-logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--dds-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.dds-identity-project {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--dds-border);
+}
+.dds-identity-project.dds-hidden { display: none; }
+.dds-identity-project-label {
+  font-size: var(--dds-text-md);
+  font-weight: 600;
+  color: var(--dds-text);
+  cursor: pointer;
+  padding: 3px 7px;
+  border-radius: var(--dds-radius);
+}
+.dds-identity-project-label:hover { background: var(--dds-bg); }
+
+/* Dirty-state badge — sits right after the project name (Identity row),
+   styled as a small button rather than a passive marker. */
+.dds-menu-dirty-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--dds-accent-light);
+  color: var(--dds-accent-hover);
+  border: 1px solid var(--dds-accent);
+  border-radius: var(--dds-radius);
+  padding: 3px 10px;
+  font-size: var(--dds-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dds-menu-dirty-badge:hover { background: var(--dds-accent); color: #fff; }
+.dds-menu-dirty-badge.dds-hidden { display: none !important; }
+
+.dds-menu-bar {
+  background: var(--dds-surface);
+  border-bottom: 1px solid var(--dds-border);
+  padding: 0 12px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  position: relative;
+}
+.dds-menu { position: relative; }
+.dds-menu-label {
+  background: none;
+  border: none;
+  padding: 6px 14px;
+  margin: 0 1px;
+  font-size: var(--dds-text-sm);
+  font-weight: 500;
+  color: var(--dds-text);
+  cursor: pointer;
+  border-radius: var(--dds-radius);
+}
+.dds-menu-label:hover { background: var(--dds-bg); }
+.dds-menu.open .dds-menu-label { background: var(--dds-bg); }
+.dds-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  min-width: 210px;
+  background: var(--dds-surface);
+  border: 1px solid var(--dds-border);
+  border-radius: var(--dds-radius);
+  box-shadow: var(--dds-shadow-hover);
+  padding: 4px;
+  z-index: 200;
+}
+.dds-menu.open .dds-menu-dropdown { display: block; }
+.dds-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  font-size: var(--dds-text-sm);
+  color: var(--dds-text);
+  cursor: pointer;
+  border-radius: var(--dds-radius);
+  white-space: nowrap;
+}
+.dds-menu-item:hover:not(:disabled) { background: var(--dds-bg); }
+.dds-menu-item:disabled { color: var(--dds-text-muted); cursor: default; opacity: 0.5; }
+.dds-menu-sep { height: 1px; background: var(--dds-border); margin: 4px 4px; }
+
+.dds-toolbar-row {
+  background: var(--dds-surface);
+  border-bottom: 1px solid var(--dds-border);
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.dds-toolbar-sep { width: 1px; align-self: stretch; margin: 2px 6px; background: var(--dds-border); }
+.dds-toolbar-spacer { flex: 1; }
+
+/* Temporary view tab strip — migrates to the Page Strip, RFC step 5 */
+.dds-view-tabs-row {
+  background: var(--dds-surface);
+  border-bottom: 1px solid var(--dds-border);
+  padding: 0 20px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 /* ===== App shell ===== */
 .dds-app {
   display: flex !important;

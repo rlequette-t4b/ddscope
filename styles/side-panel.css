@@ -3,8 +3,12 @@
 
 /* ===== Side panel drawer — in-flow push layout ===== */
 /* Mirrors .dds-ai-panel pattern: in-flow inside .dds-workspace (flex row),
-   width controlled by JS (open → 360px, closed → 0). No position:fixed.
-   ID selector (#dds-panel) used to maximise specificity over platform overrides. */
+   width controlled entirely by JS — open/close/drag (RFC step 4: the panel
+   reserves its column at all times it is toggled on; selection swaps
+   *content* only via DDS_PANEL.showContext(), never width — see
+   DDS_PANEL.show()/hide()/toggleVisibility() in src/presentation/DDS_PANEL.js).
+   No position:fixed. ID selector (#dds-panel) used to maximise specificity
+   over platform overrides. */
 #dds-panel,
 .dds-panel {
   position: relative !important;
@@ -25,9 +29,40 @@
   transition: width 0.22s ease !important;
   z-index: auto !important;
 }
-#dds-panel.open,
-.dds-panel.open {
-  width: 360px;
+/* .open no longer sets a fixed width — width is set entirely by JS
+   (show/hide/drag), same pattern as .dds-ai-panel. */
+
+/* Drag-resize handle on the left edge of the panel — the side panel is
+   the rightmost workspace column, so growing it moves its left edge
+   (mirror of .dds-ai-resize-handle / .dds-types-resize-handle, whose
+   panels grow from their right edge instead). */
+.dds-panel-resize-handle {
+  position: absolute !important;
+  top: 0 !important;
+  left: -3px !important;
+  width: 7px !important;
+  height: 100% !important;
+  cursor: col-resize !important;
+  z-index: 500 !important;
+  background: transparent !important;
+}
+.dds-panel-resize-handle:hover,
+.dds-panel-resize-handle.dragging {
+  background: var(--dds-accent) !important;
+  opacity: 0.35 !important;
+}
+
+/* ===== Empty / multi-selection states (RFC step 4) ===== */
+.dds-panel-empty-hint {
+  padding: 24px 4px !important;
+  text-align: center !important;
+  color: var(--dds-text-muted) !important;
+  font-size: var(--dds-text-sm) !important;
+}
+.dds-panel-multi-count {
+  padding: 16px 0 !important;
+  color: var(--dds-text-muted) !important;
+  font-size: var(--dds-text-sm) !important;
 }
 
 .dds-panel-header {
@@ -44,16 +79,6 @@
   font-weight: 700 !important;
   color: var(--dds-text) !important;
 }
-.dds-panel-close {
-  color: var(--dds-text-muted) !important;
-  font-size: 20px !important;
-  padding: 4px 8px !important;
-  border-radius: 4px !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-.dds-panel-close:hover { background: var(--dds-bg) !important; color: var(--dds-text) !important; }
-
 .dds-panel-body {
   flex: 1 !important;
   overflow-y: auto !important;

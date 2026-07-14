@@ -330,12 +330,17 @@ var DDS_CMD = (function () {
   // ---------------------------------------------------------------------------
 
   // TX.LANE_CREATE
-  // params: { name: string, color?: string }
+  // params: { name: string, color?: string, position?: { x: number, y: number } }
   // mapId: optional (3rd execute() arg). When present, places the newly
   // created lane on that map (map_swim_lanes insert, position computed by
   // _placeLane) — mirrors the TX.NODE_CREATE mapId-optional pattern (T-036
   // part 4). When absent (Configuration tab CRUD call site), the lane is
   // added to the functional model only, unchanged from prior behaviour.
+  // params.position, when given, overrides only x/y — width/height stay the
+  // _placeLane default (RFC §4 Types Toolbox, decided 2026-07-14: a palette
+  // drop sets placement, not a size derived from the drag). Optional and
+  // additive — existing call sites (DDS_LANE_UI, Configuration modal) never
+  // pass it, so their behaviour is unchanged.
   _register(TX.LANE_CREATE, function (params, mapId) {
     var inserted = DDS_STORE.insert('swim_lanes', [{
       name:  params.name || '',
@@ -345,7 +350,10 @@ var DDS_CMD = (function () {
     var result = { ok: true, id: laneId, laneId: laneId };
 
     if (mapId) {
-      var pos = _placeLane(mapId);
+      var basePos = _placeLane(mapId);
+      var pos = params.position
+        ? { x: params.position.x, y: params.position.y, width: basePos.width, height: basePos.height }
+        : basePos;
       var mslRows = DDS_STORE.insert('map_swim_lanes', [{
         map_id: mapId, swim_lane_id: laneId,
         x: pos.x, y: pos.y, width: pos.width, height: pos.height, group_order: null
@@ -750,7 +758,7 @@ var DDS_CMD = (function () {
 
   // TX.MAP_ADD_PRODUCT_NODE
   // params: { product_id?: integer, product_name?: string, product_type_code?: string,
-  //           swim_lane_id?: integer|null }
+  //           swim_lane_id?: integer|null, position?: { x: number, y: number } }
   // mapId (2nd arg to execute) is required — map-scoped creation.
   // Combined operation ported from the legacy DDS_NODE_UI._doAddProductSave
   // inline flow: resolve-or-create product, resolve the product-node-default
@@ -791,8 +799,10 @@ var DDS_CMD = (function () {
     }]);
     var nodeId = nodeInserted[0].id;
 
-    // 4. Canvas position (pure computation — no Cytoscape mutation)
-    var pos = DDS_LAYOUT.placeNode(nodeId, mapId);
+    // 4. Canvas position (pure computation — no Cytoscape mutation), or an
+    // explicit drop-point override (params.position — Types Toolbox palette
+    // drag, RFC §4 Types Toolbox, T-052 step 3). Optional and additive.
+    var pos = params.position || DDS_LAYOUT.placeNode(nodeId, mapId);
     var x = pos ? pos.x : 200;
     var y = pos ? pos.y : 200;
 
@@ -880,12 +890,14 @@ var DDS_CMD = (function () {
   });
 
   // TX.MAP_ADD_LANE (T-036 part 4 — swim-lane search/create dedicated modal)
-  // params: { swim_lane_id: integer }
+  // params: { swim_lane_id: integer, position?: { x: number, y: number } }
   // mapId (2nd arg to execute) is required — places an EXISTING swim-lane on
   // the map: position computed by _placeLane (pure store computation, no
   // Cytoscape read), insert map_swim_lanes. Mirrors TX.MAP_ADD_NODE /
   // TX.MAP_ADD_FLOW. Idempotent: if the lane is already on the map, no-ops
   // and returns the existing map_swim_lanes row (alreadyOnMap: true).
+  // params.position — see TX.LANE_CREATE note (RFC §4 Types Toolbox palette
+  // drag, T-052 step 3): overrides x/y only, optional and additive.
   _register(TX.MAP_ADD_LANE, function (params, mapId) {
     if (!mapId) throw new Error('[DDS_CMD] MAP_ADD_LANE requires a mapId');
     var laneId = parseInt(params.swim_lane_id, 10);
@@ -901,7 +913,10 @@ var DDS_CMD = (function () {
       };
     }
 
-    var pos = _placeLane(mapId);
+    var basePos = _placeLane(mapId);
+    var pos = params.position
+      ? { x: params.position.x, y: params.position.y, width: basePos.width, height: basePos.height }
+      : basePos;
     var mslRows = DDS_STORE.insert('map_swim_lanes', [{
       map_id: mapId, swim_lane_id: laneId,
       x: pos.x, y: pos.y, width: pos.width, height: pos.height, group_order: null
@@ -940,7 +955,11 @@ var DDS_CMD = (function () {
     var result = { ok: true, id: nodeId, nodeId: nodeId };
 
     if (mapId) {
-      var pos = DDS_LAYOUT.placeNode(nodeId, mapId);
+      // params.position, when given, overrides DDS_LAYOUT.placeNode's guessed
+      // position with an explicit drop point (Types Toolbox palette drag —
+      // RFC §4 Types Toolbox, T-052 step 3). Optional and additive — existing
+      // call sites (DDS_NODE_UI, AI executeList) never pass it.
+      var pos = params.position || DDS_LAYOUT.placeNode(nodeId, mapId);
       var x = pos ? pos.x : 200;
       var y = pos ? pos.y : 200;
       var mnRows = DDS_STORE.insert('map_nodes', [{ map_id: mapId, node_id: nodeId, x: x, y: y }]);

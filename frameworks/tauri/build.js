@@ -52,17 +52,14 @@ const CDN_INJECTIONS = [
   { position: 1784, fixture: 'script-1784-cdn-sortablejs.js', comment: 'CDN: SortableJS (verbatim, shared with framework-2). Must precede DDS_NOTES_UI (order 1785).' }
 ];
 
-// Local-only header — reused verbatim from framework-2's fixtures (the
-// header is framework-agnostic markup binding to a neutral button id, see
-// frameworks/local/fixtures/header-local.html's own comment). Position 150,
-// same convention as framework-2 — placed just before the app shell (200).
-const LOCAL_FRAGMENTS = [
-  { position: 150, fixture: 'header-local.html', comment: 'Header — DDScope brand + settings gear (shared fixture, see frameworks/local/fixtures/)' }
-];
-
-const LOCAL_STYLES = [
-  { fixture: 'header-local.css', comment: 'Header styling (shared fixture, see frameworks/local/fixtures/)' }
-];
+// Local-only header (DDScope brand + settings gear) — retired 2026-07-14,
+// same as frameworks/local/build.js: superseded by the Identity row
+// (fragments/app-shell.html, RFC §4 Header Layout) and the Extras >
+// Settings menu item (src/ui/DDS_UI_MENU.js, calls SETTINGS.open()
+// directly). Fixtures kept unused at frameworks/local/fixtures/header-local.*
+// rather than deleted.
+const LOCAL_FRAGMENTS = [];
+const LOCAL_STYLES = [];
 
 // This framework's id, matching assembly.json's optional per-entry
 // 'frameworks' scoping array.

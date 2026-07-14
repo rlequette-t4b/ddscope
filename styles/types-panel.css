@@ -1,0 +1,121 @@
+/* STYLE 920 — Types Toolbox panel: palette chips, search zone.
+   Push-layout mechanics mirror styles/ai-panel.css (.dds-ai-panel) — only
+   one of the two panels has a non-zero width at a time, enforced by
+   DDS_WORKBENCH_SHELL's "single panel open" rule, not by CSS. */
+
+.dds-types-panel {
+  position: relative !important;
+  width: 0;
+  min-width: 0 !important;
+  max-width: 320px !important;
+  background: var(--dds-surface) !important;
+  border-right: 1px solid var(--dds-border) !important;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.07) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  transition: width 0.22s ease !important;
+}
+
+/* Drag-resize handle — shared width across toolbox panels, mirrors
+   .dds-ai-resize-handle (styles/ai-panel.css), wired by
+   DDS_WORKBENCH_SHELL.initResizeHandle. */
+.dds-types-resize-handle {
+  position: absolute !important;
+  top: 0 !important;
+  right: -3px !important;
+  width: 7px !important;
+  height: 100% !important;
+  cursor: col-resize !important;
+  z-index: 500 !important;
+  background: transparent !important;
+}
+.dds-types-resize-handle:hover,
+.dds-types-resize-handle.dragging {
+  background: var(--dds-accent) !important;
+  opacity: 0.35 !important;
+}
+
+.dds-types-header {
+  padding: 10px 14px !important;
+  border-bottom: 1px solid var(--dds-border) !important;
+  flex-shrink: 0 !important;
+  background: var(--dds-surface) !important;
+}
+.dds-types-header-title {
+  font-size: var(--dds-text-base) !important;
+  font-weight: 700 !important;
+}
+
+.dds-types-body {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding: 12px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.dds-types-section-title {
+  font-size: var(--dds-text-xs) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+  color: var(--dds-text-muted) !important;
+  margin-bottom: 6px !important;
+}
+
+.dds-types-palette {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.dds-types-chip {
+  padding: 5px 10px !important;
+  border-radius: var(--dds-radius) !important;
+  border: 1px solid var(--dds-border) !important;
+  border-left: 3px solid var(--dds-border) !important;
+  font-size: var(--dds-text-sm) !important;
+  background: var(--dds-bg) !important;
+  color: var(--dds-text) !important;
+  cursor: grab !important;
+  user-select: none !important;
+  transition: background 0.15s, border-color 0.15s !important;
+}
+.dds-types-chip:hover {
+  background: var(--dds-accent-light) !important;
+  border-color: var(--dds-accent) !important;
+}
+.dds-types-chip:active { cursor: grabbing !important; }
+
+.dds-types-chip-onmap {
+  cursor: default !important;
+  color: var(--dds-text-muted) !important;
+  background: var(--dds-bg) !important;
+  opacity: 0.55 !important;
+}
+.dds-types-chip-onmap:hover {
+  background: var(--dds-bg) !important;
+  border-color: var(--dds-border) !important;
+}
+
+.dds-types-empty {
+  font-size: var(--dds-text-sm) !important;
+  color: var(--dds-text-muted) !important;
+  padding: 2px 0 !important;
+}
+
+.dds-types-search-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding-top: 4px !important;
+  border-top: 1px solid var(--dds-border) !important;
+}
+.dds-types-search-btn {
+  width: 100% !important;
+  text-align: left !important;
+}

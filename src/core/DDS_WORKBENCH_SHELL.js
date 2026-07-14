@@ -26,20 +26,99 @@
 // ============================================================
 
 var DDS_WORKBENCH_SHELL = {
-  _toolboxes: {},   // id -> { id, icon, title, onShow, onHide, views: [] }
+  _toolboxes: {},   // id -> { id, icon, title, panelId, onShow, onHide, views: [] }
   _views: {},       // id -> { id, toolboxId, title, order }
   _openToolboxId: null
 };
 
+// ---------------------------------------------------------------------------
+// Shared panel width — VSCode Activity-Bar style: every toolbox panel shares
+// one width (not each toolbox owning its own), and a user resize persists
+// across sessions via DDS_SETTINGS (key: workbench_panel_width). Decided
+// 2026-07-14 (RFC §5 Decisions) after step 3 (Types Toolbox) shipped with a
+// second, independently-fixed panel width, prompting the "why are these
+// different" feedback. Lazily read from DDS_SETTINGS on first use — by the
+// time a toolbox is first shown, DDS_INIT's boot() has already awaited
+// DDS_SETTINGS.ready(), so the cache is populated.
+// ---------------------------------------------------------------------------
+
+DDS_WORKBENCH_SHELL._MIN_WIDTH = 280;
+DDS_WORKBENCH_SHELL._MAX_WIDTH = 700;
+DDS_WORKBENCH_SHELL._DEFAULT_WIDTH = 380;
+DDS_WORKBENCH_SHELL._panelWidth = null;
+
+DDS_WORKBENCH_SHELL._getPanelWidth = function() {
+  if (DDS_WORKBENCH_SHELL._panelWidth !== null) return DDS_WORKBENCH_SHELL._panelWidth;
+  var stored = window.DDS_SETTINGS ? DDS_SETTINGS.get('workbench_panel_width') : null;
+  var n = stored ? parseInt(stored, 10) : NaN;
+  DDS_WORKBENCH_SHELL._panelWidth = (n && n >= DDS_WORKBENCH_SHELL._MIN_WIDTH && n <= DDS_WORKBENCH_SHELL._MAX_WIDTH)
+    ? n : DDS_WORKBENCH_SHELL._DEFAULT_WIDTH;
+  return DDS_WORKBENCH_SHELL._panelWidth;
+};
+
+DDS_WORKBENCH_SHELL._setPanelWidth = function(px) {
+  px = Math.max(DDS_WORKBENCH_SHELL._MIN_WIDTH, Math.min(DDS_WORKBENCH_SHELL._MAX_WIDTH, Math.round(px)));
+  DDS_WORKBENCH_SHELL._panelWidth = px;
+  if (DDS_WORKBENCH_SHELL._openToolboxId) {
+    var toolbox = DDS_WORKBENCH_SHELL._toolboxes[DDS_WORKBENCH_SHELL._openToolboxId];
+    if (toolbox && toolbox.panelId) {
+      var openPanel = document.getElementById(toolbox.panelId);
+      if (openPanel) openPanel.style.width = px + 'px';
+    }
+  }
+  if (window.DDS_SETTINGS) DDS_SETTINGS.set('workbench_panel_width', String(px));
+};
+
+// Wires a drag handle to resize its panel — the shared width, applied
+// immediately during the drag and persisted (DDS_SETTINGS) on mouseup. Call
+// once per panel, from the toolbox module's bindEvents (mirrors the old
+// per-panel DDS_AI_UI._initResize, now generalized here so every toolbox
+// panel resizes the same shared width instead of its own).
+DDS_WORKBENCH_SHELL.initResizeHandle = function(handleId, panelId) {
+  var handle = document.getElementById(handleId);
+  var panel  = document.getElementById(panelId);
+  if (!handle || !panel) return;
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    if (!panel.classList.contains('open')) return;
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    panel.style.transition = 'none';
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var newW = Math.max(DDS_WORKBENCH_SHELL._MIN_WIDTH, Math.min(DDS_WORKBENCH_SHELL._MAX_WIDTH, startW + (e.clientX - startX)));
+    panel.style.width = newW + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    DDS_WORKBENCH_SHELL._setPanelWidth(panel.offsetWidth);
+    panel.style.transition = '';
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (window.DDS_CY && typeof DDS_CY.resize === 'function') DDS_CY.resize();
+  });
+};
+
 // Register a toolbox — creates its rail icon (if #dds-rail exists in the
 // current framework's DOM) and wires the click-to-toggle behavior.
-// descriptor: { id, icon, title, onShow, onHide }
+// descriptor: { id, icon, title, panelId?, onShow, onHide }
+// panelId, when given, is the toolbox's panel element id — the shell then
+// owns that panel's width/.open class directly (shared width, see above);
+// onShow/onHide stay responsible for everything else (height, canvas
+// resize notification, legacy-button mirroring, content refresh).
 DDS_WORKBENCH_SHELL.registerToolbox = function(descriptor) {
   var id = descriptor.id;
   DDS_WORKBENCH_SHELL._toolboxes[id] = {
     id: id,
     icon: descriptor.icon,
     title: descriptor.title,
+    panelId: descriptor.panelId || null,
     onShow: descriptor.onShow || function() {},
     onHide: descriptor.onHide || function() {},
     views: []
@@ -48,8 +127,12 @@ DDS_WORKBENCH_SHELL.registerToolbox = function(descriptor) {
   var rail = document.getElementById('dds-rail');
   if (!rail) return; // no rail in this framework's DOM yet — no-op
 
+  // The rail icon is always visible, regardless of project state (2026-07-14
+  // feedback) — a toolbox's own content is responsible for guarding against
+  // "no project open" if it needs to (see DDS_AI_UI.send()). setToolboxEnabled
+  // remains available for a future toolbox that genuinely needs to gate itself.
   var btn = document.createElement('button');
-  btn.className = 'dds-rail-icon dds-hidden';
+  btn.className = 'dds-rail-icon';
   btn.id = 'dds-rail-' + id;
   btn.title = descriptor.title || '';
   btn.innerHTML = descriptor.icon || '';
@@ -99,6 +182,10 @@ DDS_WORKBENCH_SHELL._showToolbox = function(id) {
     DDS_WORKBENCH_SHELL._hideToolbox(DDS_WORKBENCH_SHELL._openToolboxId);
   }
   DDS_WORKBENCH_SHELL._openToolboxId = id;
+  if (toolbox.panelId) {
+    var panel = document.getElementById(toolbox.panelId);
+    if (panel) { panel.classList.add('open'); panel.style.width = DDS_WORKBENCH_SHELL._getPanelWidth() + 'px'; }
+  }
   toolbox.onShow();
   var btn = document.getElementById('dds-rail-' + id);
   if (btn) btn.classList.add('active');
@@ -108,6 +195,10 @@ DDS_WORKBENCH_SHELL._hideToolbox = function(id) {
   var toolbox = DDS_WORKBENCH_SHELL._toolboxes[id];
   if (!toolbox) return;
   if (DDS_WORKBENCH_SHELL._openToolboxId === id) DDS_WORKBENCH_SHELL._openToolboxId = null;
+  if (toolbox.panelId) {
+    var panel = document.getElementById(toolbox.panelId);
+    if (panel) { panel.classList.remove('open'); panel.style.width = '0'; }
+  }
   toolbox.onHide();
   var btn = document.getElementById('dds-rail-' + id);
   if (btn) btn.classList.remove('active');

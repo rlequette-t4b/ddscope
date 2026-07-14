@@ -306,6 +306,16 @@ DDS_UI_NAV.handleSave = async function() {
 
 DDS_UI_NAV.closeModal = function() { ddsHide('dds-modal-project-overlay'); };
 
+// ---- Close project ----
+// First documented UI trigger for DDS.closeProject() (previously
+// undocumented, see TODO/T-046 and docs/DDScope_Plugin_UI_RFC.md
+// §4 Header Layout — File menu).
+DDS_UI_NAV.closeProject = function() {
+  if (!DDS_STORE.getProject()) return;
+  if (DDS_STORE.isDirty() && !window.confirm('Unsaved changes will be lost. Continue?')) return;
+  DDS.closeProject();
+};
+
 // ---- Edit project (name + description) ----
 
 DDS_UI_NAV.openEditProject = function() {
@@ -340,6 +350,15 @@ DDS_UI_NAV.bindEvents = function() {
     tab.addEventListener('click', function() { DDS.showView(tab.dataset.view); });
   });
 
+  // New/Open/Save/Save As no longer have dedicated nav buttons in the
+  // new fragment — their first documented home is the File menu (RFC
+  // §4 Header Layout), wired via DDS_UI_COMMANDS in src/ui/DDS_UI_MENU.js.
+  // CommWise (framework-1) legacy compat: fragments/app-shell.html is
+  // scoped to framework-2/3 only (see assembly.json), so CommWise's live
+  // DOM may still have these old buttons with no File-menu equivalent yet
+  // — bind them directly so they keep working there until a CommWise
+  // legacy adapter is built (RFC §5 Decisions). No-op elsewhere since the
+  // ids no longer exist there.
   var bind = function(id, fn) { var el = ddsEl(id); if (el) el.addEventListener('click', fn); };
   bind('dds-btn-new',     function() { DDS_UI_NAV.newProject(); });
   bind('dds-btn-load',    function() { DDS_UI_NAV.loadProject(); });
@@ -381,8 +400,15 @@ DDS_UI_NAV.bindEvents = function() {
     if (e.target === this) DDS_UI_NAV.closeModal();
   });
 
-  // Edit project modal
-  bind('dds-btn-edit-project',           function() { DDS_UI_NAV.openEditProject(); });
+  // Edit project modal — identity row: double-click the project name to
+  // rename (RFC §4 Header Layout, decided 2026-07-14). Reuses the existing
+  // name+description modal rather than a new contentEditable widget. Works
+  // against #dds-nav-project-label, unchanged id in both old and new
+  // fragments. CommWise legacy compat: also keep the old pencil button
+  // working if present (removed from the new fragment).
+  var projectLabel = ddsEl('dds-nav-project-label');
+  if (projectLabel) projectLabel.addEventListener('dblclick', function() { DDS_UI_NAV.openEditProject(); });
+  bind('dds-btn-edit-project', function() { DDS_UI_NAV.openEditProject(); });
   bind('dds-modal-edit-project-save',    function() { DDS_UI_NAV.handleEditProjectSave(); });
   bind('dds-modal-edit-project-cancel',  function() { DDS_UI_NAV.closeEditProject(); });
   bind('dds-modal-edit-project-close',   function() { DDS_UI_NAV.closeEditProject(); });
@@ -397,15 +423,22 @@ DDS_UI_NAV.bindEvents = function() {
     if (e.target === this) DDS_UI_NAV.closeEditProject();
   });
 
-  // Ctrl+S / Cmd+S
-  document.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); DDS_UI_NAV.save(); }
-  });
+  // Ctrl+S / Cmd+S now bound centrally via DDS_UI_COMMANDS.bindKeyboard()
+  // (see src/ui/DDS_UI_MENU.js) — file.save keybinding.
 
   DDS_UI_NAV.bindUndoRedo();
 };
 
 // ---- Undo / Redo ----
+
+// Shared by both button bindings below and DDS_UI_MENU's edit.undo/edit.redo
+// commands (RFC UI Command Registry) — one action, two trigger surfaces.
+DDS_UI_NAV.undo = function() {
+  if (DDS_TRANSACTIONS.undo()) DDS_UI_NAV._afterUndoRedo();
+};
+DDS_UI_NAV.redo = function() {
+  if (DDS_TRANSACTIONS.redo()) DDS_UI_NAV._afterUndoRedo();
+};
 
 DDS_UI_NAV.bindUndoRedo = function() {
   var btnUndo = document.getElementById('dds-btn-undo');
@@ -415,9 +448,10 @@ DDS_UI_NAV.bindUndoRedo = function() {
   function _refresh() {
     btnUndo.disabled = !DDS_TRANSACTIONS.canUndo();
     btnRedo.disabled = !DDS_TRANSACTIONS.canRedo();
+    if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
   }
 
-  async function _afterUndoRedo() {
+  DDS_UI_NAV._afterUndoRedo = async function() {
     // Close side panel — its fields are stale after undo/redo
     if (window.DDS_PANEL) DDS_PANEL.close();
     var view = DDS && DDS.state && DDS.state.currentView;
@@ -434,16 +468,16 @@ DDS_UI_NAV.bindUndoRedo = function() {
     }
     DDS_STORE.markDirty();
     _refresh();
-  }
+  };
 
   btnUndo.addEventListener('click', function(e) {
     if (!e.isTrusted) return;
-    if (DDS_TRANSACTIONS.undo()) _afterUndoRedo();
+    DDS_UI_NAV.undo();
   });
 
   btnRedo.addEventListener('click', function(e) {
     if (!e.isTrusted) return;
-    if (DDS_TRANSACTIONS.redo()) _afterUndoRedo();
+    DDS_UI_NAV.redo();
   });
 
   // Keep button state in sync with transaction stack

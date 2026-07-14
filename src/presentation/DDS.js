@@ -27,6 +27,10 @@ var DDS = {
     document.querySelectorAll('.dds-nav-tab').forEach(function(t) { t.classList.remove('active'); });
     var activeTab = document.getElementById('dds-tab-' + viewName);
     if (activeTab) activeTab.classList.add('active');
+    // Re-gray Toolbar-row / menu commands that only apply to the Map view
+    // (Layout, Direction, Legend, Notes) — RFC §4 Header Layout, "grayed
+    // out, not hidden".
+    if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
   },
 
   openProject: function() {
@@ -38,10 +42,9 @@ var DDS = {
 
     // CommWise (framework-1) legacy compat: no shell there yet (see
     // docs/DDScope_Plugin_UI_RFC.md §5 Decisions) — fall back to the old
-    // #dds-btn-ai dds-hidden gating directly.
-    if (typeof DDS_WORKBENCH_SHELL !== 'undefined') {
-      DDS_WORKBENCH_SHELL.setToolboxEnabled('ai', true);
-    } else {
+    // #dds-btn-ai dds-hidden gating directly. Local/Tauri: the rail icon is
+    // always visible (2026-07-14 feedback), nothing to gate here.
+    if (typeof DDS_WORKBENCH_SHELL === 'undefined') {
       var aiBtn = document.getElementById('dds-btn-ai');
       if (aiBtn) aiBtn.classList.remove('dds-hidden');
     }
@@ -50,11 +53,28 @@ var DDS = {
       var tab = document.getElementById('dds-tab-' + t);
       if (tab) tab.classList.remove('dds-hidden');
     });
+    // Temporary view-tab strip (RFC §4 Header Layout, migrates to the Page
+    // Strip at step 5) — hidden while empty (no project) so it doesn't show
+    // as a blank bar (2026-07-14 feedback).
+    var tabsRow = document.getElementById('dds-view-tabs-row');
+    if (tabsRow) tabsRow.classList.remove('dds-hidden');
+    // dds-btn-save-as removed from the new fragment (RFC §4 Header Layout)
+    // — Save As now lives in the File menu, gated by file.saveAs's
+    // isEnabled (see DDS_UI_MENU.js). CommWise legacy compat: if the old
+    // button is still present there (fragment not yet updated), keep
+    // un-hiding it as before.
     var saveAsBtn = document.getElementById('dds-btn-save-as');
     if (saveAsBtn) saveAsBtn.classList.remove('dds-hidden');
 
     DDS.showView('map');
     if (window.DDS_NOTES_UI) DDS_NOTES_UI.show();
+    // Types Toolbox palette is data-dependent (node/product types,
+    // swim-lanes) and only re-rendered on toolbox open (DDS_TYPES_UI._applyOpen)
+    // — if the toolbox is already open when a project is opened (e.g. it was
+    // showing its empty state), it must be told to refresh explicitly, same
+    // as DDS_NOTES_UI.show() above (2026-07-14 feedback, T-052 step 3).
+    if (window.DDS_TYPES_UI) DDS_TYPES_UI.refresh();
+    if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
     DDS_MAP_UI.openProject().then(function() {
       // Reset dirty after all inserts triggered during project open (e.g. Map 1 safety insert)
       DDS_STORE.resetDirty();
@@ -67,9 +87,7 @@ var DDS = {
 
     var center = document.getElementById('dds-nav-project-center');
     if (center) center.classList.add('dds-hidden');
-    if (typeof DDS_WORKBENCH_SHELL !== 'undefined') {
-      DDS_WORKBENCH_SHELL.setToolboxEnabled('ai', false);
-    } else {
+    if (typeof DDS_WORKBENCH_SHELL === 'undefined') {
       var aiBtn = document.getElementById('dds-btn-ai');
       if (aiBtn) aiBtn.classList.add('dds-hidden');
     }
@@ -77,12 +95,16 @@ var DDS = {
     ['map','nodes','flows','products','boms','demand','annotations','configuration'].forEach(function(t) {
       var tab = document.getElementById('dds-tab-' + t); if (tab) tab.classList.add('dds-hidden');
     });
+    var tabsRowC = document.getElementById('dds-view-tabs-row');
+    if (tabsRowC) tabsRowC.classList.add('dds-hidden');
     var saveAsBtnC = document.getElementById('dds-btn-save-as');
     if (saveAsBtnC) saveAsBtnC.classList.add('dds-hidden');
 
     if (typeof DDS_AI_UI !== 'undefined') DDS_AI_UI.close();
+    if (window.DDS_TYPES_UI) DDS_TYPES_UI.close();
     if (window.DDS_NOTES_UI) DDS_NOTES_UI.hide();
     DDS.showView('map');
+    if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
   }
 };
 
