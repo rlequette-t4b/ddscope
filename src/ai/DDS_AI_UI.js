@@ -136,34 +136,75 @@ DDS_AI_UI._notifyCytoscape = function() {
   }, 240);
 };
 
-DDS_AI_UI.open = function() {
+// _applyOpen/_applyClose are the AI panel's actual show/hide behavior
+// (width, canvas resize) — registered with DDS_WORKBENCH_SHELL as the
+// 'ai' toolbox's onShow/onHide (see _registerWorkbench below). The
+// public open/close/toggle route through the shell so its rail-icon
+// state and single-panel-open-at-a-time rule stay authoritative — see
+// docs/DDScope_Plugin_UI_RFC.md §4 Migration Path, step 1.
+DDS_AI_UI._applyOpen = function() {
   if (DDS_AI_UI._open) return;
   DDS_AI_UI._open = true;
   var panel = document.getElementById('dds-ai-panel');
-  var btn   = document.getElementById('dds-btn-ai');
   if (panel) {
     panel.classList.add('open');
     panel.style.width = DDS_AI_UI._lastWidth + 'px';
     var top = panel.getBoundingClientRect().top;
     panel.style.height = (window.innerHeight - top) + 'px';
   }
-  if (btn) btn.classList.add('active');
+  // CommWise (framework-1) legacy compat: the shell/rail isn't pushed there
+  // (see docs/DDScope_Plugin_UI_RFC.md §5 Decisions), so the old map-toolbar
+  // button may still be the only trigger there — mirror its .active state
+  // if present.
+  var legacyBtn = document.getElementById('dds-btn-ai');
+  if (legacyBtn) legacyBtn.classList.add('active');
   DDS_AI_UI._notifyCytoscape();
 };
 
-DDS_AI_UI.close = function() {
+DDS_AI_UI._applyClose = function() {
   if (!DDS_AI_UI._open) return;
   DDS_AI_UI._open = false;
   var panel = document.getElementById('dds-ai-panel');
-  var btn   = document.getElementById('dds-btn-ai');
   if (panel) { panel.classList.remove('open'); panel.style.width = '0'; }
-  if (btn)   btn.classList.remove('active');
+  var legacyBtn = document.getElementById('dds-btn-ai');
+  if (legacyBtn) legacyBtn.classList.remove('active');
   DDS_AI_UI._notifyCytoscape();
 };
 
+// Registers the AI Assistant as a workbench toolbox — pilot module for
+// the IWorkbenchShell migration (RFC step 1). No-ops if the shell isn't
+// loaded (e.g. a framework not yet wired to it).
+DDS_AI_UI._registerWorkbench = function() {
+  if (typeof DDS_WORKBENCH_SHELL === 'undefined') return;
+  DDS_WORKBENCH_SHELL.registerToolbox({
+    id: 'ai',
+    icon: '&#129302;',
+    title: 'AI Assistant',
+    onShow: DDS_AI_UI._applyOpen,
+    onHide: DDS_AI_UI._applyClose
+  });
+  DDS_WORKBENCH_SHELL.registerView({ id: 'ai-main', toolboxId: 'ai', title: 'Conversation', order: 0 }, function() {
+    // #dds-ai-panel is already fully built by fragments/app-shell.html —
+    // no mounting needed for v1 (see RFC Migration Path step 1 note).
+  });
+};
+
+DDS_AI_UI.open = function() {
+  if (typeof DDS_WORKBENCH_SHELL === 'undefined') { DDS_AI_UI._applyOpen(); return; }
+  DDS_WORKBENCH_SHELL.showView('ai-main');
+};
+
+DDS_AI_UI.close = function() {
+  if (typeof DDS_WORKBENCH_SHELL === 'undefined') { DDS_AI_UI._applyClose(); return; }
+  DDS_WORKBENCH_SHELL.hideView('ai-main');
+};
+
 DDS_AI_UI.toggle = function() {
-  if (DDS_AI_UI._open) DDS_AI_UI.close();
-  else DDS_AI_UI.open();
+  if (typeof DDS_WORKBENCH_SHELL === 'undefined') {
+    if (DDS_AI_UI._open) DDS_AI_UI._applyClose(); else DDS_AI_UI._applyOpen();
+    return;
+  }
+  DDS_WORKBENCH_SHELL.toggleToolbox('ai');
 };
 
 // ===== Drag-resize =====
@@ -462,8 +503,15 @@ DDS_AI_UI.reset = function() {
 };
 
 DDS_AI_UI.bindEvents = function() {
-  var aiBtn = document.getElementById('dds-btn-ai');
-  if (aiBtn) aiBtn.addEventListener('click', function() { DDS_AI_UI.toggle(); });
+  DDS_AI_UI._registerWorkbench();
+
+  // CommWise (framework-1) legacy compat: fragments/app-shell.html is scoped
+  // to framework-2/3 only (see assembly.json), so CommWise's live DOM may
+  // still have the old map-toolbar button with no #dds-rail/#dds-workbench
+  // shell backing it — bind it directly so the AI panel keeps working there
+  // until a CommWise legacy adapter is built (RFC §5 Decisions).
+  var legacyAiBtn = document.getElementById('dds-btn-ai');
+  if (legacyAiBtn) legacyAiBtn.addEventListener('click', function() { DDS_AI_UI.toggle(); });
 
   var headerToggle = document.getElementById('dds-ai-header-toggle');
   if (headerToggle) headerToggle.addEventListener('click', function() { DDS_AI_UI.toggle(); });

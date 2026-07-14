@@ -32,8 +32,13 @@
     </div>
   </nav>
 
-  <!-- Main workspace: AI panel (push) + content -->
+  <!-- Main workspace: rail + AI panel (push) + content -->
   <div class="dds-workspace" id="dds-workspace">
+
+    <!-- Workbench rail (fixed, always visible) — icons injected by
+         DDS_WORKBENCH_SHELL.registerToolbox(), see src/core/DDS_WORKBENCH_SHELL.js
+         and docs/DDScope_Plugin_UI_RFC.md §2 Rail and Panel. -->
+    <div class="dds-rail" id="dds-rail"></div>
 
     <!-- AI Assistant panel (in-flow, pushes canvas) -->
     <div class="dds-ai-panel" id="dds-ai-panel">
@@ -153,7 +158,6 @@
 
         <!-- Map toolbar -->
         <div class="dds-map-toolbar" id="dds-map-toolbar">
-          <button class="dds-map-ai-btn dds-hidden" id="dds-btn-ai">&#129302; AI</button>
           <select class="dds-map-selector" id="dds-map-selector" title="Active map"></select>
           <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-rename" title="Rename map">&#9998;</button>
           <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-new" title="New map">+ Map</button>

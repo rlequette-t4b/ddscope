@@ -36,8 +36,15 @@ var DDS = {
     var center = document.getElementById('dds-nav-project-center');
     if (center) center.classList.remove('dds-hidden');
 
-    var aiBtn = document.getElementById('dds-btn-ai');
-    if (aiBtn) aiBtn.classList.remove('dds-hidden');
+    // CommWise (framework-1) legacy compat: no shell there yet (see
+    // docs/DDScope_Plugin_UI_RFC.md §5 Decisions) — fall back to the old
+    // #dds-btn-ai dds-hidden gating directly.
+    if (typeof DDS_WORKBENCH_SHELL !== 'undefined') {
+      DDS_WORKBENCH_SHELL.setToolboxEnabled('ai', true);
+    } else {
+      var aiBtn = document.getElementById('dds-btn-ai');
+      if (aiBtn) aiBtn.classList.remove('dds-hidden');
+    }
 
     ['map','nodes','flows','products','boms','demand','annotations','configuration'].forEach(function(t) {
       var tab = document.getElementById('dds-tab-' + t);
@@ -60,8 +67,12 @@ var DDS = {
 
     var center = document.getElementById('dds-nav-project-center');
     if (center) center.classList.add('dds-hidden');
-    var aiBtn = document.getElementById('dds-btn-ai');
-    if (aiBtn) aiBtn.classList.add('dds-hidden');
+    if (typeof DDS_WORKBENCH_SHELL !== 'undefined') {
+      DDS_WORKBENCH_SHELL.setToolboxEnabled('ai', false);
+    } else {
+      var aiBtn = document.getElementById('dds-btn-ai');
+      if (aiBtn) aiBtn.classList.add('dds-hidden');
+    }
 
     ['map','nodes','flows','products','boms','demand','annotations','configuration'].forEach(function(t) {
       var tab = document.getElementById('dds-tab-' + t); if (tab) tab.classList.add('dds-hidden');

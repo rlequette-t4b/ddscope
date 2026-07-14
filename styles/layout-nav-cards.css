@@ -175,7 +175,7 @@
   overflow: hidden !important;
 }
 
-/* ===== Workspace: AI panel + main (horizontal flex) ===== */
+/* ===== Workspace: rail + AI panel + main (horizontal flex) ===== */
 .dds-workspace {
   display: flex !important;
   flex-direction: row !important;
@@ -184,6 +184,42 @@
   min-height: 0 !important;
   overflow: hidden !important;
 }
+
+/* ===== Workbench rail — fixed, always visible (RFC §2 Rail and Panel) ===== */
+.dds-rail {
+  width: 48px !important;
+  flex-shrink: 0 !important;
+  background: var(--dds-surface) !important;
+  border-right: 1px solid var(--dds-border) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 8px 0 !important;
+  overflow-y: auto !important;
+}
+.dds-rail-icon {
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--dds-radius) !important;
+  border: 1px solid transparent !important;
+  background: none !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  color: var(--dds-text-muted) !important;
+  transition: background var(--dds-transition), color var(--dds-transition), border-color var(--dds-transition) !important;
+}
+.dds-rail-icon:hover { background: var(--dds-bg) !important; color: var(--dds-text) !important; }
+.dds-rail-icon.active {
+  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
+  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+  border-color: transparent !important;
+}
+.dds-rail-icon.dds-hidden { display: none !important; }
 
 /* ===== Main content area ===== */
 .dds-main {

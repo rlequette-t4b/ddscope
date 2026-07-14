@@ -8,6 +8,7 @@
     { "path": "core/DDS_ICONS.js", "order": 110 },
     { "path": "core/DDS_STORE.js", "order": 150 },
     { "path": "core/DDS_FILE_STORAGE_TAURI.js", "order": 155, "frameworks": ["framework-3"] },
+    { "path": "core/DDS_WORKBENCH_SHELL.js", "order": 160, "frameworks": ["framework-2", "framework-3"] },
     { "path": "presentation/DDS.js", "order": 400 },
     { "path": "domain/DDS_PROJECTS.js", "order": 500 },
     { "path": "core/DDS_JSON.js", "order": 600 },
@@ -56,7 +57,7 @@
     "page": "dds-main",
     "items": [
       { "path": "fragments/modal-debug-settings.html", "order": 110 },
-      { "path": "fragments/app-shell.html", "order": 200 },
+      { "path": "fragments/app-shell.html", "order": 200, "frameworks": ["framework-2", "framework-3"] },
       { "path": "fragments/modal-product.html", "order": 400 },
       { "path": "fragments/modal-bom.html", "order": 500 },
       { "path": "fragments/modal-configuration-crud.html", "order": 800 }
