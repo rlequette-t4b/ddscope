@@ -18,6 +18,18 @@
       console.warn('[DDS_INIT] DDS_SETTINGS.ready() failed — continuing with defaults:', e);
     }
 
+    // Wait for the i18n catalog to load (locale resolved from DDS_SETTINGS,
+    // see docs/SCFlow_I18N.md). No consumer reads DDS_I18N.t() yet — the
+    // string-extraction chantier (TODO T-058) wires it up — but resolving
+    // the locale this early keeps the boot sequence consistent for when it does.
+    if (window.DDS_I18N) {
+      try {
+        await DDS_I18N.ready();
+      } catch(e) {
+        console.warn('[DDS_INIT] DDS_I18N.ready() failed — continuing with defaults:', e);
+      }
+    }
+
     // Apply persisted log level from settings
     if (window.DDS_TOOLS && window.DDS_SETTINGS) {
       DDS_TOOLS.log.setLevel(DDS_SETTINGS.getLogLevel());

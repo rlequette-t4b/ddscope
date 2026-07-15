@@ -24,6 +24,8 @@ const coreModules = [
   'DDS_CMD',
   'DDS_ACTIONS',
   'DDS_MODEL',
+  'DDS_I18N_CATALOG_EN',
+  'DDS_I18N',
 ];
 
 // DDS_TX.js defines its object as `TX` / `window.TX` internally (see the

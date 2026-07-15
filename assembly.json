@@ -4,6 +4,8 @@
   "modules": [
     { "path": "core/DDS_TOOLS.js", "order": 40 },
     { "path": "core/DDS_SETTINGS.js", "order": 50 },
+    { "path": "core/DDS_I18N_CATALOG_EN.js", "order": 52 },
+    { "path": "core/DDS_I18N.js", "order": 54 },
     { "path": "core/DDS_COLORS.js", "order": 105 },
     { "path": "core/DDS_ICONS.js", "order": 110 },
     { "path": "core/DDS_STORE.js", "order": 150 },
