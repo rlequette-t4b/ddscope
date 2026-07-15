@@ -32,7 +32,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 .dds-app {
-  font-family: 'Figtree', 'Inter', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: var(--dds-text-base);
   color: var(--dds-text);
   background: var(--dds-bg);
@@ -41,7 +41,24 @@
   flex-direction: column;
 }
 
-.dds-app button:not(.dds-btn):not(.dds-nav-tab) {
+/* .dds-menu-label/.dds-menu-item/.dds-rail-icon/.dds-toolbar-icon-btn
+   excluded directly (2026-07-14, T-055 follow-up): their own !important
+   rules in layout-nav-cards.css lose to this reset on specificity
+   (0,3,1) vs their (0,1,0)/(0,2,0) even though both sides use
+   !important — specificity is compared before source order for
+   declarations of equal importance. Exclusion here sidesteps the fight
+   entirely, same mechanism as .dds-btn/.dds-nav-tab.
+
+   .dds-page-tab/.dds-page-strip-icon-btn/.dds-page-menu-insert/
+   .dds-page-menu-row-action excluded the same way (2026-07-14, T-054
+   Page Strip Styling follow-up — flagged unverified in J-046, confirmed
+   and fixed here): .dds-page-tab had no !important at all on its own
+   background/padding/color/font-size in page-strip.css, so the reset
+   was winning outright (not even a specificity fight) — the active-tab
+   pill highlight and tab padding were being silently discarded. The
+   other three had the same !important-vs-specificity issue as the
+   Menu Bar/Rail classes above. */
+.dds-app button:not(.dds-btn):not(.dds-nav-tab):not(.dds-menu-label):not(.dds-menu-item):not(.dds-rail-icon):not(.dds-toolbar-icon-btn):not(.dds-page-tab):not(.dds-page-strip-icon-btn):not(.dds-page-menu-insert):not(.dds-page-menu-row-action) {
   font-family: inherit !important;
   cursor: pointer !important;
   border: none !important;

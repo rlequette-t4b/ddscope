@@ -16,8 +16,26 @@ var DDS = {
   get currentProject() { return DDS_STORE.getProject() ? DDS_STORE.getProject().project : null; },
 
   showView: function(viewName) {
-    // Close side panel when leaving the map view
-    if (viewName !== 'map' && typeof DDS_PANEL !== 'undefined' && DDS_PANEL.mode) {
+    // framework-2/3: singleton pages (Nodes/Flows/Products/BOMs/Demand/
+    // Configuration) are registered on the Page Strip (T-052 step 5, see
+    // DDS._registerPages below) — route through the shell when the page
+    // exists there. Map pages are keyed by numeric map id, never the
+    // string 'map', so a showView('map') call always falls through to
+    // the legacy branch below (harmless — DDS_MAP_UI owns map page
+    // activation via switchMap/_activateMap, see src/ui/DDS_MAP_UI.js).
+    if (typeof DDS_WORKBENCH_SHELL !== 'undefined' && DDS_WORKBENCH_SHELL._pages[viewName]) {
+      DDS_WORKBENCH_SHELL.showPage(viewName);
+      return;
+    }
+
+    // Legacy fallback — framework-1 (CommWise, no DDS_WORKBENCH_SHELL) and
+    // any viewName not (yet) registered as a page.
+    // Clear the side panel's content when leaving a view it applies to.
+    // Nodes/Flows also use the side panel now (RFC step 4, T-052) — only
+    // clear when navigating to a view it doesn't cover (Products, BOMs,
+    // Demand, Configuration keep their own editing surface for v1).
+    var _sidePanelViews = { map: true, nodes: true, flows: true };
+    if (!_sidePanelViews[viewName] && typeof DDS_PANEL !== 'undefined' && DDS_PANEL.mode) {
       DDS_PANEL.close();
     }
     document.querySelectorAll('.dds-view').forEach(function(v) { v.classList.remove('active'); });
@@ -31,6 +49,52 @@ var DDS = {
     // (Layout, Direction, Legend, Notes) — RFC §4 Header Layout, "grayed
     // out, not hidden".
     if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
+  },
+
+  // Register the six singleton Page Strip pages (RFC §4 Migration Path
+  // step 5) — called once from DDS_INIT.boot(), mirrors the
+  // _registerWorkbench() self-registration pattern used by toolbox
+  // modules (DDS_AI_UI, DDS_TYPES_UI). Map pages are NOT registered here
+  // — they are multi-instance and owned by DDS_MAP_UI (registered per
+  // map in DDS_MAP_UI.openProject/createMap/duplicateMap). No-ops on
+  // framework-1 (CommWise, no DDS_WORKBENCH_SHELL) — its legacy nav-tab
+  // DOM keeps working through the showView fallback above.
+  _registerPages: function() {
+    if (typeof DDS_WORKBENCH_SHELL === 'undefined') return;
+
+    // renderFn: re-renders the page's table/content on every show —
+    // functional replacement for the old "click #dds-tab-X to re-render"
+    // listeners (still present, guarded, in each *_UI.js for CommWise's
+    // legacy nav — see e.g. DDS_PRODUCTS_UI.bindEvents). Same 50ms
+    // setTimeout as those listeners used, kept for consistency (lets any
+    // DOM/layout change from the page switch itself settle first).
+    function mkOnShow(viewName, usesSidePanel, renderFn) {
+      return function() {
+        if (!usesSidePanel && typeof DDS_PANEL !== 'undefined' && DDS_PANEL.mode) DDS_PANEL.close();
+        DDS.state.currentView = viewName;
+        if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
+        if (typeof renderFn === 'function') setTimeout(renderFn, 50);
+      };
+    }
+
+    var singletons = [
+      { id: 'nodes',         title: 'Nodes',         usesSidePanel: true,  renderFn: function() { if (window.DDS_NODES_UI) DDS_NODES_UI.renderTable(); } },
+      { id: 'flows',         title: 'Flows',         usesSidePanel: true,  renderFn: function() { if (window.DDS_FLOWS_UI) DDS_FLOWS_UI.renderTable(); } },
+      { id: 'products',      title: 'Products',      usesSidePanel: false, renderFn: function() { if (window.DDS_PRODUCTS_UI) DDS_PRODUCTS_UI.renderTable(); } },
+      { id: 'boms',          title: 'BOMs',          usesSidePanel: false, renderFn: function() { if (window.DDS_BOMS_UI) DDS_BOMS_UI.renderTable(); } },
+      { id: 'demand',        title: 'Demand',        usesSidePanel: false, renderFn: function() { if (window.DDS_DEMANDS_UI) DDS_DEMANDS_UI.renderTable(); } },
+      { id: 'configuration', title: 'Configuration', usesSidePanel: false, renderFn: function() { if (window.DDS_CONFIGURATION_UI) DDS_CONFIGURATION_UI.render(); } }
+    ];
+    singletons.forEach(function(s) {
+      DDS_WORKBENCH_SHELL.registerPage({
+        id: s.id,
+        title: s.title,
+        kind: 'singleton',
+        contentId: 'dds-view-' + s.id,
+        closable: false,
+        onShow: mkOnShow(s.id, s.usesSidePanel, s.renderFn)
+      });
+    });
   },
 
   openProject: function() {
@@ -58,6 +122,10 @@ var DDS = {
     // as a blank bar (2026-07-14 feedback).
     var tabsRow = document.getElementById('dds-view-tabs-row');
     if (tabsRow) tabsRow.classList.remove('dds-hidden');
+    // Page Strip (RFC step 5): always visible now (2026-07-14 feedback) —
+    // no longer hidden-while-empty like the temporary tabsRow above, so
+    // nothing to un-hide here; see fragments/app-shell.html (no dds-hidden
+    // in the markup) and closeProject below (no longer re-hides it either).
     // dds-btn-save-as removed from the new fragment (RFC §4 Header Layout)
     // — Save As now lives in the File menu, gated by file.saveAs's
     // isEnabled (see DDS_UI_MENU.js). CommWise legacy compat: if the old
@@ -97,6 +165,10 @@ var DDS = {
     });
     var tabsRowC = document.getElementById('dds-view-tabs-row');
     if (tabsRowC) tabsRowC.classList.add('dds-hidden');
+    // Page Strip (RFC step 5) — unregister every map page (singleton pages
+    // stay registered, they're permanent). The strip itself stays visible
+    // (2026-07-14 feedback, always shown) — no longer hidden on close.
+    if (typeof DDS_MAP_UI !== 'undefined' && typeof DDS_MAP_UI.closeAllMapPages === 'function') DDS_MAP_UI.closeAllMapPages();
     var saveAsBtnC = document.getElementById('dds-btn-save-as');
     if (saveAsBtnC) saveAsBtnC.classList.add('dds-hidden');
 

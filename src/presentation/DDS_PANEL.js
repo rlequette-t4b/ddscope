@@ -64,13 +64,16 @@ DDS_PANEL._showSection = function(key) {
 
 // Remove-button enablement no longer follows panel visibility (the panel
 // is reserved/visible independently of selection now) — it follows the
-// actual Cytoscape selection, plus the swim-lane special case (a lane is
-// not a Cytoscape element, so DDS_REMOVE/DDS_MAP_UI detect it via
-// DDS_PANEL.mode/entityId — see DDScope_Commands.md §3.3).
+// actual Cytoscape selection, plus two cases with no cy selection at all:
+// the swim-lane special case (a lane is never a Cytoscape element) and a
+// node/flow opened from the Nodes/Flows table (T-052 step 4 — "outside of
+// maps", no cy element either). DDS_REMOVE/DDS_MAP_UI detect both via
+// DDS_PANEL.mode/entityId — see DDScope_Commands.md §3.3.
 DDS_PANEL._refreshRemoveBtn = function() {
-  var hasLane = (DDS_PANEL.mode === 'lane' && DDS_PANEL.entityId != null);
+  var hasPanelEntity = (DDS_PANEL.mode === 'lane' || DDS_PANEL.mode === 'node' || DDS_PANEL.mode === 'flow')
+    && DDS_PANEL.entityId != null;
   var sel = window.DDS_CY ? DDS_CY.elements(':selected').not('.dds-note-ghost').not('.dds-annotation-ghost') : null;
-  DDS_PANEL._setRemoveBtn(hasLane || !!(sel && sel.length));
+  DDS_PANEL._setRemoveBtn(hasPanelEntity || !!(sel && sel.length));
 };
 
 // Content swap only — never touches width/presence. key === 'empty'
@@ -337,12 +340,23 @@ DDS_PANEL.bindTagInput = function(inputId, tags, wrapId, onUpdate) {
 // ---- NODE context --------------------------------------------
 // Registered like a plugin editor would be (see registerContext above).
 
-DDS_PANEL.registerContext('node', { mount: function(cyNode) {
+DDS_PANEL.registerContext('node', { mount: function(data) {
+  var cyNode = data.cyNode || null;
+  var nodeId = data.id;
   DDS_PANEL.cyElement = cyNode;
-  var nodeId = cyNode.data('nodeId');
   DDS_PANEL.entityId = nodeId;
   var node = DDS_STORE.query('nodes', { id: nodeId })[0];
   if (!node) return;
+
+  // Map-scoped fields (below) only make sense when opened from an actual
+  // canvas selection (cyNode given) — there is a specific, currently
+  // rendered map they belong to. Opened from the Nodes table (cyNode
+  // null), editing happens entirely outside any map — there is no
+  // "active map" concept to fall back on (it would just be whichever map
+  // was last viewed, not a deliberate context), so these fields are
+  // hidden rather than disabled (T-052 step 4 feedback).
+  var _mapId = cyNode ? DDS_MAP.state.currentMapId : null;
+  var _mnRec = _mapId ? DDS_STORE.query('map_nodes', { map_id: _mapId, node_id: nodeId })[0] : null;
 
   document.getElementById('dds-panel-title').textContent = 'Node';
 
@@ -399,11 +413,13 @@ DDS_PANEL.registerContext('node', { mount: function(cyNode) {
     });
   };
 
-  // Show note on map (map_nodes flag)
-  var snmEl = document.getElementById('dds-pn-show-note-on-map');
+  // Show note on map (map_nodes flag) — only meaningful with a cy element
+  var snmField = document.getElementById('dds-pn-show-note-on-map-field');
+  if (snmField) snmField.style.display = cyNode ? '' : 'none';
+  var snmEl = cyNode ? document.getElementById('dds-pn-show-note-on-map') : null;
   if (snmEl) {
-    var mapId   = DDS_MAP.state.currentMapId;
-    var mnRec   = mapId ? DDS_STORE.query('map_nodes', { map_id: mapId, node_id: nodeId })[0] : null;
+    var mapId   = _mapId;
+    var mnRec   = _mnRec;
     var hasNote = !!(node.notes && node.notes.trim());
     snmEl.disabled = !hasNote;
     snmEl.checked  = !!(mnRec && mnRec.note_visible && hasNote);
@@ -457,12 +473,14 @@ DDS_PANEL.registerContext('node', { mount: function(cyNode) {
     }
   }
 
-  // Label position override (map_nodes)
-  var lpEl = document.getElementById('dds-pn-label-pos');
+  // Label position override (map_nodes) — only meaningful with a cy element
+  var lpField = document.getElementById('dds-pn-label-pos-field');
+  if (lpField) lpField.style.display = cyNode ? '' : 'none';
+  var lpEl = cyNode ? document.getElementById('dds-pn-label-pos') : null;
   if (lpEl) {
-    var mapId2  = DDS_MAP.state.currentMapId;
-    var mnRec2  = mapId2 ? DDS_STORE.query('map_nodes', { map_id: mapId2, node_id: nodeId })[0] : null;
-    lpEl.value  = (mnRec2 && mnRec2.label_position) ? mnRec2.label_position : '';
+    var mapId2  = _mapId;
+    var mnRec2  = _mnRec;
+    lpEl.value    = (mnRec2 && mnRec2.label_position) ? mnRec2.label_position : '';
     lpEl.onchange = function() {
       var val = this.value || null;
       DDS_CMD.execute(TX.NODE_UPDATE, { id: nodeId, label_position: val }, DDS_MAP.state.currentMapId, function() {
@@ -519,17 +537,36 @@ DDS_PANEL.registerContext('node', { mount: function(cyNode) {
   });
 }});
 
-DDS_PANEL.openNode = function(cyNode) { DDS_PANEL.showContext('node', cyNode); };
+DDS_PANEL.openNode = function(cyNode) {
+  DDS_PANEL.showContext('node', { id: cyNode.data('nodeId'), cyNode: cyNode });
+};
+
+// Opened from a Nodes-table row (RFC step 4) — always the "outside of
+// maps" editor, deliberately not tied to whichever map happens to be
+// active (see the 'node' context above). Map-scoped fields hide
+// themselves accordingly.
+DDS_PANEL.openNodeById = function(nodeId) {
+  DDS_PANEL.showContext('node', { id: nodeId, cyNode: null });
+};
 
 // ---- FLOW context --------------------------------------------
 
-DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
+DDS_PANEL.registerContext('flow', { mount: function(data) {
+  var cyEdge = data.cyEdge || null;
+  var flowId = data.id;
   DDS_PANEL.cyElement = cyEdge;
-  var flowId = cyEdge.data('flowId');
   DDS_PANEL.entityId = flowId;
   var flow = DDS_STORE.query('flows', { id: flowId })[0];
   if (!flow) return;
   DDS_PANEL._flowRef = flow;
+
+  // Map-scoped fields (below) only make sense when opened from an actual
+  // canvas selection (cyEdge given) — see the matching comment on the
+  // 'node' context above for why the Flows-table entry point (cyEdge
+  // null) hides them instead of tying them to whichever map happens to
+  // be active.
+  var _mapId = cyEdge ? DDS_MAP.state.currentMapId : null;
+  var _mfRec = _mapId ? DDS_STORE.query('map_flows', { map_id: _mapId, flow_id: flowId })[0] : null;
 
   document.getElementById('dds-panel-title').textContent = 'Flow';
 
@@ -595,15 +632,17 @@ DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
     });
   };
 
-  // Show notes as edge label / annotation (map_flows flags)
-  var snlEl = document.getElementById('dds-pf-show-notes-label');
+  // Show notes as edge label / annotation (map_flows flags) — only
+  // meaningful with a cy element
+  var snlField = document.getElementById('dds-pf-show-notes-label-field');
+  if (snlField) snlField.style.display = cyEdge ? '' : 'none';
+  var snlEl = cyEdge ? document.getElementById('dds-pf-show-notes-label') : null;
   var nmRow = document.getElementById('dds-pf-notes-mode-row');
   var nmEl  = document.getElementById('dds-pf-notes-mode');
   if (snlEl) {
-    var mapFlowId2 = cyEdge.data('mapFlowId');
-    var mfRec2 = mapFlowId2 ? DDS_STORE.query('map_flows', { id: mapFlowId2 })[0] : null;
+    var mfRec2 = _mfRec;
     var _isAnnotation = !!(mfRec2 && mfRec2.notes_as_annotation);
-    snlEl.checked = !!(mfRec2 && mfRec2.show_notes_label);
+    snlEl.checked  = !!(mfRec2 && mfRec2.show_notes_label);
     // Sync mode select
     if (nmEl) nmEl.value = _isAnnotation ? 'annotation' : 'label';
     if (nmRow) nmRow.style.display = snlEl.checked ? '' : 'none';
@@ -620,7 +659,7 @@ DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
           var currentNotes = document.getElementById('dds-pf-notes').value;
           var isAnno = nmEl && nmEl.value === 'annotation';
           if (isAnno) {
-            DDS_MAP.renderFlowNoteGhost(flowId, cyEdge.data('mapFlowId') || mfRec2.id);
+            DDS_MAP.renderFlowNoteGhost(flowId, mfRec2.id);
           } else {
             if (cyEdge) cyEdge.data('label', currentNotes || '');
           }
@@ -632,7 +671,7 @@ DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
     if (nmEl) {
       nmEl.onchange = function() {
         var isAnno = this.value === 'annotation';
-        var mfId = cyEdge.data('mapFlowId');
+        var mfId = mfRec2 ? mfRec2.id : null;
         DDS_CMD.execute(TX.FLOW_UPDATE, { id: flowId, notes_as_annotation: isAnno }, DDS_MAP.state.currentMapId, function() {
           var currentNotes = document.getElementById('dds-pf-notes').value;
           if (isAnno) {
@@ -673,19 +712,19 @@ DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
     return DDS_STORE.query('map_swim_lanes', { map_id: mapId, swim_lane_id: srcLane }).length > 0;
   })();
 
-  // Hide layout controls when endpoints are not in the same lane
+  // Hide layout controls when endpoints are not in the same lane, or when
+  // there is no cy element (Flows-table entry point — see above)
   var loRow = document.getElementById('dds-pf-layout-offset-row');
-  if (loRow) loRow.style.display = _sameLane ? '' : 'none';
+  if (loRow) loRow.style.display = (cyEdge && _sameLane) ? '' : 'none';
 
   // Layout direction inverted (bidirectional flows only, same-lane only)
   var ldiRow = document.getElementById('dds-pf-layout-dir-inverted-row');
   var ldiEl  = document.getElementById('dds-pf-layout-dir-inverted');
   if (ldiRow && ldiEl) {
     var isBidi = flow.bidirectional === true;
-    ldiRow.style.display = (isBidi && _sameLane) ? '' : 'none';
+    ldiRow.style.display = (cyEdge && isBidi && _sameLane) ? '' : 'none';
     if (isBidi) {
-      var mapFlowId4 = cyEdge.data('mapFlowId');
-      var mfRec4 = mapFlowId4 ? DDS_STORE.query('map_flows', { id: mapFlowId4 })[0] : null;
+      var mfRec4 = _mfRec;
       ldiEl.checked = !!(mfRec4 && mfRec4.layout_direction_inverted === true);
       ldiEl.onchange = function() {
         var val = this.checked;
@@ -700,8 +739,7 @@ DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
   // Layout offset
   var loEl = document.getElementById('dds-pf-layout-offset');
   if (loEl) {
-    var mapFlowId3 = cyEdge.data('mapFlowId');
-    var mfRec3 = mapFlowId3 ? DDS_STORE.query('map_flows', { id: mapFlowId3 })[0] : null;
+    var mfRec3 = _mfRec;
     loEl.value = (mfRec3 && mfRec3.layout_offset != null) ? mfRec3.layout_offset : 1;
     loEl.onchange = function() {
       var val = Math.max(0, parseInt(this.value) || 0);
@@ -721,11 +759,13 @@ DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
   DDS_PANEL.renderTags('dds-pf-tags-wrap', 'dds-pf-tag-input', tags, _onFlowTagUpdate);
   DDS_PANEL.bindTagInput('dds-pf-tag-input', tags, 'dds-pf-tags-wrap', _onFlowTagUpdate);
 
-  // Curve style (map_flows attribute — presentation layer)
-  var csEl = document.getElementById('dds-pf-curve-style');
+  // Curve style (map_flows attribute — presentation layer) — only
+  // meaningful with a cy element
+  var csField = document.getElementById('dds-pf-curve-style-field');
+  if (csField) csField.style.display = cyEdge ? '' : 'none';
+  var csEl = cyEdge ? document.getElementById('dds-pf-curve-style') : null;
   if (csEl) {
-    var mapFlowId = cyEdge.data('mapFlowId');
-    var mfRec = mapFlowId ? DDS_STORE.query('map_flows', { id: mapFlowId })[0] : null;
+    var mfRec = _mfRec;
     csEl.value = (mfRec && mfRec.curve_style) ? mfRec.curve_style : 'taxi';
     csEl.onchange = function() {
       var newCs = (this.value === 'straight') ? 'straight' : 'taxi';
@@ -769,7 +809,16 @@ DDS_PANEL.registerContext('flow', { mount: function(cyEdge) {
   };
 }});
 
-DDS_PANEL.openFlow = function(cyEdge) { DDS_PANEL.showContext('flow', cyEdge); };
+DDS_PANEL.openFlow = function(cyEdge) {
+  DDS_PANEL.showContext('flow', { id: cyEdge.data('flowId'), cyEdge: cyEdge });
+};
+
+// Opened from a Flows-table row (RFC step 4) — always the "outside of
+// maps" editor, same reasoning as openNodeById above. Map-scoped fields
+// hide themselves accordingly.
+DDS_PANEL.openFlowById = function(flowId) {
+  DDS_PANEL.showContext('flow', { id: flowId, cyEdge: null });
+};
 
 DDS_PANEL._renderFlowProducts = function(flowId, flow, productById) {
   var list = document.getElementById('dds-pf-products-list'); if (!list) return;

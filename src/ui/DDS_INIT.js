@@ -41,10 +41,17 @@
       if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
     };
 
+    // Register the six singleton Page Strip pages (T-052 step 5) — no-op
+    // on framework-1 (CommWise, no DDS_WORKBENCH_SHELL). Must run before
+    // any DDS.showView() call below, and before DDS_MAP_UI.bindEvents()/
+    // openProject() register their own map pages onto the same strip.
+    if (typeof DDS._registerPages === 'function') DDS._registerPages();
+
     // Bind all UI event listeners
     DDS_UI_NAV.bindEvents();
     if (window.DDS_UI_MENU) DDS_UI_MENU.bindEvents();
     DDS_MAP_UI.bindEvents();
+    if (window.DDS_PAGE_MENU) DDS_PAGE_MENU.bindEvents();
     DDS_NODE_UI.bindEvents();
     DDS_LANE_UI.bindEvents();
     DDS_PANEL.bindEvents();

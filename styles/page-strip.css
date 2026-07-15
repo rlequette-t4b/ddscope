@@ -1,0 +1,215 @@
+/* Page Strip — full-width row at the very bottom of #dds-app (RFC §2 Page
+   Strip, §4 Header Layout / Migration Path step 5). Tabs are injected by
+   DDS_WORKBENCH_SHELL.registerPage() — see src/core/DDS_WORKBENCH_SHELL.js.
+   First lot (API + empty container): no call site registers a page yet,
+   so this file only needs to style the tab it will eventually render —
+   the "+" add-map button and the right-click context menu (Rename/
+   Duplicate/Delete) are added in the next lot, when DDS_MAP_UI and the
+   six singleton pages migrate onto this strip. */
+
+.dds-page-strip {
+  background: var(--dds-bg);
+  border-top: 1px solid var(--dds-border);
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.dds-page-strip-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px 6px;
+}
+
+.dds-page-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: var(--dds-radius);
+  font-size: var(--dds-text-sm);
+  font-weight: 500;
+  color: var(--dds-text-muted);
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dds-transition), color var(--dds-transition), border-color var(--dds-transition);
+}
+.dds-page-tab:hover {
+  background: var(--dds-border-hover);
+  color: var(--dds-text);
+}
+.dds-page-tab.active {
+  background: var(--b2w-brand-1-100, var(--dds-accent-light));
+  color: var(--b2w-brand-1-600, var(--dds-accent));
+  border-color: transparent;
+}
+.dds-page-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* Chevron — always in the DOM (added once per tab by
+   DDS_WORKBENCH_SHELL.registerPage), visible only on the active tab via
+   CSS — same state-driven-visibility pattern as the Rail's active
+   indicator bar, rather than adding/removing a node on every page
+   switch. Opens the shared Page menu (RFC §3 Page Strip Styling,
+   TODO/T-054), src/ui/DDS_PAGE_MENU.js. */
+.dds-page-tab-chevron {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dds-page-tab.active .dds-page-tab-chevron { display: inline-flex; }
+.dds-page-tab-chevron:hover { opacity: 0.7; }
+
+/* Hamburger + "+" icon buttons — both live at the start of the strip
+   (RFC §4 Page Strip - Pages: "draw.io reference screenshot shows both
+   at the start, not a trailing +"). Hamburger opens the same Page menu
+   as a tab's chevron or a right-click (src/ui/DDS_PAGE_MENU.js); "+"
+   stays its own always-visible shortcut for the single most common
+   action (New map, DDS_MAP_UI.createMap) — also reachable as "Insert
+   Page", the first row of that same menu. Map-specific for "+", not a
+   generic "add page" action — wired by DDS_MAP_UI.js, not
+   DDS_WORKBENCH_SHELL.js (out of IWorkbenchShell v1 scope, RFC §4
+   Migration Path). */
+/* All !important below: these are plain <button>s, not .dds-btn, so the
+   `.dds-app button:not(.dds-btn):not(.dds-nav-tab)` reset in
+   variables-reset.css (background/padding/color !important) would
+   otherwise silently block the hover state — same fix already applied
+   to .dds-rail-icon / .dds-toolbar-icon-btn. */
+.dds-page-strip-icon-btn {
+  flex-shrink: 0 !important;
+  width: 28px !important;
+  height: 28px !important;
+  margin: 4px 2px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--dds-radius) !important;
+  border: 1px solid transparent !important;
+  background: none !important;
+  color: var(--dds-text-muted) !important;
+  cursor: pointer !important;
+  transition: background var(--dds-transition), color var(--dds-transition) !important;
+}
+.dds-page-strip-icon-btn:hover {
+  background: var(--dds-border-hover) !important;
+  color: var(--dds-text) !important;
+}
+.dds-page-strip-icon-btn:first-child { margin-left: 6px !important; }
+
+/* Page menu (RFC §2 Page Strip / §3 Page Strip Styling, TODO/T-054) —
+   shared by the hamburger, a tab's chevron, and a right-click on any map
+   tab (src/ui/DDS_PAGE_MENU.js). Replaces the old .dds-page-context-menu
+   (Rename/Duplicate/Delete only, right-click-only, three plain buttons —
+   removed, this supersedes it). Positioned via JS (style.left/.bottom) —
+   opens upward (style.bottom, not style.top) because the Page Strip is
+   bottom-anchored, the reverse of the Menu bar's downward
+   .dds-menu-dropdown. */
+.dds-page-menu {
+  position: fixed;
+  min-width: 240px;
+  max-width: 320px;
+  background: var(--dds-bg);
+  border: 1px solid var(--dds-border);
+  border-radius: var(--dds-radius);
+  box-shadow: var(--dds-shadow-hover);
+  padding: 4px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+}
+/* !important below — same reset-fighting reason as .dds-page-strip-icon-btn above. */
+.dds-page-menu-insert {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  text-align: left !important;
+  background: none !important;
+  border: none !important;
+  padding: 8px 10px !important;
+  font-size: var(--dds-text-sm) !important;
+  font-weight: 500 !important;
+  color: var(--dds-text) !important;
+  cursor: pointer !important;
+  border-radius: var(--dds-radius) !important;
+}
+.dds-page-menu-insert:hover { background: var(--dds-border-hover) !important; }
+.dds-page-menu-sep { height: 1px; background: var(--dds-border); margin: 4px 6px; }
+.dds-page-menu-list {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dds-page-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--dds-radius);
+  cursor: pointer;
+  font-size: var(--dds-text-sm);
+  color: var(--dds-text);
+}
+.dds-page-menu-row:hover { background: var(--dds-border-hover); }
+.dds-page-menu-row-check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--b2w-brand-1-600, var(--dds-accent));
+  visibility: hidden;
+}
+.dds-page-menu-row.current .dds-page-menu-row-check { visibility: visible; }
+.dds-page-menu-row-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Rename/Duplicate/Move/Delete — hidden until the row is hovered (same
+   reveal-on-hover pattern as .dds-nav-project-edit-btn), an inline
+   simplification of the RFC's "flyout on hover" wording: the four
+   actions sit directly in the row rather than in a separately positioned
+   submenu, avoiding a second layer of edge-aware positioning for what is
+   already a positioned popup. Singleton page rows never get this cluster
+   (src/ui/DDS_PAGE_MENU.js only appends it for map rows) — those pages
+   are permanent, RFC §2 Page Strip. */
+.dds-page-menu-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity var(--dds-transition);
+}
+.dds-page-menu-row:hover .dds-page-menu-row-actions { opacity: 1; }
+/* !important below — same reset-fighting reason as .dds-page-strip-icon-btn above. */
+.dds-page-menu-row-action {
+  width: 24px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--dds-radius) !important;
+  border: none !important;
+  background: none !important;
+  color: var(--dds-text-muted) !important;
+  cursor: pointer !important;
+}
+.dds-page-menu-row-action:hover { background: var(--dds-border-hover) !important; color: var(--dds-text) !important; }
+.dds-page-menu-row-action:disabled { opacity: 0.35 !important; cursor: not-allowed !important; }
+.dds-page-menu-row-action.dds-page-menu-row-danger:hover { background: var(--dds-danger-light) !important; color: var(--dds-danger) !important; }

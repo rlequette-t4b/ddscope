@@ -153,7 +153,10 @@ DDS_BOMS_UI.bindEvents = function() {
     _bomComponents.push({ product_id: null, quantity: 1 }); DDS_BOMS_UI._renderComponents();
   });
   document.getElementById('dds-modal-bom-overlay').addEventListener('click', function(e) { if (e.target === this) DDS_BOMS_UI.closeModal(); });
-  document.getElementById('dds-tab-boms').addEventListener('click', function() {
+  // CommWise (framework-1) legacy nav tab — see DDS_PRODUCTS_UI.bindEvents
+  // for the framework-2/3 equivalent (DDS._registerPages onShow).
+  var bomsTab = document.getElementById('dds-tab-boms');
+  if (bomsTab) bomsTab.addEventListener('click', function() {
     setTimeout(function() { DDS_BOMS_UI.renderTable(); }, 50);
   });
 };

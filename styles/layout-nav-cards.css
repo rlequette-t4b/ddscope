@@ -176,7 +176,7 @@
    in this file — see feedback session 2026-07-14. */
 
 .dds-identity-row {
-  background: var(--dds-surface);
+  background: var(--dds-bg);
   border-bottom: 1px solid var(--dds-border);
   padding: 0 16px;
   height: 40px;
@@ -244,30 +244,36 @@
 .dds-menu-dirty-badge.dds-hidden { display: none !important; }
 
 .dds-menu-bar {
-  background: var(--dds-surface);
+  background: var(--dds-bg);
   border-bottom: 1px solid var(--dds-border);
   padding: 0 12px;
   height: 32px;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
   flex-shrink: 0;
   position: relative;
 }
 .dds-menu { position: relative; }
+/* .dds-menu-label is a plain <button>, not .dds-btn/.dds-nav-tab, so the
+   `.dds-app button:not(.dds-btn):not(.dds-nav-tab)` reset in
+   variables-reset.css (padding/background/font-size !important) would
+   otherwise silently strip these — same gotcha as .dds-toolbar-icon-btn
+   and the Page Strip buttons, every reset-touched property needs
+   !important here too. */
 .dds-menu-label {
-  background: none;
-  border: none;
-  padding: 6px 14px;
+  background: none !important;
+  border: none !important;
+  padding: 6px 14px !important;
   margin: 0 1px;
-  font-size: var(--dds-text-sm);
+  font-size: var(--dds-text-sm) !important;
   font-weight: 500;
-  color: var(--dds-text);
-  cursor: pointer;
+  color: var(--dds-text) !important;
+  cursor: pointer !important;
   border-radius: var(--dds-radius);
 }
-.dds-menu-label:hover { background: var(--dds-bg); }
-.dds-menu.open .dds-menu-label { background: var(--dds-bg); }
+.dds-menu-label:hover { background: var(--dds-border-hover) !important; }
+.dds-menu.open .dds-menu-label { background: var(--dds-border-hover) !important; }
 .dds-menu-dropdown {
   display: none;
   position: absolute;
@@ -275,33 +281,50 @@
   left: 0;
   margin-top: 2px;
   min-width: 210px;
-  background: var(--dds-surface);
+  background: var(--dds-bg);
   border: 1px solid var(--dds-border);
   border-radius: var(--dds-radius);
   box-shadow: var(--dds-shadow-hover);
-  padding: 4px;
+  padding: 4px 0;
   z-index: 200;
 }
 .dds-menu.open .dds-menu-dropdown { display: block; }
+/* Flat, edge-to-edge rows (RFC §3 Visual Style Guide/Menu Bar and
+   Dropdown Menus, draw.io File menu as reference) — no per-item
+   border-radius, only the dropdown container keeps radius + border.
+   Item padding moved here from the (now horizontal-less) container
+   padding above, so the hover highlight spans the full row width.
+   Plain <button>, not .dds-btn/.dds-nav-tab — same variables-reset.css
+   gotcha as .dds-menu-label above, every reset-touched property needs
+   !important. */
 .dds-menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   width: 100%;
   text-align: left;
-  background: none;
-  border: none;
-  padding: 8px 12px;
-  font-size: var(--dds-text-sm);
-  color: var(--dds-text);
-  cursor: pointer;
-  border-radius: var(--dds-radius);
+  background: none !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  font-size: var(--dds-text-sm) !important;
+  color: var(--dds-text) !important;
+  cursor: pointer !important;
+  border-radius: 0;
   white-space: nowrap;
 }
-.dds-menu-item:hover:not(:disabled) { background: var(--dds-bg); }
-.dds-menu-item:disabled { color: var(--dds-text-muted); cursor: default; opacity: 0.5; }
-.dds-menu-sep { height: 1px; background: var(--dds-border); margin: 4px 4px; }
+.dds-menu-item:hover:not(:disabled) { background: var(--dds-border-hover) !important; }
+.dds-menu-item:disabled { color: var(--dds-text-muted) !important; cursor: default !important; opacity: 0.5 !important; }
+/* Right-aligned keyboard-shortcut column (same section of the RFC). */
+.dds-menu-shortcut { color: var(--dds-text-muted); font-size: var(--dds-text-xs); }
+/* Separators mark logical item groups, not arbitrary spacing — widened
+   vertical margin (4px → 6–8px) per the RFC target; horizontal margin
+   matches the item's own horizontal padding so it aligns with the text
+   above/below rather than the old 4px-padded container. */
+.dds-menu-sep { height: 1px; background: var(--dds-border); margin: 7px 16px; }
 
 .dds-toolbar-row {
-  background: var(--dds-surface);
+  background: var(--dds-bg);
   border-bottom: 1px solid var(--dds-border);
   padding: 6px 14px;
   display: flex;
@@ -313,16 +336,45 @@
 .dds-toolbar-sep { width: 1px; align-self: stretch; margin: 2px 6px; background: var(--dds-border); }
 .dds-toolbar-spacer { flex: 1; }
 
-/* Temporary view tab strip — migrates to the Page Strip, RFC step 5 */
-.dds-view-tabs-row {
-  background: var(--dds-surface);
-  border-bottom: 1px solid var(--dds-border);
-  padding: 0 20px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+/* Toolbar row icon buttons — icon-only, no border/pill, .dds-rail-icon-
+   style hover/active (RFC §3 Visual Style Guide/Toolbar Buttons,
+   TODO/T-054). Not a .dds-btn variant — same reason .dds-rail-icon isn't:
+   the generic `.dds-app button:not(.dds-btn):not(.dds-nav-tab)` reset in
+   variables-reset.css would otherwise strip padding/background via
+   !important, so every property here needs !important too. */
+.dds-toolbar-icon-btn {
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--dds-radius) !important;
+  border: 1px solid transparent !important;
+  background: none !important;
+  color: var(--dds-text-muted) !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+  transition: background var(--dds-transition), color var(--dds-transition) !important;
 }
+.dds-toolbar-icon-btn:hover { background: var(--dds-border-hover) !important; color: var(--dds-text) !important; }
+.dds-toolbar-icon-btn:disabled,
+.dds-toolbar-icon-btn[disabled] {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+/* Auto-Layout ON state — color carries state meaning here (RFC §3/Color),
+   same allowance already used for the Page Strip active tab. Toggled by
+   DDS_MAP_UI.updateAutoLayoutBtn (src/ui/DDS_MAP_UI.js). */
+.dds-toolbar-icon-btn.active {
+  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
+}
+/* Direction toggle — icon flips instead of swapping glyph/textContent, so
+   the control stays icon+tooltip-only (RFC §3/Icons). Class toggled by
+   DDS_MAP_UI.updateDirectionBtn; only the title text differs otherwise. */
+#dds-btn-direction.dds-btn-direction-active .dds-icon-direction { transform: scaleX(-1); }
 
 /* ===== App shell ===== */
 .dds-app {
@@ -347,7 +399,7 @@
 .dds-rail {
   width: 48px !important;
   flex-shrink: 0 !important;
-  background: var(--dds-surface) !important;
+  background: var(--dds-bg) !important;
   border-right: 1px solid var(--dds-border) !important;
   display: flex !important;
   flex-direction: column !important;
@@ -371,11 +423,24 @@
   color: var(--dds-text-muted) !important;
   transition: background var(--dds-transition), color var(--dds-transition), border-color var(--dds-transition) !important;
 }
-.dds-rail-icon:hover { background: var(--dds-bg) !important; color: var(--dds-text) !important; }
+.dds-rail-icon:hover { background: var(--dds-border-hover) !important; color: var(--dds-text) !important; }
 .dds-rail-icon.active {
-  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
-  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+  position: relative !important;
+  color: var(--dds-text) !important;
   border-color: transparent !important;
+}
+/* 2px accent-colored left indicator bar — the only color on the rail
+   (RFC §3 Visual Style Guide/Rail Icon States, VSCode Activity Bar
+   pattern), replacing the former --dds-accent-light/--dds-accent pill. */
+.dds-rail-icon.active::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--b2w-brand-1-600, var(--dds-accent));
 }
 .dds-rail-icon.dds-hidden { display: none !important; }
 

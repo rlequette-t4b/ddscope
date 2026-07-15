@@ -4,7 +4,9 @@
 // docs/DDScope_Plugin_UI_RFC.md §4 Migration Path, step 1).
 //
 // Contract for v1: registerToolbox(descriptor), registerView(descriptor,
-// mountFn), showView(id), hideView(id).
+// mountFn), showView(id), hideView(id), plus registerPage(descriptor,
+// mountFn), showPage(id), closePage(id) for the Page Strip (RFC §4
+// Migration Path step 5).
 //
 // A toolbox is one rail entry (id, icon, title). It owns exactly one
 // docked panel; its onShow/onHide callbacks own that panel's actual
@@ -19,16 +21,32 @@
 // fragments/app-shell.html). Real content-mounting via mountFn is
 // deferred to the Types Toolbox (RFC step 3).
 //
-// framework-1 (CommWise) and framework-3 (Tauri) are not wired to this
-// module yet (out of scope for this pass) — every method no-ops safely
-// when #dds-rail is absent from the DOM, so loading this file elsewhere
-// does not throw.
+// A page is one entry in the full-width Page Strip (#dds-page-strip, at
+// the very bottom of #dds-app — see RFC §2/§4 Page Strip). Two kinds:
+// 'singleton' (permanent, never closable — Configuration/Nodes/Flows/
+// Products/BOMs/Demand) and 'map' (multi-instance, closable/renamable —
+// see DDS_MAP_UI). Same registration shape as toolbox/view, just a
+// different container: registerPage's optional contentId gets its
+// visibility toggled by the shell directly (mirrors registerToolbox's
+// panelId), while onShow/onHide stay responsible for everything else
+// (e.g. a map page's onShow triggers DDS_MAP.loadMap). This pass (T-052
+// step 5, first lot) only builds the API + the empty strip container —
+// no call site registers a page yet; that migration (six singleton
+// pages + the map "+"/rename/duplicate/delete flow, replacing the
+// temporary #dds-view-tabs-row and .dds-map-toolbar) is the next lot.
+//
+// framework-1 (CommWise) is not wired to this module (out of scope) —
+// every method no-ops safely when the relevant DOM root (#dds-rail,
+// #dds-page-strip) is absent, so loading this file elsewhere does not
+// throw.
 // ============================================================
 
 var DDS_WORKBENCH_SHELL = {
   _toolboxes: {},   // id -> { id, icon, title, panelId, onShow, onHide, views: [] }
   _views: {},       // id -> { id, toolboxId, title, order }
-  _openToolboxId: null
+  _openToolboxId: null,
+  _pages: {},        // id -> { id, title, kind, contentId, closable, onShow, onHide }
+  _activePageId: null
 };
 
 // ---------------------------------------------------------------------------
@@ -212,4 +230,133 @@ DDS_WORKBENCH_SHELL.setToolboxEnabled = function(id, enabled) {
   if (!btn) return;
   btn.classList.toggle('dds-hidden', !enabled);
   if (!enabled && DDS_WORKBENCH_SHELL._openToolboxId === id) DDS_WORKBENCH_SHELL._hideToolbox(id);
+};
+
+// ---------------------------------------------------------------------------
+// Page Strip — registerPage/showPage/closePage/setPageTitle (RFC §4
+// Migration Path step 5). No call site uses these yet in this pass — see
+// file header note. Mirrors registerToolbox/registerView: a page's
+// optional contentId is shown/hidden by the shell directly (like a
+// toolbox's panelId), onShow/onHide own everything else.
+// ---------------------------------------------------------------------------
+
+// Register a page — creates its Page Strip tab (if #dds-page-strip exists
+// in the current framework's DOM) and wires click-to-activate.
+// descriptor: { id, title, kind: 'singleton'|'map', contentId?, closable?,
+// onShow?, onHide? }. closable defaults to true for kind 'map', false for
+// 'singleton' (singleton pages are permanent — RFC §2 Page Strip).
+DDS_WORKBENCH_SHELL.registerPage = function(descriptor, mountFn) {
+  var id = descriptor.id;
+  var kind = descriptor.kind || 'map';
+  DDS_WORKBENCH_SHELL._pages[id] = {
+    id: id,
+    title: descriptor.title || '',
+    kind: kind,
+    contentId: descriptor.contentId || null,
+    closable: (descriptor.closable !== undefined) ? !!descriptor.closable : (kind === 'map'),
+    onShow: descriptor.onShow || function() {},
+    onHide: descriptor.onHide || function() {}
+  };
+
+  var strip = document.getElementById('dds-page-strip-tabs');
+  if (strip) {
+    var tab = document.createElement('button');
+    tab.className = 'dds-page-tab';
+    tab.id = 'dds-page-tab-' + id;
+    tab.type = 'button';
+    tab.title = descriptor.title || '';
+    var nameSpan = document.createElement('span');
+    nameSpan.className = 'dds-page-tab-title';
+    nameSpan.textContent = descriptor.title || '';
+    tab.appendChild(nameSpan);
+
+    // Chevron — always present, CSS-gated to the active tab only (RFC
+    // §3 Visual Style Guide/Page Strip Styling, TODO/T-054). Opens the
+    // shared Page menu (src/ui/DDS_PAGE_MENU.js); stopPropagation so the
+    // click doesn't also fire the tab's own showPage handler below.
+    var chevron = document.createElement('span');
+    chevron.className = 'dds-page-tab-chevron';
+    chevron.title = 'Pages menu';
+    chevron.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>';
+    chevron.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (window.DDS_PAGE_MENU) DDS_PAGE_MENU.open(chevron);
+    });
+    tab.appendChild(chevron);
+
+    tab.addEventListener('click', function() { DDS_WORKBENCH_SHELL.showPage(id); });
+    strip.appendChild(tab);
+  }
+
+  if (typeof mountFn === 'function') mountFn();
+};
+
+// Activate a page: updates the active tab, shows/hides contentId (if
+// given), and calls the outgoing/incoming pages' onHide/onShow — mirrors
+// _showToolbox/_hideToolbox's "single thing active at a time" state, but
+// for the Page Strip (always exactly one active page, never none, once
+// at least one page is registered).
+DDS_WORKBENCH_SHELL.showPage = function(id) {
+  var page = DDS_WORKBENCH_SHELL._pages[id];
+  if (!page) return;
+
+  if (DDS_WORKBENCH_SHELL._activePageId && DDS_WORKBENCH_SHELL._activePageId !== id) {
+    var prev = DDS_WORKBENCH_SHELL._pages[DDS_WORKBENCH_SHELL._activePageId];
+    if (prev) {
+      var prevTab = document.getElementById('dds-page-tab-' + prev.id);
+      if (prevTab) prevTab.classList.remove('active');
+      if (prev.contentId) {
+        var prevContent = document.getElementById(prev.contentId);
+        if (prevContent) prevContent.classList.remove('active');
+      }
+      prev.onHide();
+    }
+  }
+
+  DDS_WORKBENCH_SHELL._activePageId = id;
+  var tab = document.getElementById('dds-page-tab-' + id);
+  if (tab) tab.classList.add('active');
+  if (page.contentId) {
+    var content = document.getElementById(page.contentId);
+    if (content) content.classList.add('active');
+  }
+  page.onShow();
+};
+
+// Close (unregister) a page — removes its tab and calls onHide if it was
+// the active page. No-op for non-closable pages (singleton pages, or a
+// map descriptor explicitly registered with closable:false) — logs a
+// warning rather than silently ignoring a caller mistake. The caller
+// (DDS_MAP_UI, for map pages) stays responsible for picking and showing
+// a replacement active page afterward, same as DDS_MAP_UI.deleteMap
+// already does today for the map selector.
+DDS_WORKBENCH_SHELL.closePage = function(id) {
+  var page = DDS_WORKBENCH_SHELL._pages[id];
+  if (!page) return;
+  if (!page.closable) {
+    console.warn('[DDS_WORKBENCH_SHELL] closePage: page "' + id + '" is not closable');
+    return;
+  }
+
+  var tab = document.getElementById('dds-page-tab-' + id);
+  if (tab && tab.parentNode) tab.parentNode.removeChild(tab);
+
+  if (DDS_WORKBENCH_SHELL._activePageId === id) {
+    DDS_WORKBENCH_SHELL._activePageId = null;
+    page.onHide();
+  }
+  delete DDS_WORKBENCH_SHELL._pages[id];
+};
+
+// Rename a page's tab label in place (map pages only, in practice — see
+// DDS_MAP_UI's rename flow). No-op if the page isn't registered.
+DDS_WORKBENCH_SHELL.setPageTitle = function(id, title) {
+  var page = DDS_WORKBENCH_SHELL._pages[id];
+  if (!page) return;
+  page.title = title;
+  var tab = document.getElementById('dds-page-tab-' + id);
+  if (!tab) return;
+  var nameSpan = tab.querySelector('.dds-page-tab-title');
+  if (nameSpan) nameSpan.textContent = title;
+  tab.title = title;
 };

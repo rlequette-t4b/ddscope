@@ -143,5 +143,10 @@ DDS_PRODUCTS_UI.bindEvents = function() {
       if (btn && !btn.disabled) { e.preventDefault(); DDS_PRODUCTS_UI._doSave(true); }
     }
   });
-  document.getElementById('dds-tab-products').addEventListener('click', function() { setTimeout(function() { DDS_PRODUCTS_UI.renderTable(); }, 50); });
+  // CommWise (framework-1) legacy nav tab — fragments/app-shell.html
+  // (framework-2/3) no longer has #dds-tab-products (T-052 step 5, moved
+  // to the Page Strip; see DDS._registerPages in src/presentation/DDS.js
+  // for the equivalent onShow-triggered renderTable() there).
+  var prodTab = document.getElementById('dds-tab-products');
+  if (prodTab) prodTab.addEventListener('click', function() { setTimeout(function() { DDS_PRODUCTS_UI.renderTable(); }, 50); });
 };

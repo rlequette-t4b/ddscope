@@ -29,13 +29,66 @@ DDS_MAP_UI.renderSelector = function() {
 // Keep renderTabs as alias for compatibility (calls renderSelector)
 DDS_MAP_UI.renderTabs = DDS_MAP_UI.renderSelector;
 
-// Switch to a different map
-DDS_MAP_UI.switchMap = async function(mapId) {
+// Register one map as a Page Strip page (T-052 step 5, framework-2/3
+// only — no-op if DDS_WORKBENCH_SHELL is absent, e.g. CommWise). Shares
+// #dds-view-map as contentId across every map page — the canvas DOM is
+// a single reused surface, only its data changes (DDS_MAP.loadMap), same
+// as it always has; the Page Strip just adds a tab per map on top of
+// that. Also wires the tab's right-click context menu (Rename/Duplicate/
+// Delete — RFC §2 Page Strip).
+DDS_MAP_UI._registerMapPage = function(map) {
+  if (typeof DDS_WORKBENCH_SHELL === 'undefined') return;
+  DDS_WORKBENCH_SHELL.registerPage({
+    id: map.id,
+    title: map.name,
+    kind: 'map',
+    contentId: 'dds-view-map',
+    closable: true,
+    onShow: function() { DDS_MAP_UI._activateMap(map.id); }
+  });
+  // Right-click shortcut onto the shared Page menu (RFC §2 Page Strip: "a
+  // right-click shortcut directly on a tab", TODO/T-054) — opens at the
+  // click point. Replaces the old, right-click-only _openMapContextMenu.
+  var tab = document.getElementById('dds-page-tab-' + map.id);
+  if (tab) tab.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    if (window.DDS_PAGE_MENU) DDS_PAGE_MENU.open(e);
+  });
+};
+
+// Unregister every map page — called from DDS.closeProject (RFC step 5).
+DDS_MAP_UI.closeAllMapPages = function() {
+  if (typeof DDS_WORKBENCH_SHELL === 'undefined') return;
+  DDS_MAP.state.maps.forEach(function(m) { DDS_WORKBENCH_SHELL.closePage(m.id); });
+};
+
+// Actual data-loading side effect of activating a map — shared by the
+// Page Strip's showPage onShow (framework-2/3) and switchMap's legacy
+// branch (CommWise <select> onchange) below, so both surfaces load a map
+// the same way and keep DDS.state.currentView / command enablement
+// correct regardless of which UI triggered the switch.
+DDS_MAP_UI._activateMap = async function(mapId) {
   DDS_MAP.state.currentMapId = mapId;
-  DDS_MAP_UI.renderSelector();
+  DDS_MAP_UI.renderSelector(); // no-op if #dds-map-selector is absent (framework-2/3)
   await DDS_MAP.loadMap(mapId);
   var map = DDS_MAP.state.maps.find(function(m) { return m.id === mapId; });
   DDS_MAP_UI.updateDirectionBtn(map ? (map.direction || 'right-left') : 'right-left');
+  DDS.state.currentView = 'map';
+  if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
+};
+
+// Switch to a different map. framework-2/3: routes through the Page
+// Strip so its active tab stays in sync regardless of caller (click on a
+// tab already goes through DDS_WORKBENCH_SHELL.showPage directly — this
+// branch matters for programmatic callers: createMap/duplicateMap/
+// deleteMap/openProject below). framework-1 (CommWise, no shell): calls
+// _activateMap directly, same as before this migration.
+DDS_MAP_UI.switchMap = async function(mapId) {
+  if (typeof DDS_WORKBENCH_SHELL !== 'undefined' && DDS_WORKBENCH_SHELL._pages[mapId]) {
+    DDS_WORKBENCH_SHELL.showPage(mapId);
+    return;
+  }
+  await DDS_MAP_UI._activateMap(mapId);
 };
 
 // Rename map inline
@@ -78,16 +131,19 @@ DDS_MAP_UI.updateAutoLayoutBtn = function() {
   }
 };
 
-// Update direction toggle button label to reflect current map direction
+// Update direction toggle button to reflect current map direction. Icon
+// stays fixed (icon + tooltip only, RFC docs/DDScope_Plugin_UI_RFC.md §3
+// Icons/Toolbar Buttons, TODO/T-054) — only the title text and the
+// dds-btn-direction-active class change; the class flips the icon
+// horizontally via CSS (styles/layout-nav-cards.css), it no longer swaps
+// textContent.
 DDS_MAP_UI.updateDirectionBtn = function(direction) {
   var btn = document.getElementById('dds-btn-direction');
   if (!btn) return;
   if (direction === 'left-right') {
-    btn.textContent = '→ →';
     btn.title = 'Direction: left → right (click to toggle)';
     btn.classList.add('dds-btn-direction-active');
   } else {
-    btn.textContent = '← ←';
     btn.title = 'Direction: right ← left (click to toggle)';
     btn.classList.remove('dds-btn-direction-active');
   }
@@ -109,6 +165,8 @@ DDS_MAP_UI.toggleDirection = function() {
 DDS_MAP_UI.createMap = function() {
   DDS_CMD.execute(TX.MAP_CREATE, {}, null, function(result) {
     DDS_MAP.state.maps = DDS_STORE.query('maps', null, { order: 'position.asc' });
+    var map = DDS_MAP.state.maps.find(function(m) { return m.id === result.id; });
+    if (map) DDS_MAP_UI._registerMapPage(map);
     DDS_MAP_UI.switchMap(result.id);
   });
 };
@@ -117,6 +175,8 @@ DDS_MAP_UI.createMap = function() {
 DDS_MAP_UI.duplicateMap = function(srcMap) {
   DDS_CMD.execute(TX.MAP_DUPLICATE, { source_id: srcMap.id }, null, function(result) {
     DDS_MAP.state.maps = DDS_STORE.query('maps', null, { order: 'position.asc' });
+    var map = DDS_MAP.state.maps.find(function(m) { return m.id === result.id; });
+    if (map) DDS_MAP_UI._registerMapPage(map);
     DDS_MAP_UI.switchMap(result.id);
   });
 };
@@ -125,6 +185,7 @@ DDS_MAP_UI.duplicateMap = function(srcMap) {
 DDS_MAP_UI.deleteMap = function(map) {
   if (DDS_MAP.state.maps.length <= 1) return;
   DDS_CMD.execute(TX.MAP_DELETE, { id: map.id }, null, function() {
+    if (typeof DDS_WORKBENCH_SHELL !== 'undefined') DDS_WORKBENCH_SHELL.closePage(map.id);
     DDS_MAP.state.maps = DDS_STORE.query('maps', null, { order: 'position.asc' });
     var remaining = DDS_MAP.state.maps[0];
     if (remaining) DDS_MAP_UI.switchMap(remaining.id);
@@ -185,9 +246,18 @@ DDS_MAP_UI.bindEvents = function() {
         DDS_REMOVE.open('lane', DDS_PANEL.entityId);
         return;
       }
-      if (!DDS_CY) return;
-      var selected = DDS_CY.elements(':selected').not('.dds-note-ghost').not('.dds-annotation-ghost');
-      if (selected.length === 0) return;
+
+      var selected = DDS_CY ? DDS_CY.elements(':selected').not('.dds-note-ghost').not('.dds-annotation-ghost') : null;
+
+      if (!selected || selected.length === 0) {
+        // Node/flow opened from the Nodes/Flows table — no cy element, so
+        // no cy selection either (T-052 step 4, mirrors the lane case
+        // above). Full delete only — no map context to remove-only-from.
+        if ((DDS_PANEL.mode === 'node' || DDS_PANEL.mode === 'flow') && DDS_PANEL.entityId != null) {
+          DDS_REMOVE.open(DDS_PANEL.mode === 'flow' ? 'edge' : 'node', DDS_PANEL.entityId, false);
+        }
+        return;
+      }
 
       if (selected.length === 1) {
         var el = selected[0];
@@ -207,6 +277,17 @@ DDS_MAP_UI.bindEvents = function() {
 
   if (directionBtn)    directionBtn.addEventListener('click', function() { DDS_MAP_UI.toggleDirection(); });
   // Undo / Redo button state — click handlers are owned by DDS_UI_NAV.bindUndoRedo()
+
+  // Page Strip "+" (new map) and hamburger (opens the shared Page menu,
+  // src/ui/DDS_PAGE_MENU.js) — T-052 step 5 / T-054 Page Strip Styling,
+  // framework-2/3 only (elements absent on CommWise, lookups no-op).
+  var pageStripAdd = document.getElementById('dds-page-strip-add');
+  if (pageStripAdd) pageStripAdd.addEventListener('click', function() { DDS_MAP_UI.createMap(); });
+
+  var pageStripHamburger = document.getElementById('dds-page-strip-hamburger');
+  if (pageStripHamburger) pageStripHamburger.addEventListener('click', function() {
+    if (window.DDS_PAGE_MENU) DDS_PAGE_MENU.open(pageStripHamburger);
+  });
 
   // T-036 part 4: search/create dedicated modal (was DDS_CONFIGURATION_UI's
   // CRUD modal directly — always-create-only, plus an untransacted direct
@@ -275,6 +356,7 @@ DDS_MAP_UI.openRenameModal = function() {
     DDS_CMD.execute(TX.MAP_RENAME, { id: map.id, name: newName }, null, function() {
       map.name = newName;
       DDS_MAP_UI.renderSelector();
+      if (typeof DDS_WORKBENCH_SHELL !== 'undefined') DDS_WORKBENCH_SHELL.setPageTitle(map.id, newName);
       close();
     });
   };
@@ -326,10 +408,11 @@ DDS_MAP_UI.openProject = async function() {
     DDS_MAP.state.maps = DDS_STORE.query('maps', null, { order: 'position.asc' });
   }
 
+  if (typeof DDS_WORKBENCH_SHELL !== 'undefined') {
+    DDS_MAP.state.maps.forEach(DDS_MAP_UI._registerMapPage);
+  }
+
   var firstMap = DDS_MAP.state.maps[0];
-  DDS_MAP.state.currentMapId = firstMap.id;
-  DDS_MAP_UI.renderSelector();
-  await DDS_MAP.loadMap(firstMap.id);
-  DDS_MAP_UI.updateDirectionBtn(firstMap.direction || 'right-left');
+  await DDS_MAP_UI.switchMap(firstMap.id);
   DDS_MAP_UI.updateAutoLayoutBtn();
 };

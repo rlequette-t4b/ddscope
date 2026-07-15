@@ -21,7 +21,7 @@
       <div class="dds-menu-dropdown">
         <button class="dds-menu-item" data-cmd="file.new">New</button>
         <button class="dds-menu-item" data-cmd="file.open">Open</button>
-        <button class="dds-menu-item" data-cmd="file.save">Save</button>
+        <button class="dds-menu-item" data-cmd="file.save"><span>Save</span><span class="dds-menu-shortcut">Ctrl+S</span></button>
         <button class="dds-menu-item" data-cmd="file.saveAs">Save As</button>
         <button class="dds-menu-item" data-cmd="file.close">Close</button>
       </div>
@@ -29,8 +29,8 @@
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Edit</button>
       <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="edit.undo">Undo</button>
-        <button class="dds-menu-item" data-cmd="edit.redo">Redo</button>
+        <button class="dds-menu-item" data-cmd="edit.undo"><span>Undo</span><span class="dds-menu-shortcut">Ctrl+Z</span></button>
+        <button class="dds-menu-item" data-cmd="edit.redo"><span>Redo</span><span class="dds-menu-shortcut">Ctrl+Shift+Z</span></button>
         <button class="dds-menu-item" data-cmd="edit.remove">Remove</button>
         <div class="dds-menu-sep"></div>
         <button class="dds-menu-item" disabled title="Not yet implemented (TODO/T-003)">Cut</button>
@@ -74,14 +74,41 @@
   </div>
 
   <!-- 3. Toolbar row -->
+  <!-- Icons below: vendored inline outline SVGs in Lucide's visual style
+       (stroke=currentColor, 24x24 viewBox, round caps/joins) — RFC §3
+       Visual Style Guide/Icons + Toolbar Buttons (TODO/T-054). Network
+       access to pull the exact upstream Lucide files (unpkg, jsdelivr,
+       raw.githubusercontent.com, the GitHub contents API) was blocked in
+       this session, so these are hand-authored equivalents named after
+       their closest Lucide icon (maximize, layout-grid, refresh-cw,
+       arrow-right-left, eye, a plain notes/document glyph standing in for
+       sticky-note, trash-2) — swap in the real package assets later if
+       byte-for-byte fidelity is wanted, same class names/ids, no markup
+       restructuring needed. Scope is exactly the 7 controls the RFC flags
+       as the gap (used .dds-btn-secondary text-pills); Undo/Redo and the
+       Rail/Panel/Header toggles are untouched, out of that gap. -->
   <div class="dds-toolbar-row" id="dds-toolbar-row">
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-fit">&#9635; Fit</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-layout">&#9638; Layout</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-auto-layout" title="Auto-layout after each edit">&#8635; Auto-Layout</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-direction" title="Flow direction">&#8594; &#8594;</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-legend" title="Toggle legend">&#128065; Legend</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-notes" title="Toggle notes panel">&#128203; Notes</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-remove-from-map" disabled title="Remove selected element">&#128465; Remove</button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-fit" title="Fit to screen">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-layout" title="Run layout">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-auto-layout" title="Auto-Layout: OFF (click to enable)">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-direction" title="Direction: right ← left (click to toggle)">
+      <svg class="dds-icon-direction" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-legend" title="Toggle legend">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-notes" title="Toggle notes panel">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-remove-from-map" disabled title="Remove selected element">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>
+    </button>
     <div class="dds-toolbar-sep"></div>
     <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-undo" disabled title="Undo">↩</button>
     <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-redo" disabled title="Redo">↪</button>
@@ -89,20 +116,6 @@
     <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-toggle-rail" title="Toggle rail">Rail</button>
     <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-toggle-panel" title="Toggle side panel">Panel</button>
     <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-toggle-identity" title="Toggle identity row">Header</button>
-  </div>
-
-  <!-- Temporary view tab strip — migrates to the Page Strip, RFC step 5.
-       Left as-is (not restyled) until then. -->
-  <div class="dds-view-tabs-row dds-hidden" id="dds-view-tabs-row">
-    <div class="dds-nav-tabs">
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-map"      data-view="map">Map</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-nodes"    data-view="nodes">Nodes</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-flows"    data-view="flows">Flows</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-products" data-view="products">Products</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-boms"     data-view="boms">BOMs</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-demand"      data-view="demand">Demand</button>
-      <button class="dds-nav-tab dds-hidden" id="dds-tab-configuration"    data-view="configuration">Configuration</button>
-    </div>
   </div>
 
   <!-- Main workspace: rail + AI panel (push) + content -->
@@ -260,17 +273,6 @@
 
       <!-- View: Map -->
       <div class="dds-view active" id="dds-view-map">
-
-        <!-- Map toolbar -->
-        <div class="dds-map-toolbar" id="dds-map-toolbar">
-          <select class="dds-map-selector" id="dds-map-selector" title="Active map"></select>
-          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-rename" title="Rename map">&#9998;</button>
-          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-new" title="New map">+ Map</button>
-          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-duplicate" title="Duplicate map">&#11001;</button>
-          <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-map-delete" title="Delete map" disabled>&#10005;</button>
-          <!-- + Swim-lane / + Node / + Product moved to the Types Toolbox
-               (rail icon) — RFC §4 Current Toolbar Remapping, T-052 step 3. -->
-        </div>
 
         <!-- Canvas -->
         <div class="dds-canvas-wrap" id="dds-canvas-wrap">
@@ -439,11 +441,11 @@
               <label class="dds-label" for="dds-pn-notes">Notes</label>
               <textarea class="dds-textarea" id="dds-pn-notes"></textarea>
             </div>
-            <div class="dds-field dds-field-inline">
+            <div class="dds-field dds-field-inline" id="dds-pn-show-note-on-map-field">
               <input type="checkbox" id="dds-pn-show-note-on-map" />
               <label class="dds-label" for="dds-pn-show-note-on-map">Show note on map</label>
             </div>
-            <div class="dds-field">
+            <div class="dds-field" id="dds-pn-label-pos-field">
               <label class="dds-label" for="dds-pn-label-pos">Label position</label>
               <select id="dds-pn-label-pos" class="dds-input dds-input-sm">
                 <option value="">As in type</option>
@@ -497,7 +499,7 @@
               <label class="dds-label" for="dds-pf-notes">Notes</label>
               <textarea class="dds-textarea" id="dds-pf-notes"></textarea>
             </div>
-            <div class="dds-field dds-field-inline">
+            <div class="dds-field dds-field-inline" id="dds-pf-show-notes-label-field">
               <input type="checkbox" id="dds-pf-show-notes-label" />
               <label class="dds-label" for="dds-pf-show-notes-label">Show notes on map</label>
             </div>
@@ -520,7 +522,7 @@
               <label class="dds-label" for="dds-pf-layout-dir-inverted">Inverser sens layout</label>
               <input type="checkbox" id="dds-pf-layout-dir-inverted" class="dds-checkbox" />
             </div>
-            <div class="dds-field">
+            <div class="dds-field" id="dds-pf-curve-style-field">
               <label class="dds-label" for="dds-pf-curve-style">Edge style</label>
               <select class="dds-select" id="dds-pf-curve-style">
                 <option value="taxi">Taxi</option>
@@ -570,6 +572,49 @@
     </div>
 
   </div><!-- /.dds-workspace -->
+
+  <!-- Page Strip — full-width row at the very bottom of #dds-app, below
+       the rail/toolbox panel/canvas/side panel (RFC §2 Page Strip, §4
+       Header Layout — closes the frame opened by the three header rows
+       above). Tabs injected by DDS_WORKBENCH_SHELL.registerPage(), see
+       src/core/DDS_WORKBENCH_SHELL.js and docs/DDScope_Plugin_UI_RFC.md
+       §4 Migration Path step 5. Six singleton pages registered once by
+       DDS._registerPages() (src/presentation/DDS.js); map pages
+       registered/closed dynamically by DDS_MAP_UI.js. Replaces the old
+       #dds-view-tabs-row tab-strip and .dds-map-toolbar map-selector +
+       Rename/New/Duplicate/Delete buttons, both removed from this
+       fragment (framework-2/3) — CommWise (framework-1) keeps its own
+       separate legacy DOM with the same ids, untouched by this file. -->
+  <div class="dds-page-strip" id="dds-page-strip">
+    <button class="dds-page-strip-icon-btn" id="dds-page-strip-hamburger" title="Pages menu">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <button class="dds-page-strip-icon-btn" id="dds-page-strip-add" title="New map">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <div class="dds-page-strip-tabs" id="dds-page-strip-tabs"></div>
+  </div>
+
+  <!-- Page menu (RFC §2 Page Strip / §3 Page Strip Styling, TODO/T-054):
+       opens from the hamburger above, a tab's chevron (added by
+       DDS_WORKBENCH_SHELL.registerPage), or a right-click on any map tab.
+       Insert Page, then the page list (checkmark on the current page,
+       rendered from the live tabs so order always matches the strip) —
+       map rows reveal Rename/Duplicate/Delete/Move on hover; singleton
+       pages (Nodes/Flows/...) have no row actions, they're permanent.
+       Rendered by src/ui/DDS_PAGE_MENU.js. Opens upward — the Page Strip
+       is bottom-anchored, so this is positioned via style.bottom, not
+       style.top (the reverse of the Menu bar's downward dropdowns).
+       Replaces the old #dds-page-context-menu (Rename/Duplicate/Delete
+       only, right-click-only). -->
+  <div class="dds-page-menu dds-hidden" id="dds-page-menu">
+    <button class="dds-page-menu-insert" id="dds-page-menu-insert">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Insert Page</span>
+    </button>
+    <div class="dds-page-menu-sep"></div>
+    <div class="dds-page-menu-list" id="dds-page-menu-list"></div>
+  </div>
 
   <!-- Modal: Add product on map -->
   <div class="dds-overlay dds-hidden" id="dds-modal-add-product-overlay">

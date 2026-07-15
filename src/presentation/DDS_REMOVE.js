@@ -56,9 +56,15 @@ DDS_REMOVE._laneConsequences = function(swimLaneId) {
 
 // ---- Shared modal open helper ------------------------------
 
-DDS_REMOVE._openModal = function(title, bodyHtml, pendingPayload) {
-  // Append checkbox
-  bodyHtml += '<label class="dds-remove-map-only-row"><input type="checkbox" id="dds-remove-map-only-chk"> Remove only from map</label>';
+DDS_REMOVE._openModal = function(title, bodyHtml, pendingPayload, allowMapOnly) {
+  // Node/flow opened from the Nodes/Flows table (T-052 step 4 — "outside
+  // of maps", see DDS_PANEL.js) has no map context to remove-only-from —
+  // skip the checkbox entirely rather than offer a choice that doesn't
+  // apply. Every other call site keeps the checkbox (allowMapOnly
+  // defaults to true when omitted).
+  if (allowMapOnly !== false) {
+    bodyHtml += '<label class="dds-remove-map-only-row"><input type="checkbox" id="dds-remove-map-only-chk"> Remove only from map</label>';
+  }
 
   DDS_REMOVE._pending = pendingPayload;
   document.getElementById('dds-remove-modal-title').textContent = title;
@@ -82,7 +88,7 @@ DDS_REMOVE._openModal = function(title, bodyHtml, pendingPayload) {
 
 // ---- Single-element modal ----------------------------------
 
-DDS_REMOVE.open = function(type, entityId) {
+DDS_REMOVE.open = function(type, entityId, allowMapOnly) {
   var title = '', bodyHtml = '';
   var nodeById = {};
   DDS_STORE.query('nodes').forEach(function(n) { nodeById[n.id] = n; });
@@ -130,7 +136,7 @@ DDS_REMOVE.open = function(type, entityId) {
     return;
   }
 
-  DDS_REMOVE._openModal(title, bodyHtml, { multi: false, type: type, id: entityId });
+  DDS_REMOVE._openModal(title, bodyHtml, { multi: false, type: type, id: entityId }, allowMapOnly);
 };
 
 // ---- Multi-element modal -----------------------------------
@@ -267,6 +273,11 @@ DDS_REMOVE.execute = function() {
       if (laneDiv) laneDiv.remove();
       DDS_MAP.loadMap(DDS_MAP.state.currentMapId, true);
     }
+    // Refresh the Nodes/Flows table if it's the active view — needed now
+    // that Remove can be triggered from a table row (T-052 step 4) with no
+    // other listener watching for the row to disappear.
+    if (DDS.state.currentView === 'nodes' && window.DDS_NODES_UI) DDS_NODES_UI.renderTable();
+    if (DDS.state.currentView === 'flows' && window.DDS_FLOWS_UI) DDS_FLOWS_UI.renderTable();
     DDS_PANEL.close();
     DDS_MAP.renderLegend();
   });
@@ -324,6 +335,16 @@ DDS_REMOVE.bindEvents = function() {
     if (typeof DDS_PANEL !== 'undefined' && DDS_PANEL.mode === 'lane' && DDS_PANEL.entityId) {
       e.preventDefault();
       DDS_REMOVE.open('lane', DDS_PANEL.entityId);
+      return;
+    }
+
+    // Node/flow opened from the Nodes/Flows table — no cy element, so no
+    // cy selection to fall back to below (T-052 step 4, mirrors the lane
+    // case above). Full delete only — no map context to remove-only-from.
+    if (typeof DDS_PANEL !== 'undefined' && (DDS_PANEL.mode === 'node' || DDS_PANEL.mode === 'flow') && DDS_PANEL.entityId != null &&
+        (!DDS_CY || DDS_CY.elements(':selected').not('.dds-note-ghost').not('.dds-annotation-ghost').length === 0)) {
+      e.preventDefault();
+      DDS_REMOVE.open(DDS_PANEL.mode === 'flow' ? 'edge' : 'node', DDS_PANEL.entityId, false);
       return;
     }
 

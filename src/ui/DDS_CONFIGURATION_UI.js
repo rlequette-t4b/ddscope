@@ -572,7 +572,10 @@ DDS_CONFIGURATION_UI._moveNoteCategory = function(id, direction) {
 };
 
 DDS_CONFIGURATION_UI.bindEvents = function() {
-  document.getElementById('dds-tab-configuration').addEventListener('click', function() { setTimeout(function() { DDS_CONFIGURATION_UI.render(); }, 50); });
+  // CommWise (framework-1) legacy nav tab — see DDS_PRODUCTS_UI.bindEvents
+  // for the framework-2/3 equivalent (DDS._registerPages onShow).
+  var configTab = document.getElementById('dds-tab-configuration');
+  if (configTab) configTab.addEventListener('click', function() { setTimeout(function() { DDS_CONFIGURATION_UI.render(); }, 50); });
   document.getElementById('dds-set-name').addEventListener('input', DDS_CONFIGURATION_UI._validateModal);
   document.getElementById('dds-set-code').addEventListener('input', DDS_CONFIGURATION_UI._validateModal);
   document.getElementById('dds-modal-configuration-close').addEventListener('click',       DDS_CONFIGURATION_UI.closeModal);

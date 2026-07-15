@@ -8,7 +8,7 @@
   width: 0;
   min-width: 0 !important;
   max-width: 320px !important;
-  background: var(--dds-surface) !important;
+  background: var(--dds-bg) !important;
   border-right: 1px solid var(--dds-border) !important;
   box-shadow: 2px 0 12px rgba(0,0,0,0.07) !important;
   display: flex !important;
@@ -41,7 +41,7 @@
   padding: 10px 14px !important;
   border-bottom: 1px solid var(--dds-border) !important;
   flex-shrink: 0 !important;
-  background: var(--dds-surface) !important;
+  background: var(--dds-bg) !important;
 }
 .dds-types-header-title {
   font-size: var(--dds-text-base) !important;

@@ -31,7 +31,7 @@ DDS_NODES_UI.renderTable = function() {
   }
 
   var html = '<table class="dds-table"><thead><tr>' +
-    '<th>Name</th><th>Type</th><th>Swim-lane</th><th>Tags</th><th></th>' +
+    '<th>Name</th><th>Type</th><th>Swim-lane</th><th>Tags</th>' +
     '</tr></thead><tbody>';
 
   nodes.forEach(function(n) {
@@ -41,28 +41,25 @@ DDS_NODES_UI.renderTable = function() {
     var laneLabel = n.swim_lane_id ? (laneMap[n.swim_lane_id] || '—') : '—';
     var typeLabel = n.type_code    ? (typeMap[n.type_code]    || n.type_code) : '—';
 
-    html += '<tr>' +
+    html += '<tr data-node-id="' + n.id + '" style="cursor:pointer" title="Click to edit in the side panel">' +
       '<td><strong>' + DDS_NODES_UI._esc(n.name) + '</strong></td>' +
       '<td>' + DDS_NODES_UI._esc(typeLabel) + '</td>' +
       '<td>' + DDS_NODES_UI._esc(laneLabel) + '</td>' +
       '<td>' + (tagsHtml || '<span style="color:var(--dds-text-muted)">—</span>') + '</td>' +
-      '<td><div class="dds-table-actions">' +
-        '<button class="dds-btn dds-btn-secondary dds-btn-sm" data-action="edit" data-id="' + n.id + '">Edit</button>' +
-        '<button class="dds-btn dds-btn-danger dds-btn-sm"    data-action="del"  data-id="' + n.id + '">Delete</button>' +
-      '</div></td>' +
     '</tr>';
   });
 
   html += '</tbody></table>';
   wrap.innerHTML = html;
 
-  wrap.querySelectorAll('[data-action]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var id = parseInt(this.dataset.id);
-      var node = nodes.find(function(x) { return x.id === id; });
-      if (!node) return;
-      if (this.dataset.action === 'edit') DDS_NODES_UI.openModal(node);
-      if (this.dataset.action === 'del')  DDS_NODES_UI.handleDelete(node);
+  // Row click (RFC step 4, T-052) — opens the node in the side panel, same
+  // editor as the equivalent canvas selection. Deletion goes through the
+  // Toolbar row's Remove button (DDS_MAP_UI.js), same as a canvas
+  // selection — no more per-row Delete button here.
+  wrap.querySelectorAll('tr[data-node-id]').forEach(function(row) {
+    row.addEventListener('click', function() {
+      var id = parseInt(this.dataset.nodeId);
+      if (window.DDS_PANEL) DDS_PANEL.openNodeById(id);
     });
   });
 };
@@ -173,32 +170,10 @@ DDS_NODES_UI._doSave = function(closeAfter) {
 
 DDS_NODES_UI.handleSave = function() { DDS_NODES_UI._doSave(true); };
 
-DDS_NODES_UI.handleDelete = function(node) {
-  // Count cascade impact
-  var flows = DDS_STORE.query('flows').filter(function(f) {
-    return f.source_node_id === node.id || f.target_node_id === node.id;
-  });
-  var skus = DDS_STORE.query('skus').filter(function(s) {
-    return s.node_id === node.id;
-  });
-  var msg = 'Delete node "' + node.name + '"?';
-  if (flows.length > 0 || skus.length > 0) {
-    msg += '\n\nThis will also delete:';
-    if (flows.length > 0) msg += '\n• ' + flows.length + ' flow(s)';
-    if (skus.length  > 0) msg += '\n• ' + skus.length  + ' SKU(s)';
-  }
-  if (!confirm(msg)) return;
-
-  // Cascade via DDS_CMD (Phase 6 Step 6 — DDS_ACTIONS decommissioning, 2026-07-02)
-  DDS_CMD.execute(TX.NODE_DELETE, { id: node.id }, null);
-
-  DDS_NODES_UI.renderTable();
-
-  // Refresh map if active, preserving current viewport
-  if (typeof DDS_MAP !== 'undefined' && DDS_MAP.state.currentMapId) {
-    DDS_MAP.loadMap(DDS_MAP.state.currentMapId, true);
-  }
-};
+// Deletion moved to the Toolbar row's Remove button (T-052 step 4) — it
+// already handles the cascade-consequences confirmation (DDS_REMOVE.js),
+// now also reachable with no cy element via DDS_PANEL.mode/entityId when
+// a row is open in the side panel.
 
 DDS_NODES_UI.bindEvents = function() {
   // Toolbar button (Nodes table view)
@@ -230,8 +205,11 @@ DDS_NODES_UI.bindEvents = function() {
     }
   });
 
-  // Auto-render on tab switch
-  document.getElementById('dds-tab-nodes').addEventListener('click', function() {
+  // Auto-render on tab switch — CommWise (framework-1) legacy nav tab.
+  // See DDS_PRODUCTS_UI.bindEvents for the framework-2/3 equivalent
+  // (DDS._registerPages onShow).
+  var nodesTab = document.getElementById('dds-tab-nodes');
+  if (nodesTab) nodesTab.addEventListener('click', function() {
     setTimeout(function() { DDS_NODES_UI.renderTable(); }, 50);
   });
 };
