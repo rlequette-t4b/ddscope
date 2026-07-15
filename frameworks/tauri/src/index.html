@@ -78,7 +78,24 @@
   flex-direction: column;
 }
 
-.dds-app button:not(.dds-btn):not(.dds-nav-tab) {
+/* .dds-menu-label/.dds-menu-item/.dds-rail-icon/.dds-toolbar-icon-btn
+   excluded directly (2026-07-14, T-055 follow-up): their own !important
+   rules in layout-nav-cards.css lose to this reset on specificity
+   (0,3,1) vs their (0,1,0)/(0,2,0) even though both sides use
+   !important — specificity is compared before source order for
+   declarations of equal importance. Exclusion here sidesteps the fight
+   entirely, same mechanism as .dds-btn/.dds-nav-tab.
+
+   .dds-page-tab/.dds-page-strip-icon-btn/.dds-page-menu-insert/
+   .dds-page-menu-row-action excluded the same way (2026-07-14, T-054
+   Page Strip Styling follow-up — flagged unverified in J-046, confirmed
+   and fixed here): .dds-page-tab had no !important at all on its own
+   background/padding/color/font-size in page-strip.css, so the reset
+   was winning outright (not even a specificity fight) — the active-tab
+   pill highlight and tab padding were being silently discarded. The
+   other three had the same !important-vs-specificity issue as the
+   Menu Bar/Rail classes above. */
+.dds-app button:not(.dds-btn):not(.dds-nav-tab):not(.dds-menu-label):not(.dds-menu-item):not(.dds-rail-icon):not(.dds-toolbar-icon-btn):not(.dds-page-tab):not(.dds-page-strip-icon-btn):not(.dds-page-menu-insert):not(.dds-page-menu-row-action) {
   font-family: inherit !important;
   cursor: pointer !important;
   border: none !important;
@@ -363,24 +380,30 @@
   height: 32px;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
   flex-shrink: 0;
   position: relative;
 }
 .dds-menu { position: relative; }
+/* .dds-menu-label is a plain <button>, not .dds-btn/.dds-nav-tab, so the
+   `.dds-app button:not(.dds-btn):not(.dds-nav-tab)` reset in
+   variables-reset.css (padding/background/font-size !important) would
+   otherwise silently strip these — same gotcha as .dds-toolbar-icon-btn
+   and the Page Strip buttons, every reset-touched property needs
+   !important here too. */
 .dds-menu-label {
-  background: none;
-  border: none;
-  padding: 6px 14px;
+  background: none !important;
+  border: none !important;
+  padding: 6px 14px !important;
   margin: 0 1px;
-  font-size: var(--dds-text-sm);
+  font-size: var(--dds-text-sm) !important;
   font-weight: 500;
-  color: var(--dds-text);
-  cursor: pointer;
+  color: var(--dds-text) !important;
+  cursor: pointer !important;
   border-radius: var(--dds-radius);
 }
-.dds-menu-label:hover { background: var(--dds-bg); }
-.dds-menu.open .dds-menu-label { background: var(--dds-bg); }
+.dds-menu-label:hover { background: var(--dds-border-hover) !important; }
+.dds-menu.open .dds-menu-label { background: var(--dds-border-hover) !important; }
 .dds-menu-dropdown {
   display: none;
   position: absolute;
@@ -388,30 +411,71 @@
   left: 0;
   margin-top: 2px;
   min-width: 210px;
-  background: var(--dds-surface);
+  background: var(--dds-bg);
   border: 1px solid var(--dds-border);
   border-radius: var(--dds-radius);
   box-shadow: var(--dds-shadow-hover);
-  padding: 4px;
+  padding: 4px 0;
   z-index: 200;
 }
 .dds-menu.open .dds-menu-dropdown { display: block; }
+/* Flat, edge-to-edge rows (RFC §3 Visual Style Guide/Menu Bar and
+   Dropdown Menus, draw.io File menu as reference) — no per-item
+   border-radius, only the dropdown container keeps radius + border.
+   Item padding moved here from the (now horizontal-less) container
+   padding above, so the hover highlight spans the full row width.
+   Plain <button>, not .dds-btn/.dds-nav-tab — same variables-reset.css
+   gotcha as .dds-menu-label above, every reset-touched property needs
+   !important. */
 .dds-menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   width: 100%;
   text-align: left;
-  background: none;
-  border: none;
-  padding: 8px 12px;
-  font-size: var(--dds-text-sm);
-  color: var(--dds-text);
-  cursor: pointer;
-  border-radius: var(--dds-radius);
+  background: none !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  font-size: var(--dds-text-sm) !important;
+  color: var(--dds-text) !important;
+  cursor: pointer !important;
+  border-radius: 0;
   white-space: nowrap;
 }
-.dds-menu-item:hover:not(:disabled) { background: var(--dds-bg); }
-.dds-menu-item:disabled { color: var(--dds-text-muted); cursor: default; opacity: 0.5; }
-.dds-menu-sep { height: 1px; background: var(--dds-border); margin: 4px 4px; }
+.dds-menu-item:hover:not(:disabled) { background: var(--dds-border-hover) !important; }
+.dds-menu-item:disabled { color: var(--dds-text-muted) !important; cursor: default !important; opacity: 0.5 !important; }
+/* Right-aligned keyboard-shortcut column (same section of the RFC). */
+.dds-menu-shortcut { color: var(--dds-text-muted); font-size: var(--dds-text-xs); }
+
+/* Declarative Menu Contributions renderer (RFC §4, TODO/T-056) — the
+   start-of-row cluster (checkmark + icon + label) for menu items built
+   by DDS_UI_COMMANDS.renderMenuItems, grouped so .dds-menu-item's own
+   justify-content:space-between only has two direct children (this
+   cluster and the optional trailing .dds-menu-shortcut), regardless of
+   which optional pieces are present. Plain <span>s, not <button>s — not
+   touched by the button reset in variables-reset.css, no !important
+   fight to worry about here (unlike .dds-menu-item itself). */
+.dds-menu-item-start { display: flex; align-items: center; gap: 8px; }
+.dds-menu-item-check { width: 14px; flex-shrink: 0; font-size: var(--dds-text-xs); visibility: hidden; }
+.dds-menu-item-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex-shrink: 0; }
+.dds-menu-item-icon svg { width: 16px; height: 16px; }
+/* Toggle Commands (RFC §4) active state — same accent treatment already
+   used for .dds-rail-icon.active/.dds-toolbar-icon-btn.active/
+   .dds-nav-tab.active, reused rather than inventing a second "active"
+   visual language. .dds-menu-item is excluded from the button reset
+   (see variables-reset.css), so no specificity fight — !important here
+   only needs to beat this file's own base .dds-menu-item rule above. */
+.dds-menu-item.active {
+  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
+  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+}
+.dds-menu-item.active .dds-menu-item-check { visibility: visible; }
+/* Separators mark logical item groups, not arbitrary spacing — widened
+   vertical margin (4px → 6–8px) per the RFC target; horizontal margin
+   matches the item's own horizontal padding so it aligns with the text
+   above/below rather than the old 4px-padded container. */
+.dds-menu-sep { height: 1px; background: var(--dds-border); margin: 7px 16px; }
 
 .dds-toolbar-row {
   background: var(--dds-bg);
@@ -425,6 +489,46 @@
 }
 .dds-toolbar-sep { width: 1px; align-self: stretch; margin: 2px 6px; background: var(--dds-border); }
 .dds-toolbar-spacer { flex: 1; }
+
+/* Toolbar row icon buttons — icon-only, no border/pill, .dds-rail-icon-
+   style hover/active (RFC §3 Visual Style Guide/Toolbar Buttons,
+   TODO/T-054). Not a .dds-btn variant — same reason .dds-rail-icon isn't:
+   the generic `.dds-app button:not(.dds-btn):not(.dds-nav-tab)` reset in
+   variables-reset.css would otherwise strip padding/background via
+   !important, so every property here needs !important too. */
+.dds-toolbar-icon-btn {
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--dds-radius) !important;
+  border: 1px solid transparent !important;
+  background: none !important;
+  color: var(--dds-text-muted) !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+  transition: background var(--dds-transition), color var(--dds-transition) !important;
+}
+.dds-toolbar-icon-btn:hover { background: var(--dds-border-hover) !important; color: var(--dds-text) !important; }
+.dds-toolbar-icon-btn:disabled,
+.dds-toolbar-icon-btn[disabled] {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+/* Auto-Layout ON state — color carries state meaning here (RFC §3/Color),
+   same allowance already used for the Page Strip active tab. Toggled by
+   DDS_MAP_UI.updateAutoLayoutBtn (src/ui/DDS_MAP_UI.js). */
+.dds-toolbar-icon-btn.active {
+  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
+}
+/* Direction toggle — icon flips instead of swapping glyph/textContent, so
+   the control stays icon+tooltip-only (RFC §3/Icons). Class toggled by
+   DDS_MAP_UI.updateDirectionBtn; only the title text differs otherwise. */
+#dds-btn-direction.dds-btn-direction-active .dds-icon-direction { transform: scaleX(-1); }
 
 /* ===== App shell ===== */
 .dds-app {
@@ -473,11 +577,24 @@
   color: var(--dds-text-muted) !important;
   transition: background var(--dds-transition), color var(--dds-transition), border-color var(--dds-transition) !important;
 }
-.dds-rail-icon:hover { background: var(--dds-bg) !important; color: var(--dds-text) !important; }
+.dds-rail-icon:hover { background: var(--dds-border-hover) !important; color: var(--dds-text) !important; }
 .dds-rail-icon.active {
-  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
-  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+  position: relative !important;
+  color: var(--dds-text) !important;
   border-color: transparent !important;
+}
+/* 2px accent-colored left indicator bar — the only color on the rail
+   (RFC §3 Visual Style Guide/Rail Icon States, VSCode Activity Bar
+   pattern), replacing the former --dds-accent-light/--dds-accent pill. */
+.dds-rail-icon.active::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--b2w-brand-1-600, var(--dds-accent));
 }
 .dds-rail-icon.dds-hidden { display: none !important; }
 
@@ -2546,7 +2663,7 @@
    six singleton pages migrate onto this strip. */
 
 .dds-page-strip {
-  background: var(--dds-surface);
+  background: var(--dds-bg);
   border-top: 1px solid var(--dds-border);
   height: 36px;
   flex-shrink: 0;
@@ -2566,6 +2683,7 @@
 .dds-page-tab {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   padding: 0 12px;
   border-radius: var(--dds-radius);
   font-size: var(--dds-text-sm);
@@ -2578,7 +2696,7 @@
   transition: background var(--dds-transition), color var(--dds-transition), border-color var(--dds-transition);
 }
 .dds-page-tab:hover {
-  background: var(--dds-bg);
+  background: var(--dds-border-hover);
   color: var(--dds-text);
 }
 .dds-page-tab.active {
@@ -2592,64 +2710,164 @@
   max-width: 200px;
 }
 
-/* "+" button — creates a new map (Excel/draw.io pattern, decided
-   2026-07-14). Map-specific, not a generic "add page" action — wired by
-   DDS_MAP_UI.js, not DDS_WORKBENCH_SHELL.js (out of IWorkbenchShell v1
-   scope, see RFC §4 Migration Path). */
-.dds-page-strip-add {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  margin: 4px 6px;
-  display: inline-flex;
+/* Chevron — always in the DOM (added once per tab by
+   DDS_WORKBENCH_SHELL.registerPage), visible only on the active tab via
+   CSS — same state-driven-visibility pattern as the Rail's active
+   indicator bar, rather than adding/removing a node on every page
+   switch. Opens the shared Page menu (RFC §3 Page Strip Styling,
+   TODO/T-054), src/ui/DDS_PAGE_MENU.js. */
+.dds-page-tab-chevron {
+  display: none;
   align-items: center;
   justify-content: center;
-  border-radius: var(--dds-radius);
-  border: 1px solid transparent;
-  background: none;
-  color: var(--dds-text-muted);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background var(--dds-transition), color var(--dds-transition);
+  flex-shrink: 0;
 }
-.dds-page-strip-add:hover {
-  background: var(--dds-bg);
-  color: var(--dds-text);
-}
+.dds-page-tab.active .dds-page-tab-chevron { display: inline-flex; }
+.dds-page-tab-chevron:hover { opacity: 0.7; }
 
-/* Right-click context menu on a map page's tab — Rename/Duplicate/
-   Delete (RFC §2 Page Strip: "Delete", not "Close" — destructive, not a
-   tab close). Positioned at click coordinates by
-   DDS_MAP_UI._openMapContextMenu (src/ui/DDS_MAP_UI.js). Singleton pages
-   never trigger this menu — only map tabs get a contextmenu listener. */
-.dds-page-context-menu {
+/* Hamburger + "+" icon buttons — both live at the start of the strip
+   (RFC §4 Page Strip - Pages: "draw.io reference screenshot shows both
+   at the start, not a trailing +"). Hamburger opens the same Page menu
+   as a tab's chevron or a right-click (src/ui/DDS_PAGE_MENU.js); "+"
+   stays its own always-visible shortcut for the single most common
+   action (New map, DDS_MAP_UI.createMap) — also reachable as "Insert
+   Page", the first row of that same menu. Map-specific for "+", not a
+   generic "add page" action — wired by DDS_MAP_UI.js, not
+   DDS_WORKBENCH_SHELL.js (out of IWorkbenchShell v1 scope, RFC §4
+   Migration Path). */
+/* All !important below: these are plain <button>s, not .dds-btn, so the
+   `.dds-app button:not(.dds-btn):not(.dds-nav-tab)` reset in
+   variables-reset.css (background/padding/color !important) would
+   otherwise silently block the hover state — same fix already applied
+   to .dds-rail-icon / .dds-toolbar-icon-btn. */
+.dds-page-strip-icon-btn {
+  flex-shrink: 0 !important;
+  width: 28px !important;
+  height: 28px !important;
+  margin: 4px 2px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--dds-radius) !important;
+  border: 1px solid transparent !important;
+  background: none !important;
+  color: var(--dds-text-muted) !important;
+  cursor: pointer !important;
+  transition: background var(--dds-transition), color var(--dds-transition) !important;
+}
+.dds-page-strip-icon-btn:hover {
+  background: var(--dds-border-hover) !important;
+  color: var(--dds-text) !important;
+}
+.dds-page-strip-icon-btn:first-child { margin-left: 6px !important; }
+
+/* Page menu (RFC §2 Page Strip / §3 Page Strip Styling, TODO/T-054) —
+   shared by the hamburger, a tab's chevron, and a right-click on any map
+   tab (src/ui/DDS_PAGE_MENU.js). Replaces the old .dds-page-context-menu
+   (Rename/Duplicate/Delete only, right-click-only, three plain buttons —
+   removed, this supersedes it). Positioned via JS (style.left/.bottom) —
+   opens upward (style.bottom, not style.top) because the Page Strip is
+   bottom-anchored, the reverse of the Menu bar's downward
+   .dds-menu-dropdown. */
+.dds-page-menu {
   position: fixed;
-  min-width: 160px;
-  background: var(--dds-surface);
+  min-width: 240px;
+  max-width: 320px;
+  background: var(--dds-bg);
   border: 1px solid var(--dds-border);
   border-radius: var(--dds-radius);
   box-shadow: var(--dds-shadow-hover);
   padding: 4px;
   z-index: 300;
+  display: flex;
+  flex-direction: column;
 }
-.dds-page-context-menu-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 8px 12px;
+/* !important below — same reset-fighting reason as .dds-page-strip-icon-btn above. */
+.dds-page-menu-insert {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  text-align: left !important;
+  background: none !important;
+  border: none !important;
+  padding: 8px 10px !important;
+  font-size: var(--dds-text-sm) !important;
+  font-weight: 500 !important;
+  color: var(--dds-text) !important;
+  cursor: pointer !important;
+  border-radius: var(--dds-radius) !important;
+}
+.dds-page-menu-insert:hover { background: var(--dds-border-hover) !important; }
+.dds-page-menu-sep { height: 1px; background: var(--dds-border); margin: 4px 6px; }
+.dds-page-menu-list {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dds-page-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--dds-radius);
+  cursor: pointer;
   font-size: var(--dds-text-sm);
   color: var(--dds-text);
-  cursor: pointer;
-  border-radius: var(--dds-radius);
+}
+.dds-page-menu-row:hover { background: var(--dds-border-hover); }
+.dds-page-menu-row-check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--b2w-brand-1-600, var(--dds-accent));
+  visibility: hidden;
+}
+.dds-page-menu-row.current .dds-page-menu-row-check { visibility: visible; }
+.dds-page-menu-row-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.dds-page-context-menu-item:hover:not(:disabled) { background: var(--dds-bg); }
-.dds-page-context-menu-item:disabled { color: var(--dds-text-muted); cursor: default; opacity: 0.5; }
-.dds-page-context-menu-danger { color: var(--dds-danger, #d33); }
-.dds-page-context-menu-danger:hover:not(:disabled) { background: var(--dds-danger-light, #fde8e8); }
+/* Rename/Duplicate/Move/Delete — hidden until the row is hovered (same
+   reveal-on-hover pattern as .dds-nav-project-edit-btn), an inline
+   simplification of the RFC's "flyout on hover" wording: the four
+   actions sit directly in the row rather than in a separately positioned
+   submenu, avoiding a second layer of edge-aware positioning for what is
+   already a positioned popup. Singleton page rows never get this cluster
+   (src/ui/DDS_PAGE_MENU.js only appends it for map rows) — those pages
+   are permanent, RFC §2 Page Strip. */
+.dds-page-menu-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity var(--dds-transition);
+}
+.dds-page-menu-row:hover .dds-page-menu-row-actions { opacity: 1; }
+/* !important below — same reset-fighting reason as .dds-page-strip-icon-btn above. */
+.dds-page-menu-row-action {
+  width: 24px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--dds-radius) !important;
+  border: none !important;
+  background: none !important;
+  color: var(--dds-text-muted) !important;
+  cursor: pointer !important;
+}
+.dds-page-menu-row-action:hover { background: var(--dds-border-hover) !important; color: var(--dds-text) !important; }
+.dds-page-menu-row-action:disabled { opacity: 0.35 !important; cursor: not-allowed !important; }
+.dds-page-menu-row-action.dds-page-menu-row-danger:hover { background: var(--dds-danger-light) !important; color: var(--dds-danger) !important; }
 </style>
 <!-- styles/settings-content.css -->
 <style>
@@ -3232,21 +3450,21 @@
 
   <!-- 2. Menu bar row -->
   <div class="dds-menu-bar" id="dds-menu-bar">
+    <!-- File — v2 pilot for the Declarative Menu Contributions model
+         (RFC §4, TODO/T-056): this dropdown starts empty and is filled
+         by DDS_UI_COMMANDS.renderMenuItems('File', ...) from
+         register()/contribute() calls in src/ui/DDS_UI_MENU.js — no
+         hand-authored <button data-cmd> markup here anymore. Other
+         menus below are still v1 (hardcoded items), converted later. -->
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">File</button>
-      <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="file.new">New</button>
-        <button class="dds-menu-item" data-cmd="file.open">Open</button>
-        <button class="dds-menu-item" data-cmd="file.save">Save</button>
-        <button class="dds-menu-item" data-cmd="file.saveAs">Save As</button>
-        <button class="dds-menu-item" data-cmd="file.close">Close</button>
-      </div>
+      <div class="dds-menu-dropdown" id="dds-menu-dropdown-file"></div>
     </div>
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Edit</button>
       <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="edit.undo">Undo</button>
-        <button class="dds-menu-item" data-cmd="edit.redo">Redo</button>
+        <button class="dds-menu-item" data-cmd="edit.undo"><span>Undo</span><span class="dds-menu-shortcut">Ctrl+Z</span></button>
+        <button class="dds-menu-item" data-cmd="edit.redo"><span>Redo</span><span class="dds-menu-shortcut">Ctrl+Shift+Z</span></button>
         <button class="dds-menu-item" data-cmd="edit.remove">Remove</button>
         <div class="dds-menu-sep"></div>
         <button class="dds-menu-item" disabled title="Not yet implemented (TODO/T-003)">Cut</button>
@@ -3290,14 +3508,41 @@
   </div>
 
   <!-- 3. Toolbar row -->
+  <!-- Icons below: vendored inline outline SVGs in Lucide's visual style
+       (stroke=currentColor, 24x24 viewBox, round caps/joins) — RFC §3
+       Visual Style Guide/Icons + Toolbar Buttons (TODO/T-054). Network
+       access to pull the exact upstream Lucide files (unpkg, jsdelivr,
+       raw.githubusercontent.com, the GitHub contents API) was blocked in
+       this session, so these are hand-authored equivalents named after
+       their closest Lucide icon (maximize, layout-grid, refresh-cw,
+       arrow-right-left, eye, a plain notes/document glyph standing in for
+       sticky-note, trash-2) — swap in the real package assets later if
+       byte-for-byte fidelity is wanted, same class names/ids, no markup
+       restructuring needed. Scope is exactly the 7 controls the RFC flags
+       as the gap (used .dds-btn-secondary text-pills); Undo/Redo and the
+       Rail/Panel/Header toggles are untouched, out of that gap. -->
   <div class="dds-toolbar-row" id="dds-toolbar-row">
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-fit">&#9635; Fit</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-layout">&#9638; Layout</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-auto-layout" title="Auto-layout after each edit">&#8635; Auto-Layout</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-direction" title="Flow direction">&#8594; &#8594;</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-legend" title="Toggle legend">&#128065; Legend</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-notes" title="Toggle notes panel">&#128203; Notes</button>
-    <button class="dds-btn dds-btn-secondary dds-btn-sm" id="dds-btn-remove-from-map" disabled title="Remove selected element">&#128465; Remove</button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-fit" title="Fit to screen">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-layout" title="Run layout">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-auto-layout" title="Auto-Layout: OFF (click to enable)">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-direction" title="Direction: right ← left (click to toggle)">
+      <svg class="dds-icon-direction" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-legend" title="Toggle legend">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-notes" title="Toggle notes panel">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    </button>
+    <button class="dds-toolbar-icon-btn" id="dds-btn-remove-from-map" disabled title="Remove selected element">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>
+    </button>
     <div class="dds-toolbar-sep"></div>
     <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-undo" disabled title="Undo">↩</button>
     <button class="dds-btn dds-btn-ghost dds-btn-sm" id="dds-btn-redo" disabled title="Redo">↪</button>
@@ -3774,18 +4019,35 @@
        Rename/New/Duplicate/Delete buttons, both removed from this
        fragment (framework-2/3) — CommWise (framework-1) keeps its own
        separate legacy DOM with the same ids, untouched by this file. -->
-  <div class="dds-page-strip dds-hidden" id="dds-page-strip">
+  <div class="dds-page-strip" id="dds-page-strip">
+    <button class="dds-page-strip-icon-btn" id="dds-page-strip-hamburger" title="Pages menu">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <button class="dds-page-strip-icon-btn" id="dds-page-strip-add" title="New map">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
     <div class="dds-page-strip-tabs" id="dds-page-strip-tabs"></div>
-    <button class="dds-page-strip-add" id="dds-page-strip-add" title="New map">+</button>
   </div>
 
-  <!-- Page Strip context menu (map pages only — Rename/Duplicate/Delete,
-       RFC §2 Page Strip). Positioned at click coordinates by
-       DDS_MAP_UI._openMapContextMenu (src/ui/DDS_MAP_UI.js). -->
-  <div class="dds-page-context-menu dds-hidden" id="dds-page-context-menu">
-    <button class="dds-page-context-menu-item" id="dds-page-context-rename">Rename</button>
-    <button class="dds-page-context-menu-item" id="dds-page-context-duplicate">Duplicate</button>
-    <button class="dds-page-context-menu-item dds-page-context-menu-danger" id="dds-page-context-delete">Delete</button>
+  <!-- Page menu (RFC §2 Page Strip / §3 Page Strip Styling, TODO/T-054):
+       opens from the hamburger above, a tab's chevron (added by
+       DDS_WORKBENCH_SHELL.registerPage), or a right-click on any map tab.
+       Insert Page, then the page list (checkmark on the current page,
+       rendered from the live tabs so order always matches the strip) —
+       map rows reveal Rename/Duplicate/Delete/Move on hover; singleton
+       pages (Nodes/Flows/...) have no row actions, they're permanent.
+       Rendered by src/ui/DDS_PAGE_MENU.js. Opens upward — the Page Strip
+       is bottom-anchored, so this is positioned via style.bottom, not
+       style.top (the reverse of the Menu bar's downward dropdowns).
+       Replaces the old #dds-page-context-menu (Rename/Duplicate/Delete
+       only, right-click-only). -->
+  <div class="dds-page-menu dds-hidden" id="dds-page-menu">
+    <button class="dds-page-menu-insert" id="dds-page-menu-insert">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Insert Page</span>
+    </button>
+    <div class="dds-page-menu-sep"></div>
+    <div class="dds-page-menu-list" id="dds-page-menu-list"></div>
   </div>
 
   <!-- Modal: Add product on map -->
@@ -5496,6 +5758,21 @@ DDS_WORKBENCH_SHELL.registerPage = function(descriptor, mountFn) {
     nameSpan.className = 'dds-page-tab-title';
     nameSpan.textContent = descriptor.title || '';
     tab.appendChild(nameSpan);
+
+    // Chevron — always present, CSS-gated to the active tab only (RFC
+    // §3 Visual Style Guide/Page Strip Styling, TODO/T-054). Opens the
+    // shared Page menu (src/ui/DDS_PAGE_MENU.js); stopPropagation so the
+    // click doesn't also fire the tab's own showPage handler below.
+    var chevron = document.createElement('span');
+    chevron.className = 'dds-page-tab-chevron';
+    chevron.title = 'Pages menu';
+    chevron.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>';
+    chevron.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (window.DDS_PAGE_MENU) DDS_PAGE_MENU.open(chevron);
+    });
+    tab.appendChild(chevron);
+
     tab.addEventListener('click', function() { DDS_WORKBENCH_SHELL.showPage(id); });
     strip.appendChild(tab);
   }
@@ -5593,26 +5870,170 @@ DDS_WORKBENCH_SHELL.setPageTitle = function(id, title) {
 // DDS_CMD (undoable) or writes/reads view state directly (not undoable)
 // is a separate, per-command choice.
 //
-// v1 API: register(id, config), execute(id), isEnabled(id),
-// bindTrigger(el, id), refreshEnablement(), setKeybinding(combo, id),
-// bindKeyboard().
+// v2 (RFC §4 Declarative Menu and Toolbar Contributions / Toggle
+// Commands, TODO/T-056) adds a second declaration on top of register():
+// contribute(commandId, { surface, location, group, order }), kept
+// separate from the command definition because a command should not
+// need to know its own placement. renderMenuItems(location, containerEl)
+// is the generic renderer that turns contributions into DOM — a plugin
+// becomes able to add a menu entry via register()+contribute() alone, no
+// edit to this file or DDS_UI_MENU.js required. v1's imperative wiring
+// (each menu item hand-authored in fragments/app-shell.html, bound by
+// DDS_UI_MENU._bindMenuBar's querySelectorAll sweep) still works
+// unchanged for menus not yet migrated — File is the v2 pilot (see
+// DDS_UI_MENU._registerCommands); Edit/View/Arrange/Extras/Help and the
+// toolbar row convert later, same incremental discipline as T-052.
+// Toolbar rendering itself (a generic renderer building toolbar buttons
+// from contributions, not just menu items) is not built yet — today's
+// toolbar row stays hand-authored in fragments/app-shell.html; only the
+// toggle-visual-sync half of Toggle Commands (see _refreshOne) is wired
+// for it in advance.
+//
+// API: register(id, config), contribute(commandId, config),
+// renderMenuItems(location, containerEl), execute(id), isEnabled(id),
+// isActive(id), bindTrigger(el, id), refreshEnablement(),
+// setKeybinding(combo, id), bindKeyboard().
 // ============================================================
 
 var DDS_UI_COMMANDS = {
-  _commands: {},     // id -> { handler, isEnabled, title }
-  _bound: [],         // [{ el, id }] — DOM triggers registered via bindTrigger
-  _keybindings: {}    // 'mod+s' -> id
+  _commands: {},       // id -> { handler, isEnabled, title, icon, isActive, activeIcon, activeTitle }
+  _bound: [],          // [{ el, id }] — DOM triggers registered via bindTrigger
+  _keybindings: {},    // 'mod+s' -> id
+  _contributions: []   // [{ commandId, surface, location, group, order }]
 };
 
-// config: { handler: fn, isEnabled?: fn -> boolean, title?: string }
+// config: { handler: fn, isEnabled?: fn -> boolean, title?: string,
+//   icon?: string (raw SVG markup), isActive?: fn -> boolean,
+//   activeIcon?: string, activeTitle?: string }
+// isActive/activeIcon/activeTitle are for toggle commands only (RFC §4
+// Toggle Commands) — a command with no isActive is a stateless action.
+// Deliberately scoped to a binary/two-way state, not a general state
+// machine (RFC).
 DDS_UI_COMMANDS.register = function(id, config) {
   DDS_UI_COMMANDS._commands[id] = config || {};
+};
+
+// contribution: { surface: 'menu'|'toolbar', location, group?, order? }
+// location is the menu name ('File', 'Edit'...) for a menu contribution,
+// or the toolbar row/section for a toolbar contribution. group+order
+// give separator/ordering control without a full priority system: items
+// are sorted by group (groups ordered by first contribute() call that
+// used them), then by order within a group (defaults to registration
+// order); a separator is rendered between groups by renderMenuItems.
+DDS_UI_COMMANDS.contribute = function(commandId, contrib) {
+  contrib = contrib || {};
+  DDS_UI_COMMANDS._contributions.push({
+    commandId: commandId,
+    surface: contrib.surface,
+    location: contrib.location,
+    group: contrib.group || 'default',
+    order: typeof contrib.order === 'number' ? contrib.order : DDS_UI_COMMANDS._contributions.length
+  });
+};
+
+DDS_UI_COMMANDS._contributionsFor = function(surface, location) {
+  var matches = DDS_UI_COMMANDS._contributions.filter(function(c) {
+    return c.surface === surface && c.location === location;
+  });
+  var groupOrder = [];
+  matches.forEach(function(c) { if (groupOrder.indexOf(c.group) === -1) groupOrder.push(c.group); });
+  return matches.slice().sort(function(a, b) {
+    var g = groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group);
+    return g !== 0 ? g : a.order - b.order;
+  });
+};
+
+// Reverse-lookup of setKeybinding() — lets a generic renderer display a
+// command's shortcut without the caller having to know it separately.
+DDS_UI_COMMANDS._comboFor = function(id) {
+  for (var combo in DDS_UI_COMMANDS._keybindings) {
+    if (DDS_UI_COMMANDS._keybindings[combo] === id) return combo;
+  }
+  return null;
+};
+
+// 'mod+shift+z' -> 'Ctrl+Shift+Z' (display form, same as the three
+// hand-authored dds-menu-shortcut spans this replaces for File).
+DDS_UI_COMMANDS._formatCombo = function(combo) {
+  return combo.split('+').map(function(part) {
+    if (part === 'mod') return 'Ctrl';
+    return part.charAt(0).toUpperCase() + part.slice(1);
+  }).join('+');
+};
+
+// Generic Menu Contribution Renderer (RFC §4 Declarative Menu and
+// Toolbar Contributions). Clears containerEl and rebuilds it from the
+// contributions registered for (surface: 'menu', location) — safe to
+// call again later (e.g. a plugin loaded after boot) since it always
+// starts from an empty container. Each trigger is built purely from its
+// command's title/icon/keybinding and bound via bindTrigger here, not by
+// the caller reaching for a hand-picked getElementById.
+DDS_UI_COMMANDS.renderMenuItems = function(location, containerEl) {
+  if (!containerEl) return;
+  containerEl.innerHTML = '';
+  var contribs = DDS_UI_COMMANDS._contributionsFor('menu', location);
+  var lastGroup = null;
+  contribs.forEach(function(contrib, i) {
+    var cmd = DDS_UI_COMMANDS._commands[contrib.commandId];
+    if (!cmd) return;
+    if (i > 0 && contrib.group !== lastGroup) {
+      var sep = document.createElement('div');
+      sep.className = 'dds-menu-sep';
+      containerEl.appendChild(sep);
+    }
+    lastGroup = contrib.group;
+
+    var el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'dds-menu-item';
+    el.dataset.cmd = contrib.commandId;
+
+    var start = document.createElement('span');
+    start.className = 'dds-menu-item-start';
+
+    if (cmd.isActive) {
+      var check = document.createElement('span');
+      check.className = 'dds-menu-item-check';
+      check.textContent = '✓';
+      start.appendChild(check);
+    }
+    if (cmd.icon) {
+      var iconWrap = document.createElement('span');
+      iconWrap.className = 'dds-menu-item-icon';
+      iconWrap.innerHTML = cmd.icon;
+      start.appendChild(iconWrap);
+    }
+    var label = document.createElement('span');
+    label.className = 'dds-menu-item-label';
+    label.textContent = cmd.title || contrib.commandId;
+    start.appendChild(label);
+    el.appendChild(start);
+
+    var combo = DDS_UI_COMMANDS._comboFor(contrib.commandId);
+    if (combo) {
+      var shortcut = document.createElement('span');
+      shortcut.className = 'dds-menu-shortcut';
+      shortcut.textContent = DDS_UI_COMMANDS._formatCombo(combo);
+      el.appendChild(shortcut);
+    }
+
+    containerEl.appendChild(el);
+    DDS_UI_COMMANDS.bindTrigger(el, contrib.commandId);
+  });
 };
 
 DDS_UI_COMMANDS.isEnabled = function(id) {
   var cmd = DDS_UI_COMMANDS._commands[id];
   if (!cmd) return false;
   return cmd.isEnabled ? !!cmd.isEnabled() : true;
+};
+
+// Toggle-command state check (RFC §4 Toggle Commands). false for any
+// command without an isActive — same "not every command is a toggle"
+// default as isEnabled defaulting to true.
+DDS_UI_COMMANDS.isActive = function(id) {
+  var cmd = DDS_UI_COMMANDS._commands[id];
+  return !!(cmd && cmd.isActive && cmd.isActive());
 };
 
 DDS_UI_COMMANDS.execute = function(id) {
@@ -5623,20 +6044,44 @@ DDS_UI_COMMANDS.execute = function(id) {
 };
 
 // Binds a DOM element's click to execute(id), and registers it for
-// refreshEnablement() to keep its disabled state in sync. A command may
-// have more than one bound trigger (e.g. a toolbar button AND a menu
-// item) — "moving a command between the menu bar and a keybinding is a
-// change to a binding table, not to the command or its handler" (RFC).
+// refreshEnablement() to keep its disabled/active state in sync. A
+// command may have more than one bound trigger (e.g. a toolbar button
+// AND a menu item) — "moving a command between the menu bar and a
+// keybinding is a change to a binding table, not to the command or its
+// handler" (RFC). Idempotent per element — renderMenuItems binds its own
+// elements immediately, and DDS_UI_MENU._bindMenuBar's querySelectorAll
+// sweep (for menus not yet migrated to contribute()) may also match
+// them; a second bindTrigger call on the same element is a no-op rather
+// than double-firing the command.
 DDS_UI_COMMANDS.bindTrigger = function(el, id) {
-  if (!el) return;
+  if (!el || el._ddsCommandBound) return;
+  el._ddsCommandBound = true;
   el.addEventListener('click', function() { DDS_UI_COMMANDS.execute(id); });
   DDS_UI_COMMANDS._bound.push({ el: el, id: id });
   DDS_UI_COMMANDS._refreshOne(el, id);
 };
 
 DDS_UI_COMMANDS._refreshOne = function(el, id) {
+  var cmd = DDS_UI_COMMANDS._commands[id];
   if ('disabled' in el) el.disabled = !DDS_UI_COMMANDS.isEnabled(id);
   else el.classList.toggle('dds-disabled', !DDS_UI_COMMANDS.isEnabled(id));
+
+  if (!cmd || !cmd.isActive) return;
+  // Toggle Commands (RFC §4) — menu items get a checkmark (.active class,
+  // styled in styles/layout-nav-cards.css same as .dds-rail-icon.active/
+  // .dds-toolbar-icon-btn.active/.dds-nav-tab.active); a toolbar button
+  // bound directly via bindTrigger picks up the pre-existing
+  // .dds-toolbar-icon-btn.active highlight the same way (no toolbar
+  // contribution renderer yet — see file header — but a command that
+  // declares isActive today, bound by hand to a toolbar button, already
+  // gets synced state for free through this one shared code path).
+  var active = DDS_UI_COMMANDS.isActive(id);
+  el.classList.toggle('active', active);
+  if (cmd.activeTitle || cmd.title) el.title = (active && cmd.activeTitle) ? cmd.activeTitle : (cmd.title || el.title || '');
+  if (cmd.icon || cmd.activeIcon) {
+    var iconHost = el.querySelector('.dds-menu-item-icon');
+    if (iconHost) iconHost.innerHTML = (active && cmd.activeIcon) ? cmd.activeIcon : cmd.icon;
+  }
 };
 
 DDS_UI_COMMANDS.refreshEnablement = function() {
@@ -5831,10 +6276,10 @@ var DDS = {
     // as a blank bar (2026-07-14 feedback).
     var tabsRow = document.getElementById('dds-view-tabs-row');
     if (tabsRow) tabsRow.classList.remove('dds-hidden');
-    // Page Strip (RFC step 5) — same hidden-while-empty rationale as the
-    // temporary tabsRow above; framework-1 (CommWise) has no #dds-page-strip.
-    var pageStrip = document.getElementById('dds-page-strip');
-    if (pageStrip) pageStrip.classList.remove('dds-hidden');
+    // Page Strip (RFC step 5): always visible now (2026-07-14 feedback) —
+    // no longer hidden-while-empty like the temporary tabsRow above, so
+    // nothing to un-hide here; see fragments/app-shell.html (no dds-hidden
+    // in the markup) and closeProject below (no longer re-hides it either).
     // dds-btn-save-as removed from the new fragment (RFC §4 Header Layout)
     // — Save As now lives in the File menu, gated by file.saveAs's
     // isEnabled (see DDS_UI_MENU.js). CommWise legacy compat: if the old
@@ -5875,10 +6320,9 @@ var DDS = {
     var tabsRowC = document.getElementById('dds-view-tabs-row');
     if (tabsRowC) tabsRowC.classList.add('dds-hidden');
     // Page Strip (RFC step 5) — unregister every map page (singleton pages
-    // stay registered, they're permanent) and hide the now-empty strip.
+    // stay registered, they're permanent). The strip itself stays visible
+    // (2026-07-14 feedback, always shown) — no longer hidden on close.
     if (typeof DDS_MAP_UI !== 'undefined' && typeof DDS_MAP_UI.closeAllMapPages === 'function') DDS_MAP_UI.closeAllMapPages();
-    var pageStripC = document.getElementById('dds-page-strip');
-    if (pageStripC) pageStripC.classList.add('dds-hidden');
     var saveAsBtnC = document.getElementById('dds-btn-save-as');
     if (saveAsBtnC) saveAsBtnC.classList.add('dds-hidden');
 
@@ -6669,12 +7113,23 @@ DDS_UI_MENU._registerCommands = function() {
   var hasProject = function() { return !!DDS_STORE.getProject(); };
   var onMapView  = function() { return DDS && DDS.state && DDS.state.currentView === 'map'; };
 
-  // File
-  DDS_UI_COMMANDS.register('file.new',    { handler: DDS_UI_NAV.newProject });
-  DDS_UI_COMMANDS.register('file.open',   { handler: DDS_UI_NAV.loadProject });
-  DDS_UI_COMMANDS.register('file.save',   { handler: DDS_UI_NAV.save,   isEnabled: hasProject });
-  DDS_UI_COMMANDS.register('file.saveAs', { handler: DDS_UI_NAV.saveAs, isEnabled: hasProject });
-  DDS_UI_COMMANDS.register('file.close',  { handler: DDS_UI_NAV.closeProject, isEnabled: hasProject });
+  // File — v2 pilot for the Declarative Menu Contributions model (RFC §4,
+  // TODO/T-056): register() now carries title (rendering data, not just
+  // hardcoded HTML text), and contribute() places each command into the
+  // File dropdown instead of a hand-authored <button data-cmd> in
+  // fragments/app-shell.html. DDS_UI_COMMANDS.renderMenuItems('File', ...)
+  // builds the actual DOM — see DDS_UI_MENU._renderContributedMenus below.
+  DDS_UI_COMMANDS.register('file.new',    { handler: DDS_UI_NAV.newProject, title: 'New' });
+  DDS_UI_COMMANDS.register('file.open',   { handler: DDS_UI_NAV.loadProject, title: 'Open' });
+  DDS_UI_COMMANDS.register('file.save',   { handler: DDS_UI_NAV.save,   isEnabled: hasProject, title: 'Save' });
+  DDS_UI_COMMANDS.register('file.saveAs', { handler: DDS_UI_NAV.saveAs, isEnabled: hasProject, title: 'Save As' });
+  DDS_UI_COMMANDS.register('file.close',  { handler: DDS_UI_NAV.closeProject, isEnabled: hasProject, title: 'Close' });
+
+  DDS_UI_COMMANDS.contribute('file.new',    { surface: 'menu', location: 'File', order: 0 });
+  DDS_UI_COMMANDS.contribute('file.open',   { surface: 'menu', location: 'File', order: 1 });
+  DDS_UI_COMMANDS.contribute('file.save',   { surface: 'menu', location: 'File', order: 2 });
+  DDS_UI_COMMANDS.contribute('file.saveAs', { surface: 'menu', location: 'File', order: 3 });
+  DDS_UI_COMMANDS.contribute('file.close',  { surface: 'menu', location: 'File', order: 4 });
 
   // Edit — Undo/Redo call the same DDS_UI_NAV functions the toolbar
   // buttons use (see DDS_UI_NAV.js); Remove proxies the existing
@@ -6745,14 +7200,39 @@ DDS_UI_MENU._bindMenuBar = function() {
         if (!wasOpen) menu.classList.add('open');
       });
     }
+    // Menus not yet migrated to contribute() still have their items
+    // hand-authored in fragments/app-shell.html — bind them here.
+    // bindTrigger is idempotent, so this sweep is also safe to run over
+    // a dropdown already populated by DDS_UI_COMMANDS.renderMenuItems
+    // (File) — those items are simply already bound and this is a no-op
+    // for them.
     menu.querySelectorAll('.dds-menu-item[data-cmd]').forEach(function(item) {
       DDS_UI_COMMANDS.bindTrigger(item, item.dataset.cmd);
-      item.addEventListener('click', function() { DDS_UI_MENU._closeAllMenus(); });
     });
+    // Close-on-click delegated at the dropdown container so it covers
+    // both hand-authored items and anything a renderMenuItems() call (or
+    // a future plugin contribute()) adds later, with no per-item wiring.
+    var dropdown = menu.querySelector('.dds-menu-dropdown');
+    if (dropdown) {
+      dropdown.addEventListener('click', function(e) {
+        if (e.target.closest('.dds-menu-item')) DDS_UI_MENU._closeAllMenus();
+      });
+    }
   });
 
   document.addEventListener('click', DDS_UI_MENU._closeAllMenus);
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') DDS_UI_MENU._closeAllMenus(); });
+};
+
+// Renders every menu location already migrated to the Declarative Menu
+// Contributions model (RFC §4, TODO/T-056). Must run before
+// _bindMenuBar's sweep populates/binds hand-authored items — order
+// between the two doesn't actually matter for correctness (bindTrigger
+// is idempotent either way), but rendering first keeps the DOM fully
+// built before any binding pass touches it. Add a location here as each
+// menu converts; File is the only one so far.
+DDS_UI_MENU._renderContributedMenus = function() {
+  DDS_UI_COMMANDS.renderMenuItems('File', document.getElementById('dds-menu-dropdown-file'));
 };
 
 // ---- Toolbar-row rail/identity toggles ----
@@ -6777,6 +7257,7 @@ DDS_UI_MENU.refreshDirtyBadge = function(dirty) {
 
 DDS_UI_MENU.bindEvents = function() {
   DDS_UI_MENU._registerCommands();
+  DDS_UI_MENU._renderContributedMenus();
   DDS_UI_MENU._bindMenuBar();
   DDS_UI_MENU._bindToolbarToggles();
   var badge = document.getElementById('dds-menu-dirty-badge');
@@ -6838,6 +7319,7 @@ DDS_UI_MENU.bindEvents = function() {
     DDS_UI_NAV.bindEvents();
     if (window.DDS_UI_MENU) DDS_UI_MENU.bindEvents();
     DDS_MAP_UI.bindEvents();
+    if (window.DDS_PAGE_MENU) DDS_PAGE_MENU.bindEvents();
     DDS_NODE_UI.bindEvents();
     DDS_LANE_UI.bindEvents();
     DDS_PANEL.bindEvents();
@@ -9472,10 +9954,13 @@ DDS_MAP_UI._registerMapPage = function(map) {
     closable: true,
     onShow: function() { DDS_MAP_UI._activateMap(map.id); }
   });
+  // Right-click shortcut onto the shared Page menu (RFC §2 Page Strip: "a
+  // right-click shortcut directly on a tab", TODO/T-054) — opens at the
+  // click point. Replaces the old, right-click-only _openMapContextMenu.
   var tab = document.getElementById('dds-page-tab-' + map.id);
   if (tab) tab.addEventListener('contextmenu', function(e) {
     e.preventDefault();
-    DDS_MAP_UI._openMapContextMenu(e, map.id);
+    if (window.DDS_PAGE_MENU) DDS_PAGE_MENU.open(e);
   });
 };
 
@@ -9512,28 +9997,6 @@ DDS_MAP_UI.switchMap = async function(mapId) {
     return;
   }
   await DDS_MAP_UI._activateMap(mapId);
-};
-
-// ---- Page Strip context menu (map pages only — Rename/Duplicate/
-// Delete, RFC §2 Page Strip). framework-2/3 only — #dds-page-context-menu
-// doesn't exist on CommWise. ----------------------------------
-DDS_MAP_UI._contextMenuMapId = null;
-
-DDS_MAP_UI._openMapContextMenu = function(evt, mapId) {
-  var menu = document.getElementById('dds-page-context-menu');
-  if (!menu) return;
-  DDS_MAP_UI._contextMenuMapId = mapId;
-  var delItem = document.getElementById('dds-page-context-delete');
-  if (delItem) delItem.disabled = DDS_MAP.state.maps.length <= 1;
-  menu.style.left = evt.clientX + 'px';
-  menu.style.top = evt.clientY + 'px';
-  menu.classList.remove('dds-hidden');
-};
-
-DDS_MAP_UI._closeMapContextMenu = function() {
-  var menu = document.getElementById('dds-page-context-menu');
-  if (menu) menu.classList.add('dds-hidden');
-  DDS_MAP_UI._contextMenuMapId = null;
 };
 
 // Rename map inline
@@ -9576,16 +10039,19 @@ DDS_MAP_UI.updateAutoLayoutBtn = function() {
   }
 };
 
-// Update direction toggle button label to reflect current map direction
+// Update direction toggle button to reflect current map direction. Icon
+// stays fixed (icon + tooltip only, RFC docs/DDScope_Plugin_UI_RFC.md §3
+// Icons/Toolbar Buttons, TODO/T-054) — only the title text and the
+// dds-btn-direction-active class change; the class flips the icon
+// horizontally via CSS (styles/layout-nav-cards.css), it no longer swaps
+// textContent.
 DDS_MAP_UI.updateDirectionBtn = function(direction) {
   var btn = document.getElementById('dds-btn-direction');
   if (!btn) return;
   if (direction === 'left-right') {
-    btn.textContent = '→ →';
     btn.title = 'Direction: left → right (click to toggle)';
     btn.classList.add('dds-btn-direction-active');
   } else {
-    btn.textContent = '← ←';
     btn.title = 'Direction: right ← left (click to toggle)';
     btn.classList.remove('dds-btn-direction-active');
   }
@@ -9720,40 +10186,16 @@ DDS_MAP_UI.bindEvents = function() {
   if (directionBtn)    directionBtn.addEventListener('click', function() { DDS_MAP_UI.toggleDirection(); });
   // Undo / Redo button state — click handlers are owned by DDS_UI_NAV.bindUndoRedo()
 
-  // Page Strip "+" (new map) and right-click context menu (Rename/
-  // Duplicate/Delete) — T-052 step 5, framework-2/3 only (elements absent
-  // on CommWise, every lookup below no-ops safely).
+  // Page Strip "+" (new map) and hamburger (opens the shared Page menu,
+  // src/ui/DDS_PAGE_MENU.js) — T-052 step 5 / T-054 Page Strip Styling,
+  // framework-2/3 only (elements absent on CommWise, lookups no-op).
   var pageStripAdd = document.getElementById('dds-page-strip-add');
   if (pageStripAdd) pageStripAdd.addEventListener('click', function() { DDS_MAP_UI.createMap(); });
 
-  var ctxRename = document.getElementById('dds-page-context-rename');
-  var ctxDup    = document.getElementById('dds-page-context-duplicate');
-  var ctxDel    = document.getElementById('dds-page-context-delete');
-  if (ctxRename) ctxRename.addEventListener('click', function() {
-    var mapId = DDS_MAP_UI._contextMenuMapId;
-    DDS_MAP_UI._closeMapContextMenu();
-    if (mapId == null) return;
-    if (mapId !== DDS_MAP.state.currentMapId) DDS_MAP_UI.switchMap(mapId);
-    DDS_MAP_UI.openRenameModal();
+  var pageStripHamburger = document.getElementById('dds-page-strip-hamburger');
+  if (pageStripHamburger) pageStripHamburger.addEventListener('click', function() {
+    if (window.DDS_PAGE_MENU) DDS_PAGE_MENU.open(pageStripHamburger);
   });
-  if (ctxDup) ctxDup.addEventListener('click', function() {
-    var mapId = DDS_MAP_UI._contextMenuMapId;
-    DDS_MAP_UI._closeMapContextMenu();
-    var map = DDS_MAP.state.maps.find(function(m) { return m.id === mapId; });
-    if (map) DDS_MAP_UI.duplicateMap(map);
-  });
-  if (ctxDel) ctxDel.addEventListener('click', function() {
-    var mapId = DDS_MAP_UI._contextMenuMapId;
-    DDS_MAP_UI._closeMapContextMenu();
-    var map = DDS_MAP.state.maps.find(function(m) { return m.id === mapId; });
-    if (map) DDS_MAP_UI.deleteMap(map);
-  });
-  var ctxMenu = document.getElementById('dds-page-context-menu');
-  if (ctxMenu) {
-    document.addEventListener('click', function(e) {
-      if (!ctxMenu.classList.contains('dds-hidden') && !ctxMenu.contains(e.target)) DDS_MAP_UI._closeMapContextMenu();
-    });
-  }
 
   // T-036 part 4: search/create dedicated modal (was DDS_CONFIGURATION_UI's
   // CRUD modal directly — always-create-only, plus an untransacted direct
@@ -9881,6 +10323,235 @@ DDS_MAP_UI.openProject = async function() {
   var firstMap = DDS_MAP.state.maps[0];
   await DDS_MAP_UI.switchMap(firstMap.id);
   DDS_MAP_UI.updateAutoLayoutBtn();
+};
+</script>
+<!-- src/ui/DDS_PAGE_MENU.js -->
+<script>
+// ============================================================
+// DDS_PAGE_MENU — shared Page Strip menu (RFC §2 Page Strip / §3 Visual
+// Style Guide/Page Strip Styling, TODO/T-054).
+//
+// Opens from three trigger surfaces, always the same content: the
+// hamburger icon at the start of the strip (#dds-page-strip-hamburger,
+// wired in DDS_MAP_UI.bindEvents), the active tab's chevron (added to
+// every tab by DDS_WORKBENCH_SHELL.registerPage, CSS-gated to the active
+// one), or a right-click on any map tab (wired in
+// DDS_MAP_UI._registerMapPage). Content: an "Insert Page" action, then
+// the full page list — singleton pages (Nodes/Flows/Products/BOMs/
+// Demand/Configuration) and map pages together, in the same order as the
+// visible strip, with a checkmark on the current page. Map rows reveal
+// Rename/Duplicate/Delete/Move on hover (an inline row-actions cluster,
+// not a separately positioned flyout submenu — see styles/page-strip.css
+// for why). Singleton rows get no actions — they're permanent (RFC §2
+// Page Strip).
+//
+// Replaces the old #dds-page-context-menu (Rename/Duplicate/Delete only,
+// right-click-only, three plain buttons) — DDS_MAP_UI's
+// _openMapContextMenu/_closeMapContextMenu are gone, this module is the
+// only Page Strip popup now.
+//
+// Move (reordering pages) is deliberately left disabled: no position-
+// mutation mechanism exists yet anywhere in the Page Strip (map
+// 'position' is read for ordering — DDS_MAP_UI.renderSelector — but
+// nothing writes it today), so wiring a real drag/reorder flow is a
+// separate piece of work, not a side effect of adding this menu. Same
+// "reserved but not yet built" treatment as Cut/Copy/Paste in the Edit
+// menu (fragments/app-shell.html, TODO/T-003).
+//
+// framework-2/3 only — every entry point already guards on
+// DDS_WORKBENCH_SHELL / #dds-page-strip being present; this module's own
+// DOM lookups (#dds-page-menu) simply no-op (return early) on
+// framework-1 (CommWise), which has none of these elements.
+// ============================================================
+
+var DDS_PAGE_MENU = {};
+
+DDS_PAGE_MENU._outsideClickHandler = null;
+
+// Small inline icon set for this menu's own controls (Insert Page's "+",
+// the current-page checkmark, and the four row actions) — same
+// hand-vendored, Lucide-style approach as the Toolbar Buttons pass
+// (fragments/app-shell.html), not a separate library.
+DDS_PAGE_MENU._ICONS = {
+  check: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  pencil: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  move: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9 2 12l3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>'
+};
+
+// Read rows from the live DOM tabs (#dds-page-strip-tabs), not
+// DDS_WORKBENCH_SHELL._pages directly. That object is keyed by id, and
+// JS always iterates integer-like keys in ascending numeric order before
+// string keys regardless of insertion order — since map ids are numeric
+// and singleton ids are strings ('nodes', 'flows'...), Object.keys on
+// _pages would not match the strip's actual visual/registration order.
+// Reading the tabs keeps the menu's list identical to what's on screen.
+DDS_PAGE_MENU._buildRows = function() {
+  var tabs = document.querySelectorAll('#dds-page-strip-tabs .dds-page-tab');
+  var rows = [];
+  tabs.forEach(function(tab) {
+    var rawId = tab.id.replace('dds-page-tab-', '');
+    var isMap = /^\d+$/.test(rawId); // map ids are numeric; singleton ids are words
+    var titleEl = tab.querySelector('.dds-page-tab-title');
+    rows.push({
+      id: isMap ? parseInt(rawId, 10) : rawId,
+      title: titleEl ? titleEl.textContent : '',
+      isMap: isMap,
+      current: tab.classList.contains('active')
+    });
+  });
+  return rows;
+};
+
+DDS_PAGE_MENU._actionBtn = function(iconName, title, onClick) {
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'dds-page-menu-row-action';
+  btn.title = title;
+  btn.innerHTML = DDS_PAGE_MENU._ICONS[iconName] || '';
+  btn.addEventListener('click', onClick);
+  return btn;
+};
+
+DDS_PAGE_MENU._render = function() {
+  var list = document.getElementById('dds-page-menu-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  var rows = DDS_PAGE_MENU._buildRows();
+  var mapCount = rows.filter(function(r) { return r.isMap; }).length;
+
+  rows.forEach(function(row) {
+    var el = document.createElement('div');
+    el.className = 'dds-page-menu-row' + (row.current ? ' current' : '');
+
+    var check = document.createElement('span');
+    check.className = 'dds-page-menu-row-check';
+    check.innerHTML = DDS_PAGE_MENU._ICONS.check;
+    el.appendChild(check);
+
+    var title = document.createElement('span');
+    title.className = 'dds-page-menu-row-title';
+    title.textContent = row.title;
+    el.appendChild(title);
+
+    el.addEventListener('click', function() {
+      DDS_PAGE_MENU.close();
+      DDS_WORKBENCH_SHELL.showPage(row.id);
+    });
+
+    // Row actions — map pages only (RFC §2 Page Strip: singleton pages
+    // are permanent, no Rename/Delete/Move/Duplicate). Reuses the exact
+    // handlers the old right-click-only context menu called
+    // (DDS_MAP_UI.openRenameModal/duplicateMap/deleteMap) so behavior is
+    // unchanged, only the trigger surface and surrounding chrome are new.
+    if (row.isMap) {
+      var actions = document.createElement('span');
+      actions.className = 'dds-page-menu-row-actions';
+
+      actions.appendChild(DDS_PAGE_MENU._actionBtn('pencil', 'Rename', function(e) {
+        e.stopPropagation();
+        DDS_PAGE_MENU.close();
+        if (row.id !== DDS_MAP.state.currentMapId) DDS_MAP_UI.switchMap(row.id);
+        DDS_MAP_UI.openRenameModal();
+      }));
+
+      actions.appendChild(DDS_PAGE_MENU._actionBtn('copy', 'Duplicate', function(e) {
+        e.stopPropagation();
+        DDS_PAGE_MENU.close();
+        var map = DDS_MAP.state.maps.find(function(m) { return m.id === row.id; });
+        if (map) DDS_MAP_UI.duplicateMap(map);
+      }));
+
+      var moveBtn = DDS_PAGE_MENU._actionBtn('move', 'Move (not yet implemented — TODO/T-054)', function(e) {
+        e.stopPropagation();
+      });
+      moveBtn.disabled = true;
+      actions.appendChild(moveBtn);
+
+      var delBtn = DDS_PAGE_MENU._actionBtn('trash', 'Delete', function(e) {
+        e.stopPropagation();
+        DDS_PAGE_MENU.close();
+        var map = DDS_MAP.state.maps.find(function(m) { return m.id === row.id; });
+        if (map) DDS_MAP_UI.deleteMap(map);
+      });
+      delBtn.classList.add('dds-page-menu-row-danger');
+      if (mapCount <= 1) delBtn.disabled = true; // last remaining map — mirrors the old context menu's guard
+      actions.appendChild(delBtn);
+
+      el.appendChild(actions);
+    }
+
+    list.appendChild(el);
+  });
+};
+
+// anchorOrEvent: a DOM element (hamburger/chevron — menu opens above it,
+// left-aligned to it) or a MouseEvent (right-click — menu opens with its
+// bottom-left corner at the click point). Either way the menu opens
+// upward (style.bottom, not style.top) since the Page Strip is
+// bottom-anchored — the reverse of the Menu bar's downward dropdowns
+// (RFC §3 Page Strip Styling).
+DDS_PAGE_MENU.open = function(anchorOrEvent) {
+  var menu = document.getElementById('dds-page-menu');
+  if (!menu) return;
+
+  DDS_PAGE_MENU._render();
+  menu.classList.remove('dds-hidden');
+  menu.style.top = 'auto';
+
+  var x, yFromBottom;
+  if (anchorOrEvent && anchorOrEvent.nodeType === 1) {
+    var r = anchorOrEvent.getBoundingClientRect();
+    x = r.left;
+    yFromBottom = window.innerHeight - r.top;
+  } else {
+    x = anchorOrEvent.clientX;
+    yFromBottom = window.innerHeight - anchorOrEvent.clientY;
+  }
+
+  var menuWidth = menu.getBoundingClientRect().width || 240;
+  var maxLeft = window.innerWidth - menuWidth - 8;
+  menu.style.left = Math.max(8, Math.min(x, maxLeft)) + 'px';
+  menu.style.bottom = yFromBottom + 'px';
+
+  // Deferred so the click that opened the menu doesn't immediately
+  // trigger the outside-click handler (same pattern as the old
+  // per-tab context menu's document click listener).
+  setTimeout(function() {
+    DDS_PAGE_MENU._outsideClickHandler = function(e) {
+      if (!menu.contains(e.target)) DDS_PAGE_MENU.close();
+    };
+    document.addEventListener('click', DDS_PAGE_MENU._outsideClickHandler);
+    document.addEventListener('keydown', DDS_PAGE_MENU._escHandler);
+  }, 0);
+};
+
+DDS_PAGE_MENU._escHandler = function(e) {
+  if (e.key === 'Escape') DDS_PAGE_MENU.close();
+};
+
+DDS_PAGE_MENU.close = function() {
+  var menu = document.getElementById('dds-page-menu');
+  if (!menu) return;
+  menu.classList.add('dds-hidden');
+  if (DDS_PAGE_MENU._outsideClickHandler) {
+    document.removeEventListener('click', DDS_PAGE_MENU._outsideClickHandler);
+    DDS_PAGE_MENU._outsideClickHandler = null;
+  }
+  document.removeEventListener('keydown', DDS_PAGE_MENU._escHandler);
+};
+
+// Insert Page — wired once at boot (not per-open); same handler as the
+// standalone "+" button (DDS_MAP_UI.createMap, wired separately in
+// DDS_MAP_UI.bindEvents).
+DDS_PAGE_MENU.bindEvents = function() {
+  var insertBtn = document.getElementById('dds-page-menu-insert');
+  if (insertBtn) insertBtn.addEventListener('click', function() {
+    DDS_PAGE_MENU.close();
+    DDS_MAP_UI.createMap();
+  });
 };
 </script>
 <!-- src/presentation/DDS_LAYOUT.js -->

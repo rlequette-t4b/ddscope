@@ -47,6 +47,15 @@
   color: var(--dds-text-muted) !important;
 }
 .dds-btn-ghost:hover { background: var(--dds-bg) !important; color: var(--dds-text) !important; }
+/* Toggle Commands (RFC §4) toolbar highlight case — Rail/Panel/Identity
+   row toggles (no activeIcon/activeTitle declared), same accent
+   treatment as .dds-rail-icon.active/.dds-toolbar-icon-btn.active/
+   .dds-nav-tab.active. Scoped to .dds-btn-ghost, not all .dds-btn, since
+   only ghost buttons are used as toggle triggers today. */
+.dds-btn-ghost.active {
+  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
+}
 .dds-btn-ghost:disabled,
 .dds-btn-ghost[disabled] {
   opacity: 0.4 !important;

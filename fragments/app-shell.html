@@ -38,29 +38,22 @@
         <button class="dds-menu-item" disabled title="Not yet implemented (TODO/T-003)">Paste</button>
       </div>
     </div>
+    <!-- View / Arrange / Extras — migrated to the Declarative Menu
+         Contributions model alongside File (RFC §4, TODO/T-056), so their
+         Toggle Commands (Rail/Panel/Identity Row, Direction, Legend,
+         Notes) can actually render a checkmark — see
+         DDS_UI_MENU._registerCommands/_renderContributedMenus. -->
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">View</button>
-      <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="view.toggleRail">Toggle Rail</button>
-        <button class="dds-menu-item" data-cmd="view.toggleSidePanel">Toggle Side Panel</button>
-        <button class="dds-menu-item" data-cmd="view.toggleIdentityRow">Toggle Identity Row</button>
-        <button class="dds-menu-item" disabled title="Depends on the Page Strip (RFC step 5)">Fullscreen</button>
-      </div>
+      <div class="dds-menu-dropdown" id="dds-menu-dropdown-view"></div>
     </div>
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Arrange</button>
-      <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="arrange.layout">Layout</button>
-        <button class="dds-menu-item" data-cmd="arrange.direction">Direction</button>
-      </div>
+      <div class="dds-menu-dropdown" id="dds-menu-dropdown-arrange"></div>
     </div>
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Extras</button>
-      <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="extras.legend">Legend</button>
-        <button class="dds-menu-item" data-cmd="extras.notes">Notes</button>
-        <button class="dds-menu-item" data-cmd="extras.settings">Settings</button>
-      </div>
+      <div class="dds-menu-dropdown" id="dds-menu-dropdown-extras"></div>
     </div>
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Help</button>

@@ -52,36 +52,128 @@ DDS_UI_MENU._registerCommands = function() {
     isEnabled: function() { var b = document.getElementById('dds-btn-remove-from-map'); return !!b && !b.disabled; }
   });
 
-  // View — rail/identity row visibility are small toggles (v1). Side
-  // panel visibility now goes through DDS_PANEL.toggleVisibility() (RFC
-  // step 4, T-052) — content swap stays separate, see DDS_PANEL.js.
-  // Fullscreen still depends on the Page Strip (RFC step 5, not built
-  // yet) — left as a static disabled menu item in the fragment.
+  // View — rail/identity row visibility and side panel visibility are
+  // Toggle Commands (RFC §4, TODO/T-056): isActive reads the DOM class
+  // that already is the source of truth for each panel's visibility, so
+  // no new state to keep in sync. Both surfaces go through the registry
+  // for these three — the toolbar buttons (#dds-btn-toggle-rail etc.,
+  // bound in _bindToolbarToggles below) AND the View menu (migrated to
+  // contribute(), see below) — so isActive drives a toolbar highlight
+  // (.dds-btn-ghost.active, styles/buttons-modal-forms.css) and a menu
+  // checkmark from the exact same state read.
+  // Handlers call refreshEnablement() themselves after mutating state —
+  // none of these three dirty the project, touch undo/redo, or switch
+  // pages, so none of the existing global refreshEnablement() triggers
+  // (DDS_STORE.onDirtyChange, undo/redo, page switch — see DDS_INIT.js)
+  // would otherwise catch them (RFC §4 Toggle Commands/Refresh: "a
+  // toggle whose state can change independently of those triggers ...
+  // must call refreshEnablement() from its own handler").
   DDS_UI_COMMANDS.register('view.toggleRail', {
-    handler: function() { var r = document.getElementById('dds-rail'); if (r) r.classList.toggle('dds-hidden'); }
+    handler: function() {
+      var r = document.getElementById('dds-rail');
+      if (r) r.classList.toggle('dds-hidden');
+      DDS_UI_COMMANDS.refreshEnablement();
+    },
+    isActive: function() { var r = document.getElementById('dds-rail'); return !!r && !r.classList.contains('dds-hidden'); },
+    title: 'Toggle Rail'
   });
   DDS_UI_COMMANDS.register('view.toggleSidePanel', {
-    handler: function() { if (window.DDS_PANEL) DDS_PANEL.toggleVisibility(); }
+    handler: function() {
+      if (window.DDS_PANEL) DDS_PANEL.toggleVisibility();
+      DDS_UI_COMMANDS.refreshEnablement();
+    },
+    isActive: function() { var p = document.getElementById('dds-panel'); return !!p && !p.classList.contains('dds-hidden'); },
+    title: 'Toggle Side Panel'
   });
   DDS_UI_COMMANDS.register('view.toggleIdentityRow', {
-    handler: function() { var r = document.getElementById('dds-identity-row'); if (r) r.classList.toggle('dds-hidden'); }
+    handler: function() {
+      var r = document.getElementById('dds-identity-row');
+      if (r) r.classList.toggle('dds-hidden');
+      DDS_UI_COMMANDS.refreshEnablement();
+    },
+    isActive: function() { var r = document.getElementById('dds-identity-row'); return !!r && !r.classList.contains('dds-hidden'); },
+    title: 'Toggle Identity Row'
+  });
+  // Still depends on the Page Strip (RFC step 5, built, but no
+  // fullscreen mechanism wired to it yet) — kept as an always-disabled
+  // command rather than a hand-authored disabled <button>, now that View
+  // is generated from contributions (every trigger needs a command).
+  DDS_UI_COMMANDS.register('view.fullscreen', {
+    handler: function() {},
+    isEnabled: function() { return false; },
+    title: 'Fullscreen'
   });
 
-  // Arrange — same functions as the Layout/Direction toolbar buttons.
-  DDS_UI_COMMANDS.register('arrange.layout',    { handler: function() { DDS_MAP.runLayout(); }, isEnabled: onMapView });
-  DDS_UI_COMMANDS.register('arrange.direction', { handler: function() { DDS_MAP_UI.toggleDirection(); }, isEnabled: onMapView });
+  DDS_UI_COMMANDS.contribute('view.toggleRail',       { surface: 'menu', location: 'View', order: 0 });
+  DDS_UI_COMMANDS.contribute('view.toggleSidePanel',  { surface: 'menu', location: 'View', order: 1 });
+  DDS_UI_COMMANDS.contribute('view.toggleIdentityRow',{ surface: 'menu', location: 'View', order: 2 });
+  DDS_UI_COMMANDS.contribute('view.fullscreen',       { surface: 'menu', location: 'View', order: 3 });
 
-  // Extras
-  DDS_UI_COMMANDS.register('extras.legend', { handler: function() { DDS_MAP.toggleLegend(); }, isEnabled: onMapView });
-  DDS_UI_COMMANDS.register('extras.notes',  { handler: function() { if (window.DDS_NOTES_UI) DDS_NOTES_UI.toggle(); }, isEnabled: onMapView });
+  // Arrange — same functions as the Layout/Direction toolbar buttons.
+  // Direction is a Toggle Command whose toolbar button already has its
+  // own dedicated active-state rendering (DDS_MAP_UI.updateDirectionBtn
+  // — icon flip via CSS transform, called from several places, not just
+  // this command's handler) — isActive here only drives the Arrange
+  // menu's checkmark; the toolbar button is untouched.
+  DDS_UI_COMMANDS.register('arrange.layout',    { handler: function() { DDS_MAP.runLayout(); }, isEnabled: onMapView, title: 'Layout' });
+  DDS_UI_COMMANDS.register('arrange.direction', {
+    handler: function() {
+      DDS_MAP_UI.toggleDirection();
+      // toggleDirection already calls updateDirectionBtn for the toolbar
+      // button's own dedicated visual (untouched by this registry) —
+      // this refreshEnablement() is only to sync the new Arrange menu
+      // checkmark, which has no other trigger for this state change.
+      DDS_UI_COMMANDS.refreshEnablement();
+    },
+    isEnabled: onMapView,
+    isActive: function() {
+      var mapId = DDS_MAP.state.currentMapId;
+      var map = mapId && DDS_MAP.state.maps.find(function(m) { return m.id === mapId; });
+      return !!map && map.direction === 'left-right';
+    },
+    title: 'Direction'
+  });
+
+  DDS_UI_COMMANDS.contribute('arrange.layout',    { surface: 'menu', location: 'Arrange', order: 0 });
+  DDS_UI_COMMANDS.contribute('arrange.direction', { surface: 'menu', location: 'Arrange', order: 1 });
+
+  // Extras — Legend and Notes are Toggle Commands; only the menu goes
+  // through the registry (their toolbar buttons, #dds-btn-legend/
+  // #dds-btn-notes, keep their own separate bindings in DDS_MAP_UI.js,
+  // untouched — no risk of two code paths fighting over the same
+  // element's state).
+  DDS_UI_COMMANDS.register('extras.legend', {
+    handler: function() { DDS_MAP.toggleLegend(); DDS_UI_COMMANDS.refreshEnablement(); },
+    isEnabled: onMapView,
+    isActive: function() {
+      var mapId = DDS_MAP.state.currentMapId;
+      var mapRec = mapId && DDS_STORE.query('maps', { id: mapId })[0];
+      return !!mapRec && mapRec.legend_visible !== false;
+    },
+    title: 'Legend'
+  });
+  DDS_UI_COMMANDS.register('extras.notes', {
+    handler: function() { if (window.DDS_NOTES_UI) DDS_NOTES_UI.toggle(); DDS_UI_COMMANDS.refreshEnablement(); },
+    isEnabled: onMapView,
+    isActive: function() {
+      var p = document.getElementById('dds-notes-panel');
+      return !!p && !p.classList.contains('dds-hidden');
+    },
+    title: 'Notes'
+  });
   // The local-only header (DDScope brand + settings gear) was retired
   // 2026-07-14 — the Identity row now carries the brand, and this menu
   // item is the settings entry point instead of the old gear button.
   // SETTINGS (src/core/DDS_SETTINGS.js) is a plain global, safe to call
   // directly regardless of whether #dds-header-settings-btn exists.
   DDS_UI_COMMANDS.register('extras.settings', {
-    handler: function() { if (window.SETTINGS) SETTINGS.open(); }
+    handler: function() { if (window.SETTINGS) SETTINGS.open(); },
+    title: 'Settings'
   });
+
+  DDS_UI_COMMANDS.contribute('extras.legend',   { surface: 'menu', location: 'Extras', order: 0 });
+  DDS_UI_COMMANDS.contribute('extras.notes',    { surface: 'menu', location: 'Extras', order: 1 });
+  DDS_UI_COMMANDS.contribute('extras.settings', { surface: 'menu', location: 'Extras', order: 2 });
 
   // Keybindings — kept to the small set that already existed (Ctrl/Cmd+S)
   // plus Undo/Redo, rather than inventing new bindings for actions that
@@ -139,10 +231,14 @@ DDS_UI_MENU._bindMenuBar = function() {
 // _bindMenuBar's sweep populates/binds hand-authored items — order
 // between the two doesn't actually matter for correctness (bindTrigger
 // is idempotent either way), but rendering first keeps the DOM fully
-// built before any binding pass touches it. Add a location here as each
-// menu converts; File is the only one so far.
+// built before any binding pass touches it. File (T-056 pilot), then
+// View/Arrange/Extras (added to actually exercise Toggle Commands) —
+// Edit and Help stay v1 hand-authored markup for now.
 DDS_UI_MENU._renderContributedMenus = function() {
-  DDS_UI_COMMANDS.renderMenuItems('File', document.getElementById('dds-menu-dropdown-file'));
+  DDS_UI_COMMANDS.renderMenuItems('File',    document.getElementById('dds-menu-dropdown-file'));
+  DDS_UI_COMMANDS.renderMenuItems('View',    document.getElementById('dds-menu-dropdown-view'));
+  DDS_UI_COMMANDS.renderMenuItems('Arrange', document.getElementById('dds-menu-dropdown-arrange'));
+  DDS_UI_COMMANDS.renderMenuItems('Extras',  document.getElementById('dds-menu-dropdown-extras'));
 };
 
 // ---- Toolbar-row rail/identity toggles ----

@@ -213,20 +213,40 @@ DDS_UI_COMMANDS._refreshOne = function(el, id) {
   else el.classList.toggle('dds-disabled', !DDS_UI_COMMANDS.isEnabled(id));
 
   if (!cmd || !cmd.isActive) return;
-  // Toggle Commands (RFC §4) — menu items get a checkmark (.active class,
-  // styled in styles/layout-nav-cards.css same as .dds-rail-icon.active/
-  // .dds-toolbar-icon-btn.active/.dds-nav-tab.active); a toolbar button
-  // bound directly via bindTrigger picks up the pre-existing
-  // .dds-toolbar-icon-btn.active highlight the same way (no toolbar
-  // contribution renderer yet — see file header — but a command that
-  // declares isActive today, bound by hand to a toolbar button, already
-  // gets synced state for free through this one shared code path).
   var active = DDS_UI_COMMANDS.isActive(id);
-  el.classList.toggle('active', active);
-  if (cmd.activeTitle || cmd.title) el.title = (active && cmd.activeTitle) ? cmd.activeTitle : (cmd.title || el.title || '');
-  if (cmd.icon || cmd.activeIcon) {
-    var iconHost = el.querySelector('.dds-menu-item-icon');
-    if (iconHost) iconHost.innerHTML = (active && cmd.activeIcon) ? cmd.activeIcon : cmd.icon;
+
+  // Toggle Commands (RFC §4) — menu item and toolbar button rendering
+  // are deliberately different, not just two skins of the same swap:
+  if (el.classList.contains('dds-menu-item')) {
+    // "a toggle command always renders as a checkbox-style entry —
+    // checkmark shown when isActive() is true, regardless of whether
+    // activeIcon/activeTitle is set. The label itself does not swap in
+    // the menu; the checkmark alone carries the state." — no
+    // icon/title swap here even if the command declares them; those
+    // fields are toolbar-only per the RFC.
+    el.classList.toggle('active', active);
+    return;
+  }
+
+  // Toolbar button (or any other non-menu trigger bound via
+  // bindTrigger — no toolbar contribution renderer exists yet, see file
+  // header, but a command declaring isActive today already gets synced
+  // state for free through this one shared code path once one is bound
+  // by hand). "The two are mutually exclusive per command: an icon swap
+  // already communicates state, so no highlight is layered on top of
+  // it."
+  if (cmd.activeIcon || cmd.activeTitle) {
+    el.classList.remove('active');
+    if (cmd.icon || cmd.activeIcon) {
+      var svg = el.querySelector('svg');
+      var markup = active && cmd.activeIcon ? cmd.activeIcon : cmd.icon;
+      if (svg && markup) svg.outerHTML = markup;
+    }
+    if (cmd.title || cmd.activeTitle) el.title = (active && cmd.activeTitle) ? cmd.activeTitle : (cmd.title || el.title || '');
+  } else {
+    // No activeIcon/activeTitle declared — Legend/side-panel/rail/
+    // Notes-toggle case: highlighted/pressed visual on the default icon.
+    el.classList.toggle('active', active);
   }
 };
 

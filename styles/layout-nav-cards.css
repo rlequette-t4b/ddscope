@@ -330,16 +330,11 @@
 .dds-menu-item-check { width: 14px; flex-shrink: 0; font-size: var(--dds-text-xs); visibility: hidden; }
 .dds-menu-item-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex-shrink: 0; }
 .dds-menu-item-icon svg { width: 16px; height: 16px; }
-/* Toggle Commands (RFC §4) active state — same accent treatment already
-   used for .dds-rail-icon.active/.dds-toolbar-icon-btn.active/
-   .dds-nav-tab.active, reused rather than inventing a second "active"
-   visual language. .dds-menu-item is excluded from the button reset
-   (see variables-reset.css), so no specificity fight — !important here
-   only needs to beat this file's own base .dds-menu-item rule above. */
-.dds-menu-item.active {
-  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
-  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
-}
+/* Toggle Commands (RFC §4) active state for a menu item — deliberately
+   NOT the same accent-highlight treatment as .dds-rail-icon.active/
+   .dds-toolbar-icon-btn.active/.dds-nav-tab.active: "the checkmark alone
+   carries the state, keeping menu items scannable as a fixed list" — no
+   row background/color change, just revealing the checkmark. */
 .dds-menu-item.active .dds-menu-item-check { visibility: visible; }
 /* Separators mark logical item groups, not arbitrary spacing — widened
    vertical margin (4px → 6–8px) per the RFC target; horizontal margin
