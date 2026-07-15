@@ -23,12 +23,23 @@ DDS_UI_MENU._registerCommands = function() {
   var hasProject = function() { return !!DDS_STORE.getProject(); };
   var onMapView  = function() { return DDS && DDS.state && DDS.state.currentView === 'map'; };
 
-  // File
-  DDS_UI_COMMANDS.register('file.new',    { handler: DDS_UI_NAV.newProject });
-  DDS_UI_COMMANDS.register('file.open',   { handler: DDS_UI_NAV.loadProject });
-  DDS_UI_COMMANDS.register('file.save',   { handler: DDS_UI_NAV.save,   isEnabled: hasProject });
-  DDS_UI_COMMANDS.register('file.saveAs', { handler: DDS_UI_NAV.saveAs, isEnabled: hasProject });
-  DDS_UI_COMMANDS.register('file.close',  { handler: DDS_UI_NAV.closeProject, isEnabled: hasProject });
+  // File — v2 pilot for the Declarative Menu Contributions model (RFC §4,
+  // TODO/T-056): register() now carries title (rendering data, not just
+  // hardcoded HTML text), and contribute() places each command into the
+  // File dropdown instead of a hand-authored <button data-cmd> in
+  // fragments/app-shell.html. DDS_UI_COMMANDS.renderMenuItems('File', ...)
+  // builds the actual DOM — see DDS_UI_MENU._renderContributedMenus below.
+  DDS_UI_COMMANDS.register('file.new',    { handler: DDS_UI_NAV.newProject, title: 'New' });
+  DDS_UI_COMMANDS.register('file.open',   { handler: DDS_UI_NAV.loadProject, title: 'Open' });
+  DDS_UI_COMMANDS.register('file.save',   { handler: DDS_UI_NAV.save,   isEnabled: hasProject, title: 'Save' });
+  DDS_UI_COMMANDS.register('file.saveAs', { handler: DDS_UI_NAV.saveAs, isEnabled: hasProject, title: 'Save As' });
+  DDS_UI_COMMANDS.register('file.close',  { handler: DDS_UI_NAV.closeProject, isEnabled: hasProject, title: 'Close' });
+
+  DDS_UI_COMMANDS.contribute('file.new',    { surface: 'menu', location: 'File', order: 0 });
+  DDS_UI_COMMANDS.contribute('file.open',   { surface: 'menu', location: 'File', order: 1 });
+  DDS_UI_COMMANDS.contribute('file.save',   { surface: 'menu', location: 'File', order: 2 });
+  DDS_UI_COMMANDS.contribute('file.saveAs', { surface: 'menu', location: 'File', order: 3 });
+  DDS_UI_COMMANDS.contribute('file.close',  { surface: 'menu', location: 'File', order: 4 });
 
   // Edit — Undo/Redo call the same DDS_UI_NAV functions the toolbar
   // buttons use (see DDS_UI_NAV.js); Remove proxies the existing
@@ -99,14 +110,39 @@ DDS_UI_MENU._bindMenuBar = function() {
         if (!wasOpen) menu.classList.add('open');
       });
     }
+    // Menus not yet migrated to contribute() still have their items
+    // hand-authored in fragments/app-shell.html — bind them here.
+    // bindTrigger is idempotent, so this sweep is also safe to run over
+    // a dropdown already populated by DDS_UI_COMMANDS.renderMenuItems
+    // (File) — those items are simply already bound and this is a no-op
+    // for them.
     menu.querySelectorAll('.dds-menu-item[data-cmd]').forEach(function(item) {
       DDS_UI_COMMANDS.bindTrigger(item, item.dataset.cmd);
-      item.addEventListener('click', function() { DDS_UI_MENU._closeAllMenus(); });
     });
+    // Close-on-click delegated at the dropdown container so it covers
+    // both hand-authored items and anything a renderMenuItems() call (or
+    // a future plugin contribute()) adds later, with no per-item wiring.
+    var dropdown = menu.querySelector('.dds-menu-dropdown');
+    if (dropdown) {
+      dropdown.addEventListener('click', function(e) {
+        if (e.target.closest('.dds-menu-item')) DDS_UI_MENU._closeAllMenus();
+      });
+    }
   });
 
   document.addEventListener('click', DDS_UI_MENU._closeAllMenus);
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') DDS_UI_MENU._closeAllMenus(); });
+};
+
+// Renders every menu location already migrated to the Declarative Menu
+// Contributions model (RFC §4, TODO/T-056). Must run before
+// _bindMenuBar's sweep populates/binds hand-authored items — order
+// between the two doesn't actually matter for correctness (bindTrigger
+// is idempotent either way), but rendering first keeps the DOM fully
+// built before any binding pass touches it. Add a location here as each
+// menu converts; File is the only one so far.
+DDS_UI_MENU._renderContributedMenus = function() {
+  DDS_UI_COMMANDS.renderMenuItems('File', document.getElementById('dds-menu-dropdown-file'));
 };
 
 // ---- Toolbar-row rail/identity toggles ----
@@ -131,6 +167,7 @@ DDS_UI_MENU.refreshDirtyBadge = function(dirty) {
 
 DDS_UI_MENU.bindEvents = function() {
   DDS_UI_MENU._registerCommands();
+  DDS_UI_MENU._renderContributedMenus();
   DDS_UI_MENU._bindMenuBar();
   DDS_UI_MENU._bindToolbarToggles();
   var badge = document.getElementById('dds-menu-dirty-badge');

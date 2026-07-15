@@ -16,15 +16,15 @@
 
   <!-- 2. Menu bar row -->
   <div class="dds-menu-bar" id="dds-menu-bar">
+    <!-- File — v2 pilot for the Declarative Menu Contributions model
+         (RFC §4, TODO/T-056): this dropdown starts empty and is filled
+         by DDS_UI_COMMANDS.renderMenuItems('File', ...) from
+         register()/contribute() calls in src/ui/DDS_UI_MENU.js — no
+         hand-authored <button data-cmd> markup here anymore. Other
+         menus below are still v1 (hardcoded items), converted later. -->
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">File</button>
-      <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="file.new">New</button>
-        <button class="dds-menu-item" data-cmd="file.open">Open</button>
-        <button class="dds-menu-item" data-cmd="file.save"><span>Save</span><span class="dds-menu-shortcut">Ctrl+S</span></button>
-        <button class="dds-menu-item" data-cmd="file.saveAs">Save As</button>
-        <button class="dds-menu-item" data-cmd="file.close">Close</button>
-      </div>
+      <div class="dds-menu-dropdown" id="dds-menu-dropdown-file"></div>
     </div>
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Edit</button>

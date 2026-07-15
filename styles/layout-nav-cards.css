@@ -317,6 +317,30 @@
 .dds-menu-item:disabled { color: var(--dds-text-muted) !important; cursor: default !important; opacity: 0.5 !important; }
 /* Right-aligned keyboard-shortcut column (same section of the RFC). */
 .dds-menu-shortcut { color: var(--dds-text-muted); font-size: var(--dds-text-xs); }
+
+/* Declarative Menu Contributions renderer (RFC §4, TODO/T-056) — the
+   start-of-row cluster (checkmark + icon + label) for menu items built
+   by DDS_UI_COMMANDS.renderMenuItems, grouped so .dds-menu-item's own
+   justify-content:space-between only has two direct children (this
+   cluster and the optional trailing .dds-menu-shortcut), regardless of
+   which optional pieces are present. Plain <span>s, not <button>s — not
+   touched by the button reset in variables-reset.css, no !important
+   fight to worry about here (unlike .dds-menu-item itself). */
+.dds-menu-item-start { display: flex; align-items: center; gap: 8px; }
+.dds-menu-item-check { width: 14px; flex-shrink: 0; font-size: var(--dds-text-xs); visibility: hidden; }
+.dds-menu-item-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex-shrink: 0; }
+.dds-menu-item-icon svg { width: 16px; height: 16px; }
+/* Toggle Commands (RFC §4) active state — same accent treatment already
+   used for .dds-rail-icon.active/.dds-toolbar-icon-btn.active/
+   .dds-nav-tab.active, reused rather than inventing a second "active"
+   visual language. .dds-menu-item is excluded from the button reset
+   (see variables-reset.css), so no specificity fight — !important here
+   only needs to beat this file's own base .dds-menu-item rule above. */
+.dds-menu-item.active {
+  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
+  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+}
+.dds-menu-item.active .dds-menu-item-check { visibility: visible; }
 /* Separators mark logical item groups, not arbitrary spacing — widened
    vertical margin (4px → 6–8px) per the RFC target; horizontal margin
    matches the item's own horizontal padding so it aligns with the text
