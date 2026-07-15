@@ -22,7 +22,6 @@ const coreModules = [
   'DDS_TRANSACTIONS',
   'DDS_TX',
   'DDS_CMD',
-  'DDS_ACTIONS',
   'DDS_MODEL',
   'DDS_I18N_CATALOG_EN',
   'DDS_I18N',
