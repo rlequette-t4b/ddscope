@@ -3,6 +3,23 @@
 // ============================================================
 // AUDITOR:LARGE_BLOCK_JUSTIFIED - single cohesive map loading pipeline
 
+// Destroy the Cytoscape instance and clear the swim-lane overlay/legend
+// DOM — called from DDS_MAP_UI.closeAllMapPages (2026-07-15, ISS-022
+// follow-up) so the central panel is actually emptied on project close,
+// not just hidden: clearActivePage()/showPage() only toggle the .active
+// class on #dds-view-map, they never touched the Cytoscape graph or the
+// swim-lane overlay content, which stayed rendered underneath. Safe to
+// call with no map loaded — initCy() below recreates a fresh, empty
+// instance the next time a map is opened.
+DDS_MAP.destroyCy = function() {
+  if (DDS_CY) { DDS_CY.destroy(); DDS_CY = null; }
+  DDS_MAP.state.cytoscapeReady = false;
+  var overlay = document.getElementById('dds-swimlane-overlay');
+  if (overlay) overlay.innerHTML = '';
+  var legend = document.getElementById('dds-legend');
+  if (legend) { legend.innerHTML = ''; legend.classList.add('dds-hidden'); }
+};
+
 DDS_MAP.initCy = function() {
   if (DDS_CY) { DDS_CY.destroy(); DDS_CY = null; }
   DDS_CY = cytoscape({

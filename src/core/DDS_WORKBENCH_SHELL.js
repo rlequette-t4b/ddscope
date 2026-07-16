@@ -348,6 +348,29 @@ DDS_WORKBENCH_SHELL.closePage = function(id) {
   delete DDS_WORKBENCH_SHELL._pages[id];
 };
 
+// Hide whichever page is currently active, regardless of its closable
+// flag — unlike closePage, this does NOT unregister the page (singleton
+// pages stay registered, they're permanent) and works even when the
+// active page isn't closable. Used by DDS.closeProject (2026-07-15,
+// ISS-022) to guarantee the Page Strip never keeps showing stale content
+// from a closed project, whether the page active at close time was a
+// map (dynamic) page or a singleton (static) one — closeAllMapPages
+// alone only ever touched map pages. No-op if no page is active.
+DDS_WORKBENCH_SHELL.clearActivePage = function() {
+  var id = DDS_WORKBENCH_SHELL._activePageId;
+  if (!id) return;
+  var page = DDS_WORKBENCH_SHELL._pages[id];
+  DDS_WORKBENCH_SHELL._activePageId = null;
+  if (!page) return;
+  var tab = document.getElementById('dds-page-tab-' + id);
+  if (tab) tab.classList.remove('active');
+  if (page.contentId) {
+    var content = document.getElementById(page.contentId);
+    if (content) content.classList.remove('active');
+  }
+  page.onHide();
+};
+
 // Rename a page's tab label in place (map pages only, in practice — see
 // DDS_MAP_UI's rename flow). No-op if the page isn't registered.
 DDS_WORKBENCH_SHELL.setPageTitle = function(id, title) {

@@ -57,9 +57,18 @@ DDS_MAP_UI._registerMapPage = function(map) {
 };
 
 // Unregister every map page — called from DDS.closeProject (RFC step 5).
+// Also resets the in-memory map model (2026-07-15, ISS-022): DDS_MAP.state
+// used to be left stale (old project's maps/currentMapId) until the next
+// openProject overwrote it. The Page Strip's own active-page cleanup is a
+// separate step, DDS_WORKBENCH_SHELL.clearActivePage(), called by
+// DDS.closeProject alongside this.
 DDS_MAP_UI.closeAllMapPages = function() {
-  if (typeof DDS_WORKBENCH_SHELL === 'undefined') return;
-  DDS_MAP.state.maps.forEach(function(m) { DDS_WORKBENCH_SHELL.closePage(m.id); });
+  if (typeof DDS_WORKBENCH_SHELL !== 'undefined') {
+    DDS_MAP.state.maps.forEach(function(m) { DDS_WORKBENCH_SHELL.closePage(m.id); });
+  }
+  DDS_MAP.state.maps = [];
+  DDS_MAP.state.currentMapId = null;
+  if (typeof DDS_MAP.destroyCy === 'function') DDS_MAP.destroyCy();
 };
 
 // Actual data-loading side effect of activating a map — shared by the

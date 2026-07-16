@@ -157,8 +157,12 @@ DDS_AI_UI._applyOpen = function() {
       panel.classList.add('open');
       panel.style.width = (DDS_AI_UI._lastWidth || 420) + 'px';
     }
-    var top = panel.getBoundingClientRect().top;
-    panel.style.height = (window.innerHeight - top) + 'px';
+    // No JS height here — panel height comes from the .dds-workspace flex
+    // stretch (same as the rail and Types Toolbox), which correctly leaves
+    // room for the Page Strip. A leftover `panel.style.height =
+    // window.innerHeight - top` here (pre-dating the Page Strip, RFC step 5,
+    // 2026-07-14) ignored the strip's 36px and made the panel overlap it —
+    // fixed 2026-07-15.
   }
   // CommWise (framework-1) legacy compat: the shell/rail isn't pushed there
   // (see docs/DDScope_Plugin_UI_RFC.md §5 Decisions), so the old map-toolbar

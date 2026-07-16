@@ -165,9 +165,14 @@ var DDS = {
     });
     var tabsRowC = document.getElementById('dds-view-tabs-row');
     if (tabsRowC) tabsRowC.classList.add('dds-hidden');
-    // Page Strip (RFC step 5) — unregister every map page (singleton pages
-    // stay registered, they're permanent). The strip itself stays visible
-    // (2026-07-14 feedback, always shown) — no longer hidden on close.
+    // Page Strip (RFC step 5) — first hide whichever page is currently
+    // active, static or dynamic (2026-07-15, ISS-022: closeAllMapPages
+    // alone left a stale singleton page on screen when it, not a map, was
+    // active at close time), then unregister every map page (singleton
+    // pages stay registered, they're permanent). The strip itself stays
+    // visible (2026-07-14 feedback, always shown) — no longer hidden on
+    // close.
+    if (typeof DDS_WORKBENCH_SHELL !== 'undefined') DDS_WORKBENCH_SHELL.clearActivePage();
     if (typeof DDS_MAP_UI !== 'undefined' && typeof DDS_MAP_UI.closeAllMapPages === 'function') DDS_MAP_UI.closeAllMapPages();
     var saveAsBtnC = document.getElementById('dds-btn-save-as');
     if (saveAsBtnC) saveAsBtnC.classList.add('dds-hidden');
@@ -175,7 +180,14 @@ var DDS = {
     if (typeof DDS_AI_UI !== 'undefined') DDS_AI_UI.close();
     if (window.DDS_TYPES_UI) DDS_TYPES_UI.close();
     if (window.DDS_NOTES_UI) DDS_NOTES_UI.hide();
-    DDS.showView('map');
+    // Was DDS.showView('map') (legacy CommWise nav-tab fallback, framework-1
+    // retired 2026-07-15, T-059) — removed 2026-07-15 (ISS-022 follow-up):
+    // 'map' never matches a registered Page Strip id (map pages are keyed
+    // by numeric map id), so the call always fell through to showView's
+    // legacy branch and re-added .active to #dds-view-map, undoing the
+    // clearActivePage()/destroyCy() cleanup above. No project/view is open
+    // after close, so there is nothing to show here.
+    DDS.state.currentView = null;
     if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
   }
 };
