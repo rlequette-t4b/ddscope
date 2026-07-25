@@ -98,6 +98,18 @@ var DDS = {
   },
 
   openProject: function() {
+    // Open-project teardown (2026-07-25, twin of ISS-022's close path) —
+    // loadProject/handleSave call openProject() directly without a
+    // preceding closeProject(), so a project opened over an already-open
+    // one used to leak the previous project's map tabs on the Page Strip.
+    // Run the same teardown closeProject does before registering the new
+    // project's map pages. No-op on a first open (no active page, maps
+    // empty); reads DDS_MAP.state.maps, still the previous project's at
+    // this point (overwritten later in DDS_MAP_UI.openProject). See
+    // docs/DDScope_Modules.md DDS_WORKBENCH_SHELL Open-project contract.
+    if (typeof DDS_WORKBENCH_SHELL !== 'undefined') DDS_WORKBENCH_SHELL.clearActivePage();
+    if (typeof DDS_MAP_UI !== 'undefined' && typeof DDS_MAP_UI.closeAllMapPages === 'function') DDS_MAP_UI.closeAllMapPages();
+
     var name = DDS_STORE.getProject().project.name || 'Untitled';
     var label = document.getElementById('dds-nav-project-label');
     if (label) label.textContent = name;

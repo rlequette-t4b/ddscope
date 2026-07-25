@@ -363,13 +363,13 @@
     },
     {
       "tag": "sud",
-      "color": "#fbc02d",
-      "line_color": "#fbc02d",
+      "color": "#f57c00",
+      "line_color": "#f57c00",
       "line_style": null,
       "line_width": null,
       "id": 2,
       "created_at": "2026-05-24T20:18:20.061Z",
-      "updated_at": "2026-05-24T20:18:20.061Z"
+      "updated_at": "2026-07-22T07:00:37.813Z"
     },
     {
       "tag": "aval",
@@ -431,7 +431,7 @@
       "y": 155,
       "id": 1,
       "created_at": "2026-05-24T20:20:43.247Z",
-      "updated_at": "2026-05-24T20:34:50.978Z"
+      "updated_at": "2026-07-22T06:59:10.878Z"
     },
     {
       "map_id": 2,
@@ -440,7 +440,7 @@
       "y": 62,
       "id": 2,
       "created_at": "2026-05-24T20:21:47.646Z",
-      "updated_at": "2026-05-24T20:34:50.978Z",
+      "updated_at": "2026-07-22T06:59:10.879Z",
       "label_position": "above"
     },
     {
@@ -450,7 +450,7 @@
       "y": 264,
       "id": 3,
       "created_at": "2026-05-24T20:21:47.646Z",
-      "updated_at": "2026-05-24T20:34:50.978Z"
+      "updated_at": "2026-07-22T06:59:10.879Z"
     },
     {
       "map_id": 2,
@@ -459,7 +459,7 @@
       "y": -1,
       "id": 4,
       "created_at": "2026-05-24T20:24:40.181Z",
-      "updated_at": "2026-05-24T20:34:50.978Z",
+      "updated_at": "2026-07-22T06:59:10.879Z",
       "note_visible": true,
       "note_dx": 2,
       "note_dy": 82
@@ -471,16 +471,16 @@
       "y": 292,
       "id": 5,
       "created_at": "2026-05-24T20:24:40.181Z",
-      "updated_at": "2026-05-24T20:34:50.978Z"
+      "updated_at": "2026-07-22T06:59:10.879Z"
     },
     {
       "map_id": 2,
       "node_id": 6,
       "x": 1144,
-      "y": -37,
+      "y": -23,
       "id": 6,
       "created_at": "2026-05-24T20:31:44.742Z",
-      "updated_at": "2026-05-24T20:34:50.978Z",
+      "updated_at": "2026-07-22T06:59:10.879Z",
       "label_position": "above"
     },
     {
@@ -490,7 +490,7 @@
       "y": 317,
       "id": 7,
       "created_at": "2026-05-24T20:31:44.742Z",
-      "updated_at": "2026-05-24T20:34:50.978Z",
+      "updated_at": "2026-07-22T06:59:10.879Z",
       "note_visible": false
     }
   ],
@@ -642,5 +642,6 @@
       "updated_at": "2026-05-24T20:37:46.863Z",
       "font_size": 18
     }
-  ]
+  ],
+  "note_categories": []
 }

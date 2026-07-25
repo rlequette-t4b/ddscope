@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DDScope — Desktop</title>
+<title>SCFlow — Desktop</title>
 
 <!--
   GENERATED FILE — DO NOT EDIT src/index.html BY HAND.
@@ -460,16 +460,11 @@
 .dds-menu-item-check { width: 14px; flex-shrink: 0; font-size: var(--dds-text-xs); visibility: hidden; }
 .dds-menu-item-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex-shrink: 0; }
 .dds-menu-item-icon svg { width: 16px; height: 16px; }
-/* Toggle Commands (RFC §4) active state — same accent treatment already
-   used for .dds-rail-icon.active/.dds-toolbar-icon-btn.active/
-   .dds-nav-tab.active, reused rather than inventing a second "active"
-   visual language. .dds-menu-item is excluded from the button reset
-   (see variables-reset.css), so no specificity fight — !important here
-   only needs to beat this file's own base .dds-menu-item rule above. */
-.dds-menu-item.active {
-  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
-  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
-}
+/* Toggle Commands (RFC §4) active state for a menu item — deliberately
+   NOT the same accent-highlight treatment as .dds-rail-icon.active/
+   .dds-toolbar-icon-btn.active/.dds-nav-tab.active: "the checkmark alone
+   carries the state, keeping menu items scannable as a fixed list" — no
+   row background/color change, just revealing the checkmark. */
 .dds-menu-item.active .dds-menu-item-check { visibility: visible; }
 /* Separators mark logical item groups, not arbitrary spacing — widened
    vertical margin (4px → 6–8px) per the RFC target; horizontal margin
@@ -702,6 +697,15 @@
   color: var(--dds-text-muted) !important;
 }
 .dds-btn-ghost:hover { background: var(--dds-bg) !important; color: var(--dds-text) !important; }
+/* Toggle Commands (RFC §4) toolbar highlight case — Rail/Panel/Identity
+   row toggles (no activeIcon/activeTitle declared), same accent
+   treatment as .dds-rail-icon.active/.dds-toolbar-icon-btn.active/
+   .dds-nav-tab.active. Scoped to .dds-btn-ghost, not all .dds-btn, since
+   only ghost buttons are used as toggle triggers today. */
+.dds-btn-ghost.active {
+  color: var(--b2w-brand-1-600, var(--dds-accent)) !important;
+  background: var(--b2w-brand-1-100, var(--dds-accent-light)) !important;
+}
 .dds-btn-ghost:disabled,
 .dds-btn-ghost[disabled] {
   opacity: 0.4 !important;
@@ -1858,8 +1862,8 @@
   position: relative !important;
   width: 0;
   min-width: 0 !important;
-  max-width: 600px !important;
-  background: var(--dds-surface) !important;
+  max-width: 700px !important;
+  background: var(--dds-bg) !important;
   border-right: 1px solid var(--dds-border) !important;
   box-shadow: 2px 0 12px rgba(0,0,0,0.07) !important;
   display: flex !important;
@@ -1894,7 +1898,7 @@
   flex-direction: column !important;
   gap: 0 !important;
   flex-shrink: 0 !important;
-  background: var(--dds-surface) !important;
+  background: var(--dds-bg) !important;
 }
 .dds-ai-header-row {
   display: flex !important;
@@ -2033,7 +2037,7 @@
   border-radius: 12px 12px 4px 12px !important;
 }
 .dds-ai-bubble-assistant {
-  background: var(--dds-bg) !important;
+  background: var(--dds-surface) !important;
   color: var(--dds-text) !important;
   border-radius: 12px 12px 12px 4px !important;
   border: 1px solid var(--dds-border) !important;
@@ -2056,7 +2060,7 @@
 
 /* ===== Action plan ===== */
 .dds-ai-plan {
-  background: var(--dds-bg) !important;
+  background: var(--dds-surface) !important;
   border: 1px solid var(--dds-border) !important;
   border-radius: var(--dds-radius) !important;
   overflow: hidden !important;
@@ -2538,7 +2542,7 @@
   position: relative !important;
   width: 0;
   min-width: 0 !important;
-  max-width: 320px !important;
+  max-width: 700px !important;
   background: var(--dds-bg) !important;
   border-right: 1px solid var(--dds-border) !important;
   box-shadow: 2px 0 12px rgba(0,0,0,0.07) !important;
@@ -3441,7 +3445,7 @@
 
   <!-- 1. Identity row -->
   <div class="dds-identity-row" id="dds-identity-row">
-    <span class="dds-identity-logo"><span class="dds-identity-logo-mark">DD</span>Scope</span>
+    <span class="dds-identity-logo"><span class="dds-identity-logo-mark">SC</span>Flow</span>
     <span class="dds-identity-project dds-hidden" id="dds-nav-project-center">
       <span id="dds-nav-project-label" class="dds-identity-project-label" title="Double-click to rename"></span>
       <button class="dds-menu-dirty-badge dds-hidden" id="dds-menu-dirty-badge" title="Unsaved changes — click to save">Unsaved changes — Save</button>
@@ -3472,29 +3476,22 @@
         <button class="dds-menu-item" disabled title="Not yet implemented (TODO/T-003)">Paste</button>
       </div>
     </div>
+    <!-- View / Arrange / Extras — migrated to the Declarative Menu
+         Contributions model alongside File (RFC §4, TODO/T-056), so their
+         Toggle Commands (Rail/Panel/Identity Row, Direction, Legend,
+         Notes) can actually render a checkmark — see
+         DDS_UI_MENU._registerCommands/_renderContributedMenus. -->
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">View</button>
-      <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="view.toggleRail">Toggle Rail</button>
-        <button class="dds-menu-item" data-cmd="view.toggleSidePanel">Toggle Side Panel</button>
-        <button class="dds-menu-item" data-cmd="view.toggleIdentityRow">Toggle Identity Row</button>
-        <button class="dds-menu-item" disabled title="Depends on the Page Strip (RFC step 5)">Fullscreen</button>
-      </div>
+      <div class="dds-menu-dropdown" id="dds-menu-dropdown-view"></div>
     </div>
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Arrange</button>
-      <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="arrange.layout">Layout</button>
-        <button class="dds-menu-item" data-cmd="arrange.direction">Direction</button>
-      </div>
+      <div class="dds-menu-dropdown" id="dds-menu-dropdown-arrange"></div>
     </div>
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Extras</button>
-      <div class="dds-menu-dropdown">
-        <button class="dds-menu-item" data-cmd="extras.legend">Legend</button>
-        <button class="dds-menu-item" data-cmd="extras.notes">Notes</button>
-        <button class="dds-menu-item" data-cmd="extras.settings">Settings</button>
-      </div>
+      <div class="dds-menu-dropdown" id="dds-menu-dropdown-extras"></div>
     </div>
     <div class="dds-menu">
       <button class="dds-menu-label" type="button">Help</button>
@@ -4853,6 +4850,171 @@ var DDS_SETTINGS = (function() {
     return { ready: ready, get: get, set: set, isDebugAI: isDebugAI, isLogActions: isLogActions, isShowBfsRanks: isShowBfsRanks, getLogLevel: getLogLevel, getAnthropicApiKey: getAnthropicApiKey, getGeminiApiKey: getGeminiApiKey, getAiModel: getAiModel };
 })();
 </script>
+<!-- src/core/DDS_I18N_CATALOG_EN.js -->
+<script>
+// ============================================================
+// DDS_I18N_CATALOG_EN — English (source language) string catalog
+// ============================================================
+//
+// Flat key -> string map consumed by the DDS_I18N service (see
+// src/core/DDS_I18N.js and docs/SCFlow_I18N.md). English is SCFlow's
+// source language, matching the repository's language convention
+// (see README.md).
+//
+// Empty of real content by design: the string-extraction audit (TODO
+// T-058, chantier "Audit + extraction des chaines en dur") populates this
+// catalog as UI text is migrated off hardcoded textContent/innerHTML. This
+// file exists so the socle (DDS_I18N.ready()/t()/setLocale()) has a real,
+// loadable catalog to resolve against from day one.
+//
+// Placeholder syntax (see DDS_I18N._format): "{name}" substitution,
+// "{name, plural, one {...} other {...}}" pluralization — "#" inside a
+// plural branch is replaced by the numeric value.
+window.DDS_I18N_CATALOG_EN = {
+  // Illustrative only — demonstrates the placeholder syntax ahead of real
+  // extracted keys. Safe to remove once T-058's extraction chantier lands
+  // its first real batch.
+  'i18n.example.greeting': 'Hello, {name}!',
+  'i18n.example.item_count': '{count, plural, one {# item} other {# items}}'
+};
+</script>
+<!-- src/core/DDS_I18N.js -->
+<script>
+/**
+ * DDS_I18N — II18nService: string catalog and locale resolution.
+ * See docs/SCFlow_I18N.md for the interface contract.
+ *
+ * Public API (framework-agnostic):
+ *   await DDS_I18N.ready()        -> resolves once the active locale's catalog is loaded
+ *   DDS_I18N.t(key, params)       -> resolves key in the active locale, substitutes params
+ *   await DDS_I18N.setLocale(loc) -> switches active locale, reloads catalog, persists to DDS_SETTINGS
+ *   DDS_I18N.getLocale()          -> active locale code (e.g. 'en')
+ *
+ * Catalog: static data, one flat key/value file per locale
+ * (src/core/DDS_I18N_CATALOG_<LOCALE>.js, each assigning
+ * window.DDS_I18N_CATALOG_<LOCALE>) — bundled directly in Core, identical
+ * across every framework. Unlike DDS_SETTINGS, no per-framework backend
+ * injection here: the catalog *content* does not vary by framework, only
+ * its future *source* might (e.g. a server-fetched catalog) — that seam,
+ * if ever needed, belongs to a later chantier (TODO T-058), not the socle.
+ *
+ * Locale resolution order: DDS_SETTINGS key 'locale' (persisted, same
+ * mechanism as log_level/workbench_panel_width) -> navigator.language
+ * (first two letters, if a supported locale) -> SOURCE_LOCALE ('en').
+ *
+ * Placeholders: hand-rolled subset of ICU MessageFormat syntax — plain
+ * "{name}" substitution plus "{name, plural, one {...} other {...}}"
+ * pluralization ("#" inside a branch is replaced by the numeric value).
+ * No external dependency: the project has no runtime dependencies or
+ * bundler (script-tag modules only, see docs/SCFlow_I18N.md §2) — revisit
+ * if a future language needs rules beyond one/other plurals or word-order
+ * reshuffling that this subset can't express.
+ */
+var DDS_I18N = (function() {
+    'use strict';
+
+    var SOURCE_LOCALE = 'en';
+    // Extend as catalogs are added (extraction chantier, TODO T-058).
+    var SUPPORTED_LOCALES = ['en'];
+
+    var _locale = SOURCE_LOCALE;
+    var _catalog = {};
+    var _readyPromise = null;
+
+    function _catalogFor(locale) {
+        return window['DDS_I18N_CATALOG_' + locale.toUpperCase()] || null;
+    }
+
+    function _resolveInitialLocale() {
+        var fromSettings = window.DDS_SETTINGS && DDS_SETTINGS.get('locale');
+        if (fromSettings && SUPPORTED_LOCALES.indexOf(fromSettings) !== -1) {
+            return fromSettings;
+        }
+
+        var nav = ((typeof navigator !== 'undefined' && navigator.language) || '').slice(0, 2).toLowerCase();
+        if (nav && SUPPORTED_LOCALES.indexOf(nav) !== -1) return nav;
+
+        return SOURCE_LOCALE;
+    }
+
+    function _load(locale) {
+        var catalog = _catalogFor(locale);
+        if (!catalog) {
+            console.warn('[DDS_I18N] No catalog for locale "' + locale + '" — falling back to ' + SOURCE_LOCALE);
+            locale = SOURCE_LOCALE;
+            catalog = _catalogFor(SOURCE_LOCALE) || {};
+        }
+        _locale = locale;
+        _catalog = catalog;
+        console.log('[DDS_I18N] Locale set to', _locale, '(' + Object.keys(_catalog).length + ' key(s))');
+    }
+
+    function ready() {
+        if (_readyPromise) return _readyPromise;
+
+        _readyPromise = Promise.resolve()
+            .then(function() {
+                return (window.DDS_SETTINGS && DDS_SETTINGS.ready) ? DDS_SETTINGS.ready() : Promise.resolve();
+            })
+            .then(function() {
+                _load(_resolveInitialLocale());
+            })
+            .catch(function(e) {
+                console.warn('[DDS_I18N] ready() failed — falling back to ' + SOURCE_LOCALE + ':', e);
+                _load(SOURCE_LOCALE);
+            });
+
+        return _readyPromise;
+    }
+
+    async function setLocale(locale) {
+        if (SUPPORTED_LOCALES.indexOf(locale) === -1) {
+            console.warn('[DDS_I18N] setLocale: unsupported locale "' + locale + '" — ignored');
+            return;
+        }
+        _load(locale);
+        if (window.DDS_SETTINGS) {
+            await DDS_SETTINGS.set('locale', locale);
+        }
+    }
+
+    function getLocale() {
+        return _locale;
+    }
+
+    function t(key, params) {
+        var raw = Object.prototype.hasOwnProperty.call(_catalog, key) ? _catalog[key] : null;
+        if (raw === null) {
+            console.warn('[DDS_I18N] Missing key "' + key + '" for locale', _locale);
+            return key;
+        }
+        return _format(raw, params || {});
+    }
+
+    // {name, plural, one {...} other {...}} is resolved before plain
+    // substitution so a {name} reference inside a branch still resolves.
+    function _format(template, params) {
+        var withPlurals = template.replace(
+            /\{(\w+),\s*plural,\s*one\s*\{([^}]*)\}\s*other\s*\{([^}]*)\}\}/g,
+            function(match, name, one, other) {
+                var n = Number(params[name]);
+                var branch = (n === 1 ? one : other);
+                return branch.replace(/#/g, String(n));
+            }
+        );
+        return withPlurals.replace(/\{(\w+)\}/g, function(match, name) {
+            return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match;
+        });
+    }
+
+    return {
+        ready: ready,
+        t: t,
+        setLocale: setLocale,
+        getLocale: getLocale
+    };
+})();
+</script>
 <!-- src/core/DDS_COLORS.js -->
 <script>
 // ============================================================
@@ -5837,6 +5999,29 @@ DDS_WORKBENCH_SHELL.closePage = function(id) {
   delete DDS_WORKBENCH_SHELL._pages[id];
 };
 
+// Hide whichever page is currently active, regardless of its closable
+// flag — unlike closePage, this does NOT unregister the page (singleton
+// pages stay registered, they're permanent) and works even when the
+// active page isn't closable. Used by DDS.closeProject (2026-07-15,
+// ISS-022) to guarantee the Page Strip never keeps showing stale content
+// from a closed project, whether the page active at close time was a
+// map (dynamic) page or a singleton (static) one — closeAllMapPages
+// alone only ever touched map pages. No-op if no page is active.
+DDS_WORKBENCH_SHELL.clearActivePage = function() {
+  var id = DDS_WORKBENCH_SHELL._activePageId;
+  if (!id) return;
+  var page = DDS_WORKBENCH_SHELL._pages[id];
+  DDS_WORKBENCH_SHELL._activePageId = null;
+  if (!page) return;
+  var tab = document.getElementById('dds-page-tab-' + id);
+  if (tab) tab.classList.remove('active');
+  if (page.contentId) {
+    var content = document.getElementById(page.contentId);
+    if (content) content.classList.remove('active');
+  }
+  page.onHide();
+};
+
 // Rename a page's tab label in place (map pages only, in practice — see
 // DDS_MAP_UI's rename flow). No-op if the page isn't registered.
 DDS_WORKBENCH_SHELL.setPageTitle = function(id, title) {
@@ -6067,20 +6252,40 @@ DDS_UI_COMMANDS._refreshOne = function(el, id) {
   else el.classList.toggle('dds-disabled', !DDS_UI_COMMANDS.isEnabled(id));
 
   if (!cmd || !cmd.isActive) return;
-  // Toggle Commands (RFC §4) — menu items get a checkmark (.active class,
-  // styled in styles/layout-nav-cards.css same as .dds-rail-icon.active/
-  // .dds-toolbar-icon-btn.active/.dds-nav-tab.active); a toolbar button
-  // bound directly via bindTrigger picks up the pre-existing
-  // .dds-toolbar-icon-btn.active highlight the same way (no toolbar
-  // contribution renderer yet — see file header — but a command that
-  // declares isActive today, bound by hand to a toolbar button, already
-  // gets synced state for free through this one shared code path).
   var active = DDS_UI_COMMANDS.isActive(id);
-  el.classList.toggle('active', active);
-  if (cmd.activeTitle || cmd.title) el.title = (active && cmd.activeTitle) ? cmd.activeTitle : (cmd.title || el.title || '');
-  if (cmd.icon || cmd.activeIcon) {
-    var iconHost = el.querySelector('.dds-menu-item-icon');
-    if (iconHost) iconHost.innerHTML = (active && cmd.activeIcon) ? cmd.activeIcon : cmd.icon;
+
+  // Toggle Commands (RFC §4) — menu item and toolbar button rendering
+  // are deliberately different, not just two skins of the same swap:
+  if (el.classList.contains('dds-menu-item')) {
+    // "a toggle command always renders as a checkbox-style entry —
+    // checkmark shown when isActive() is true, regardless of whether
+    // activeIcon/activeTitle is set. The label itself does not swap in
+    // the menu; the checkmark alone carries the state." — no
+    // icon/title swap here even if the command declares them; those
+    // fields are toolbar-only per the RFC.
+    el.classList.toggle('active', active);
+    return;
+  }
+
+  // Toolbar button (or any other non-menu trigger bound via
+  // bindTrigger — no toolbar contribution renderer exists yet, see file
+  // header, but a command declaring isActive today already gets synced
+  // state for free through this one shared code path once one is bound
+  // by hand). "The two are mutually exclusive per command: an icon swap
+  // already communicates state, so no highlight is layered on top of
+  // it."
+  if (cmd.activeIcon || cmd.activeTitle) {
+    el.classList.remove('active');
+    if (cmd.icon || cmd.activeIcon) {
+      var svg = el.querySelector('svg');
+      var markup = active && cmd.activeIcon ? cmd.activeIcon : cmd.icon;
+      if (svg && markup) svg.outerHTML = markup;
+    }
+    if (cmd.title || cmd.activeTitle) el.title = (active && cmd.activeTitle) ? cmd.activeTitle : (cmd.title || el.title || '');
+  } else {
+    // No activeIcon/activeTitle declared — Legend/side-panel/rail/
+    // Notes-toggle case: highlighted/pressed visual on the default icon.
+    el.classList.toggle('active', active);
   }
 };
 
@@ -6319,9 +6524,14 @@ var DDS = {
     });
     var tabsRowC = document.getElementById('dds-view-tabs-row');
     if (tabsRowC) tabsRowC.classList.add('dds-hidden');
-    // Page Strip (RFC step 5) — unregister every map page (singleton pages
-    // stay registered, they're permanent). The strip itself stays visible
-    // (2026-07-14 feedback, always shown) — no longer hidden on close.
+    // Page Strip (RFC step 5) — first hide whichever page is currently
+    // active, static or dynamic (2026-07-15, ISS-022: closeAllMapPages
+    // alone left a stale singleton page on screen when it, not a map, was
+    // active at close time), then unregister every map page (singleton
+    // pages stay registered, they're permanent). The strip itself stays
+    // visible (2026-07-14 feedback, always shown) — no longer hidden on
+    // close.
+    if (typeof DDS_WORKBENCH_SHELL !== 'undefined') DDS_WORKBENCH_SHELL.clearActivePage();
     if (typeof DDS_MAP_UI !== 'undefined' && typeof DDS_MAP_UI.closeAllMapPages === 'function') DDS_MAP_UI.closeAllMapPages();
     var saveAsBtnC = document.getElementById('dds-btn-save-as');
     if (saveAsBtnC) saveAsBtnC.classList.add('dds-hidden');
@@ -6329,7 +6539,14 @@ var DDS = {
     if (typeof DDS_AI_UI !== 'undefined') DDS_AI_UI.close();
     if (window.DDS_TYPES_UI) DDS_TYPES_UI.close();
     if (window.DDS_NOTES_UI) DDS_NOTES_UI.hide();
-    DDS.showView('map');
+    // Was DDS.showView('map') (legacy CommWise nav-tab fallback, framework-1
+    // retired 2026-07-15, T-059) — removed 2026-07-15 (ISS-022 follow-up):
+    // 'map' never matches a registered Page Strip id (map pages are keyed
+    // by numeric map id), so the call always fell through to showView's
+    // legacy branch and re-added .active to #dds-view-map, undoing the
+    // clearActivePage()/destroyCy() cleanup above. No project/view is open
+    // after close, so there is nothing to show here.
+    DDS.state.currentView = null;
     if (window.DDS_UI_COMMANDS) DDS_UI_COMMANDS.refreshEnablement();
   }
 };
@@ -7142,36 +7359,128 @@ DDS_UI_MENU._registerCommands = function() {
     isEnabled: function() { var b = document.getElementById('dds-btn-remove-from-map'); return !!b && !b.disabled; }
   });
 
-  // View — rail/identity row visibility are small toggles (v1). Side
-  // panel visibility now goes through DDS_PANEL.toggleVisibility() (RFC
-  // step 4, T-052) — content swap stays separate, see DDS_PANEL.js.
-  // Fullscreen still depends on the Page Strip (RFC step 5, not built
-  // yet) — left as a static disabled menu item in the fragment.
+  // View — rail/identity row visibility and side panel visibility are
+  // Toggle Commands (RFC §4, TODO/T-056): isActive reads the DOM class
+  // that already is the source of truth for each panel's visibility, so
+  // no new state to keep in sync. Both surfaces go through the registry
+  // for these three — the toolbar buttons (#dds-btn-toggle-rail etc.,
+  // bound in _bindToolbarToggles below) AND the View menu (migrated to
+  // contribute(), see below) — so isActive drives a toolbar highlight
+  // (.dds-btn-ghost.active, styles/buttons-modal-forms.css) and a menu
+  // checkmark from the exact same state read.
+  // Handlers call refreshEnablement() themselves after mutating state —
+  // none of these three dirty the project, touch undo/redo, or switch
+  // pages, so none of the existing global refreshEnablement() triggers
+  // (DDS_STORE.onDirtyChange, undo/redo, page switch — see DDS_INIT.js)
+  // would otherwise catch them (RFC §4 Toggle Commands/Refresh: "a
+  // toggle whose state can change independently of those triggers ...
+  // must call refreshEnablement() from its own handler").
   DDS_UI_COMMANDS.register('view.toggleRail', {
-    handler: function() { var r = document.getElementById('dds-rail'); if (r) r.classList.toggle('dds-hidden'); }
+    handler: function() {
+      var r = document.getElementById('dds-rail');
+      if (r) r.classList.toggle('dds-hidden');
+      DDS_UI_COMMANDS.refreshEnablement();
+    },
+    isActive: function() { var r = document.getElementById('dds-rail'); return !!r && !r.classList.contains('dds-hidden'); },
+    title: 'Toggle Rail'
   });
   DDS_UI_COMMANDS.register('view.toggleSidePanel', {
-    handler: function() { if (window.DDS_PANEL) DDS_PANEL.toggleVisibility(); }
+    handler: function() {
+      if (window.DDS_PANEL) DDS_PANEL.toggleVisibility();
+      DDS_UI_COMMANDS.refreshEnablement();
+    },
+    isActive: function() { var p = document.getElementById('dds-panel'); return !!p && !p.classList.contains('dds-hidden'); },
+    title: 'Toggle Side Panel'
   });
   DDS_UI_COMMANDS.register('view.toggleIdentityRow', {
-    handler: function() { var r = document.getElementById('dds-identity-row'); if (r) r.classList.toggle('dds-hidden'); }
+    handler: function() {
+      var r = document.getElementById('dds-identity-row');
+      if (r) r.classList.toggle('dds-hidden');
+      DDS_UI_COMMANDS.refreshEnablement();
+    },
+    isActive: function() { var r = document.getElementById('dds-identity-row'); return !!r && !r.classList.contains('dds-hidden'); },
+    title: 'Toggle Identity Row'
+  });
+  // Still depends on the Page Strip (RFC step 5, built, but no
+  // fullscreen mechanism wired to it yet) — kept as an always-disabled
+  // command rather than a hand-authored disabled <button>, now that View
+  // is generated from contributions (every trigger needs a command).
+  DDS_UI_COMMANDS.register('view.fullscreen', {
+    handler: function() {},
+    isEnabled: function() { return false; },
+    title: 'Fullscreen'
   });
 
-  // Arrange — same functions as the Layout/Direction toolbar buttons.
-  DDS_UI_COMMANDS.register('arrange.layout',    { handler: function() { DDS_MAP.runLayout(); }, isEnabled: onMapView });
-  DDS_UI_COMMANDS.register('arrange.direction', { handler: function() { DDS_MAP_UI.toggleDirection(); }, isEnabled: onMapView });
+  DDS_UI_COMMANDS.contribute('view.toggleRail',       { surface: 'menu', location: 'View', order: 0 });
+  DDS_UI_COMMANDS.contribute('view.toggleSidePanel',  { surface: 'menu', location: 'View', order: 1 });
+  DDS_UI_COMMANDS.contribute('view.toggleIdentityRow',{ surface: 'menu', location: 'View', order: 2 });
+  DDS_UI_COMMANDS.contribute('view.fullscreen',       { surface: 'menu', location: 'View', order: 3 });
 
-  // Extras
-  DDS_UI_COMMANDS.register('extras.legend', { handler: function() { DDS_MAP.toggleLegend(); }, isEnabled: onMapView });
-  DDS_UI_COMMANDS.register('extras.notes',  { handler: function() { if (window.DDS_NOTES_UI) DDS_NOTES_UI.toggle(); }, isEnabled: onMapView });
+  // Arrange — same functions as the Layout/Direction toolbar buttons.
+  // Direction is a Toggle Command whose toolbar button already has its
+  // own dedicated active-state rendering (DDS_MAP_UI.updateDirectionBtn
+  // — icon flip via CSS transform, called from several places, not just
+  // this command's handler) — isActive here only drives the Arrange
+  // menu's checkmark; the toolbar button is untouched.
+  DDS_UI_COMMANDS.register('arrange.layout',    { handler: function() { DDS_MAP.runLayout(); }, isEnabled: onMapView, title: 'Layout' });
+  DDS_UI_COMMANDS.register('arrange.direction', {
+    handler: function() {
+      DDS_MAP_UI.toggleDirection();
+      // toggleDirection already calls updateDirectionBtn for the toolbar
+      // button's own dedicated visual (untouched by this registry) —
+      // this refreshEnablement() is only to sync the new Arrange menu
+      // checkmark, which has no other trigger for this state change.
+      DDS_UI_COMMANDS.refreshEnablement();
+    },
+    isEnabled: onMapView,
+    isActive: function() {
+      var mapId = DDS_MAP.state.currentMapId;
+      var map = mapId && DDS_MAP.state.maps.find(function(m) { return m.id === mapId; });
+      return !!map && map.direction === 'left-right';
+    },
+    title: 'Direction'
+  });
+
+  DDS_UI_COMMANDS.contribute('arrange.layout',    { surface: 'menu', location: 'Arrange', order: 0 });
+  DDS_UI_COMMANDS.contribute('arrange.direction', { surface: 'menu', location: 'Arrange', order: 1 });
+
+  // Extras — Legend and Notes are Toggle Commands; only the menu goes
+  // through the registry (their toolbar buttons, #dds-btn-legend/
+  // #dds-btn-notes, keep their own separate bindings in DDS_MAP_UI.js,
+  // untouched — no risk of two code paths fighting over the same
+  // element's state).
+  DDS_UI_COMMANDS.register('extras.legend', {
+    handler: function() { DDS_MAP.toggleLegend(); DDS_UI_COMMANDS.refreshEnablement(); },
+    isEnabled: onMapView,
+    isActive: function() {
+      var mapId = DDS_MAP.state.currentMapId;
+      var mapRec = mapId && DDS_STORE.query('maps', { id: mapId })[0];
+      return !!mapRec && mapRec.legend_visible !== false;
+    },
+    title: 'Legend'
+  });
+  DDS_UI_COMMANDS.register('extras.notes', {
+    handler: function() { if (window.DDS_NOTES_UI) DDS_NOTES_UI.toggle(); DDS_UI_COMMANDS.refreshEnablement(); },
+    isEnabled: onMapView,
+    isActive: function() {
+      var p = document.getElementById('dds-notes-panel');
+      return !!p && !p.classList.contains('dds-hidden');
+    },
+    title: 'Notes'
+  });
   // The local-only header (DDScope brand + settings gear) was retired
   // 2026-07-14 — the Identity row now carries the brand, and this menu
   // item is the settings entry point instead of the old gear button.
   // SETTINGS (src/core/DDS_SETTINGS.js) is a plain global, safe to call
   // directly regardless of whether #dds-header-settings-btn exists.
   DDS_UI_COMMANDS.register('extras.settings', {
-    handler: function() { if (window.SETTINGS) SETTINGS.open(); }
+    handler: function() { if (window.SETTINGS) SETTINGS.open(); },
+    title: 'Settings'
   });
+
+  DDS_UI_COMMANDS.contribute('extras.legend',   { surface: 'menu', location: 'Extras', order: 0 });
+  DDS_UI_COMMANDS.contribute('extras.notes',    { surface: 'menu', location: 'Extras', order: 1 });
+  DDS_UI_COMMANDS.contribute('extras.settings', { surface: 'menu', location: 'Extras', order: 2 });
 
   // Keybindings — kept to the small set that already existed (Ctrl/Cmd+S)
   // plus Undo/Redo, rather than inventing new bindings for actions that
@@ -7229,10 +7538,14 @@ DDS_UI_MENU._bindMenuBar = function() {
 // _bindMenuBar's sweep populates/binds hand-authored items — order
 // between the two doesn't actually matter for correctness (bindTrigger
 // is idempotent either way), but rendering first keeps the DOM fully
-// built before any binding pass touches it. Add a location here as each
-// menu converts; File is the only one so far.
+// built before any binding pass touches it. File (T-056 pilot), then
+// View/Arrange/Extras (added to actually exercise Toggle Commands) —
+// Edit and Help stay v1 hand-authored markup for now.
 DDS_UI_MENU._renderContributedMenus = function() {
-  DDS_UI_COMMANDS.renderMenuItems('File', document.getElementById('dds-menu-dropdown-file'));
+  DDS_UI_COMMANDS.renderMenuItems('File',    document.getElementById('dds-menu-dropdown-file'));
+  DDS_UI_COMMANDS.renderMenuItems('View',    document.getElementById('dds-menu-dropdown-view'));
+  DDS_UI_COMMANDS.renderMenuItems('Arrange', document.getElementById('dds-menu-dropdown-arrange'));
+  DDS_UI_COMMANDS.renderMenuItems('Extras',  document.getElementById('dds-menu-dropdown-extras'));
 };
 
 // ---- Toolbar-row rail/identity toggles ----
@@ -7284,6 +7597,18 @@ DDS_UI_MENU.bindEvents = function() {
       await DDS_SETTINGS.ready();
     } catch(e) {
       console.warn('[DDS_INIT] DDS_SETTINGS.ready() failed — continuing with defaults:', e);
+    }
+
+    // Wait for the i18n catalog to load (locale resolved from DDS_SETTINGS,
+    // see docs/SCFlow_I18N.md). No consumer reads DDS_I18N.t() yet — the
+    // string-extraction chantier (TODO T-058) wires it up — but resolving
+    // the locale this early keeps the boot sequence consistent for when it does.
+    if (window.DDS_I18N) {
+      try {
+        await DDS_I18N.ready();
+      } catch(e) {
+        console.warn('[DDS_INIT] DDS_I18N.ready() failed — continuing with defaults:', e);
+      }
     }
 
     // Apply persisted log level from settings
@@ -7525,6 +7850,23 @@ DDS_MAP.edgeLabel = function(flow) {
 // DDS_MAP.loadMap — initialize Cytoscape + render map
 // ============================================================
 // AUDITOR:LARGE_BLOCK_JUSTIFIED - single cohesive map loading pipeline
+
+// Destroy the Cytoscape instance and clear the swim-lane overlay/legend
+// DOM — called from DDS_MAP_UI.closeAllMapPages (2026-07-15, ISS-022
+// follow-up) so the central panel is actually emptied on project close,
+// not just hidden: clearActivePage()/showPage() only toggle the .active
+// class on #dds-view-map, they never touched the Cytoscape graph or the
+// swim-lane overlay content, which stayed rendered underneath. Safe to
+// call with no map loaded — initCy() below recreates a fresh, empty
+// instance the next time a map is opened.
+DDS_MAP.destroyCy = function() {
+  if (DDS_CY) { DDS_CY.destroy(); DDS_CY = null; }
+  DDS_MAP.state.cytoscapeReady = false;
+  var overlay = document.getElementById('dds-swimlane-overlay');
+  if (overlay) overlay.innerHTML = '';
+  var legend = document.getElementById('dds-legend');
+  if (legend) { legend.innerHTML = ''; legend.classList.add('dds-hidden'); }
+};
 
 DDS_MAP.initCy = function() {
   if (DDS_CY) { DDS_CY.destroy(); DDS_CY = null; }
@@ -9965,9 +10307,18 @@ DDS_MAP_UI._registerMapPage = function(map) {
 };
 
 // Unregister every map page — called from DDS.closeProject (RFC step 5).
+// Also resets the in-memory map model (2026-07-15, ISS-022): DDS_MAP.state
+// used to be left stale (old project's maps/currentMapId) until the next
+// openProject overwrote it. The Page Strip's own active-page cleanup is a
+// separate step, DDS_WORKBENCH_SHELL.clearActivePage(), called by
+// DDS.closeProject alongside this.
 DDS_MAP_UI.closeAllMapPages = function() {
-  if (typeof DDS_WORKBENCH_SHELL === 'undefined') return;
-  DDS_MAP.state.maps.forEach(function(m) { DDS_WORKBENCH_SHELL.closePage(m.id); });
+  if (typeof DDS_WORKBENCH_SHELL !== 'undefined') {
+    DDS_MAP.state.maps.forEach(function(m) { DDS_WORKBENCH_SHELL.closePage(m.id); });
+  }
+  DDS_MAP.state.maps = [];
+  DDS_MAP.state.currentMapId = null;
+  if (typeof DDS_MAP.destroyCy === 'function') DDS_MAP.destroyCy();
 };
 
 // Actual data-loading side effect of activating a map — shared by the
@@ -19004,8 +19355,12 @@ DDS_AI_UI._applyOpen = function() {
       panel.classList.add('open');
       panel.style.width = (DDS_AI_UI._lastWidth || 420) + 'px';
     }
-    var top = panel.getBoundingClientRect().top;
-    panel.style.height = (window.innerHeight - top) + 'px';
+    // No JS height here — panel height comes from the .dds-workspace flex
+    // stretch (same as the rail and Types Toolbox), which correctly leaves
+    // room for the Page Strip. A leftover `panel.style.height =
+    // window.innerHeight - top` here (pre-dating the Page Strip, RFC step 5,
+    // 2026-07-14) ignored the strip's 36px and made the panel overlap it —
+    // fixed 2026-07-15.
   }
   // CommWise (framework-1) legacy compat: the shell/rail isn't pushed there
   // (see docs/DDScope_Plugin_UI_RFC.md §5 Decisions), so the old map-toolbar
